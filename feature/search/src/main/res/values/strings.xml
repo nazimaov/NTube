@@ -1,5 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="search_title">Search</string>
-    <string name="search_placeholder">Search will appear in phase 3.</string>
+    <string name="search_hint">Search YouTube</string>
+    <string name="search_voice">Voice</string>
+    <string name="search_filter_all">All</string>
+    <string name="search_filter_videos">Videos</string>
+    <string name="search_filter_channels">Channels</string>
+    <string name="search_filter_playlists">Playlists</string>
 </resources>

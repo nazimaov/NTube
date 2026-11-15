@@ -22,4 +22,6 @@
     <string name="watch_error_bot">YouTube asked to confirm you are not a bot. Try again later.</string>
     <string name="watch_error_unavailable">This video is unavailable.</string>
     <string name="watch_error_unknown">Something went wrong.</string>
+<string name="watch_channel">Channel</string>
+    <string name="watch_related">Related videos</string>
 </resources>

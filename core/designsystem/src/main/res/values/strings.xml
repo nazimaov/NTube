@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ds_views">
+        <item quantity="one">%s view</item>
+        <item quantity="other">%s views</item>
+    </plurals>
+    <plurals name="ds_subscribers">
+        <item quantity="one">%s subscriber</item>
+        <item quantity="other">%s subscribers</item>
+    </plurals>
+    <plurals name="ds_videos">
+        <item quantity="one">%s video</item>
+        <item quantity="other">%s videos</item>
+    </plurals>
+    <string name="ds_live">LIVE</string>
+    <string name="ds_loading">Loading…</string>
+    <string name="ds_retry">Retry</string>
+    <string name="ds_empty">Nothing here yet.</string>
+    <string name="ds_error_network">No internet connection.</string>
+    <string name="ds_error_extraction">YouTube changed something and the content can\'t be loaded. Check for an app update.</string>
+    <string name="ds_error_age">Age-restricted content.</string>
+    <string name="ds_error_private">This content is private.</string>
+    <string name="ds_error_geo">Not available in your country.</string>
+    <string name="ds_error_paid">Requires a paid subscription.</string>
+    <string name="ds_error_bot">YouTube asked to confirm you are not a bot. Try again later.</string>
+    <string name="ds_error_unavailable">Content is unavailable.</string>
+    <string name="ds_error_unknown">Something went wrong.</string>
+</resources>

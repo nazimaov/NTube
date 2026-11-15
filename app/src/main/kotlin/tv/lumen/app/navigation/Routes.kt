@@ -2,7 +2,7 @@ package tv.lumen.app.navigation
 
 import kotlinx.serialization.Serializable
 
-// Типобезопасные маршруты (SPEC, раздел 8). Channel и Playlist добавляются в фазе 3.
+// Типобезопасные маршруты (SPEC, раздел 8). Имена полей читают ViewModel экранов из SavedStateHandle.
 @Serializable data object Home
 @Serializable data object Search
 @Serializable data object Subscriptions
@@ -11,3 +11,7 @@ import kotlinx.serialization.Serializable
 
 /** Имена полей читает WatchViewModel из SavedStateHandle — не переименовывать без него. */
 @Serializable data class Watch(val videoId: String, val playlistId: String? = null, val startMs: Long = 0)
+
+@Serializable data class Channel(val channelId: String)
+
+@Serializable data class Playlist(val playlistId: String, val title: String)

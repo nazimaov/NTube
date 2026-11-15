@@ -4,6 +4,8 @@ plugins {
 }
 
 dependencies {
+    api(project(":core:model"))
     api(libs.androidx.tv.material)
     api(libs.androidx.compose.material.icons.core)
+    api(libs.coil.compose)
 }

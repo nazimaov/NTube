@@ -22,4 +22,6 @@
     <string name="watch_error_bot">YouTube просит подтвердить, что вы не бот. Попробуйте позже.</string>
     <string name="watch_error_unavailable">Видео недоступно.</string>
     <string name="watch_error_unknown">Что-то пошло не так.</string>
+<string name="watch_channel">Канал</string>
+    <string name="watch_related">Похожие видео</string>
 </resources>

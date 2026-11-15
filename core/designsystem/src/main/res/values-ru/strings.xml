@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <plurals name="ds_views">
+        <item quantity="one">%s просмотр</item>
+        <item quantity="few">%s просмотра</item>
+        <item quantity="many">%s просмотров</item>
+        <item quantity="other">%s просмотра</item>
+    </plurals>
+    <plurals name="ds_subscribers">
+        <item quantity="one">%s подписчик</item>
+        <item quantity="few">%s подписчика</item>
+        <item quantity="many">%s подписчиков</item>
+        <item quantity="other">%s подписчика</item>
+    </plurals>
+    <plurals name="ds_videos">
+        <item quantity="one">%s видео</item>
+        <item quantity="few">%s видео</item>
+        <item quantity="many">%s видео</item>
+        <item quantity="other">%s видео</item>
+    </plurals>
+    <string name="ds_live">ЭФИР</string>
+    <string name="ds_loading">Загрузка…</string>
+    <string name="ds_retry">Повторить</string>
+    <string name="ds_empty">Здесь пока пусто.</string>
+    <string name="ds_error_network">Нет подключения к интернету.</string>
+    <string name="ds_error_extraction">YouTube что-то изменил, и данные не загружаются. Проверьте обновление приложения.</string>
+    <string name="ds_error_age">Контент с возрастным ограничением.</string>
+    <string name="ds_error_private">Контент скрыт автором.</string>
+    <string name="ds_error_geo">Недоступно в вашей стране.</string>
+    <string name="ds_error_paid">Доступно только по платной подписке.</string>
+    <string name="ds_error_bot">YouTube просит подтвердить, что вы не бот. Попробуйте позже.</string>
+    <string name="ds_error_unavailable">Контент недоступен.</string>
+    <string name="ds_error_unknown">Что-то пошло не так.</string>
+</resources>

@@ -18,6 +18,12 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.ui.focus.focusRestorer
+import tv.lumen.core.designsystem.component.CardWidth
+import tv.lumen.core.designsystem.component.VideoCard
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -63,17 +69,41 @@ private const val FAST_SEEK_MS = 30_000L
 
 internal enum class WatchDialog { QUALITY, SPEED, SUBTITLES, AUDIO }
 
-private enum class PanelFocus { PLAY, SEEK }
+private enum class PanelFocus { PLAY, SEEK, RELATED }
 
 @Composable
-fun WatchRoute(modifier: Modifier = Modifier, viewModel: WatchViewModel = hiltViewModel()) {
+fun WatchRoute(
+    onBack: () -> Unit,
+    onOpenVideo: (String) -> Unit,
+    onOpenChannel: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: WatchViewModel = hiltViewModel(),
+) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-    WatchScreen(state = state, controller = viewModel.controller, modifier = modifier)
+    WatchScreen(
+        state = state,
+        controller = viewModel.controller,
+        onBack = onBack,
+        onOpenVideo = onOpenVideo,
+        onOpenChannel = onOpenChannel,
+        modifier = modifier,
+    )
 }
 
 @Composable
-internal fun WatchScreen(state: PlayerState, controller: PlayerController, modifier: Modifier = Modifier) {
+internal fun WatchScreen(
+    state: PlayerState,
+    controller: PlayerController,
+    onBack: () -> Unit,
+    onOpenVideo: (String) -> Unit,
+    onOpenChannel: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
     var panelVisible by remember { mutableStateOf(false) }
+    // Ряд «Похожие» внизу панели: открывается кнопкой Вниз (SPEC 5.5)
+    var relatedVisible by remember { mutableStateOf(false) }
+    var buttonsFocused by remember { mutableStateOf(false) }
+    val related = state.details?.related.orEmpty()
     var panelFocus by remember { mutableStateOf(PanelFocus.PLAY) }
     var dialog by remember { mutableStateOf<WatchDialog?>(null) }
     var interaction by remember { mutableIntStateOf(0) }
@@ -83,6 +113,7 @@ internal fun WatchScreen(state: PlayerState, controller: PlayerController, modif
 
     fun showPanel(focus: PanelFocus) {
         panelFocus = focus
+        relatedVisible = focus == PanelFocus.RELATED || (relatedVisible && panelVisible)
         panelVisible = true
         interaction++
         focusRequest++
@@ -99,6 +130,7 @@ internal fun WatchScreen(state: PlayerState, controller: PlayerController, modif
         if (panelVisible && state.isPlaying && dialog == null) {
             delay(PANEL_HIDE_MS)
             panelVisible = false
+            relatedVisible = false
         }
     }
     LaunchedEffect(panelVisible, dialog) {
@@ -111,13 +143,17 @@ internal fun WatchScreen(state: PlayerState, controller: PlayerController, modif
         // Back перехватываем здесь: иначе Compose на ТВ снимает фокус с элемента и событие не доходит
         // до BackHandler — панель остаётся без фокуса, пульт перестаёт работать.
         if (event.key == Key.Back) {
-            if (dialog == null && !panelVisible) return false // выход из плеера
             if (event.type == KeyEventType.KeyUp) {
-                if (dialog != null) {
-                    dialog = null
-                    showPanel(PanelFocus.PLAY)
-                } else {
-                    panelVisible = false
+                when {
+                    dialog != null -> {
+                        dialog = null
+                        showPanel(PanelFocus.PLAY)
+                    }
+                    panelVisible -> {
+                        panelVisible = false
+                        relatedVisible = false
+                    }
+                    else -> onBack() // выход из плеера
                 }
             }
             return true
@@ -131,6 +167,11 @@ internal fun WatchScreen(state: PlayerState, controller: PlayerController, modif
             Key.MediaFastForward -> { controller.seekBy(FAST_SEEK_MS); return true }
             Key.MediaRewind -> { controller.seekBy(-FAST_SEEK_MS); return true }
         }
+        // Вниз с ряда кнопок открывает «Похожие»
+        if (panelVisible && dialog == null && !relatedVisible && buttonsFocused && event.key == Key.DirectionDown && related.isNotEmpty()) {
+            showPanel(PanelFocus.RELATED)
+            return true
+        }
         if (dialog != null || panelVisible || state.error != null) return false
         return when (event.key) {
             Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
@@ -138,8 +179,8 @@ internal fun WatchScreen(state: PlayerState, controller: PlayerController, modif
             }
             Key.DirectionLeft -> { controller.seekBy(-seekStep(event)); showPanel(PanelFocus.SEEK); true }
             Key.DirectionRight -> { controller.seekBy(seekStep(event)); showPanel(PanelFocus.SEEK); true }
-            // Вниз — ряд «Похожие» появится в фазе 3 вместе с карточками; пока показывает панель
-            Key.DirectionUp, Key.DirectionDown -> { showPanel(PanelFocus.PLAY); true }
+            Key.DirectionUp -> { showPanel(PanelFocus.PLAY); true }
+            Key.DirectionDown -> { showPanel(if (related.isNotEmpty()) PanelFocus.RELATED else PanelFocus.PLAY); true }
             else -> false
         }
     }
@@ -176,8 +217,12 @@ internal fun WatchScreen(state: PlayerState, controller: PlayerController, modif
                 controller = controller,
                 initialFocus = panelFocus,
                 focusRequest = focusRequest,
+                relatedVisible = relatedVisible,
+                onButtonsFocusChanged = { buttonsFocused = it },
                 onInteraction = { interaction++ },
                 onOpenDialog = { dialog = it },
+                onOpenVideo = onOpenVideo,
+                onOpenChannel = onOpenChannel,
             )
         }
 
@@ -230,13 +275,24 @@ private fun ControlPanel(
     controller: PlayerController,
     initialFocus: PanelFocus,
     focusRequest: Int,
+    relatedVisible: Boolean,
+    onButtonsFocusChanged: (Boolean) -> Unit,
     onInteraction: () -> Unit,
     onOpenDialog: (WatchDialog) -> Unit,
+    onOpenVideo: (String) -> Unit,
+    onOpenChannel: (String) -> Unit,
 ) {
     val playFocus = remember { FocusRequester() }
     val seekFocus = remember { FocusRequester() }
-    LaunchedEffect(focusRequest) {
-        runCatching { if (initialFocus == PanelFocus.SEEK) seekFocus.requestFocus() else playFocus.requestFocus() }
+    val relatedFocus = remember { FocusRequester() }
+    LaunchedEffect(focusRequest, relatedVisible) {
+        runCatching {
+            when (initialFocus) {
+                PanelFocus.SEEK -> seekFocus.requestFocus()
+                PanelFocus.RELATED -> if (relatedVisible) relatedFocus.requestFocus() else playFocus.requestFocus()
+                PanelFocus.PLAY -> playFocus.requestFocus()
+            }
+        }
     }
 
     Column(
@@ -275,7 +331,7 @@ private fun ControlPanel(
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.onFocusChanged { onButtonsFocusChanged(it.hasFocus) }) {
             Button(onClick = controller::togglePlayPause, modifier = Modifier.focusRequester(playFocus)) {
                 Text(stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play))
             }
@@ -299,6 +355,27 @@ private fun ControlPanel(
             if (state.audioTracks.size > 1) {
                 Button(onClick = { onOpenDialog(WatchDialog.AUDIO) }) {
                     Text(stringResource(R.string.watch_audio))
+                }
+            }
+            state.details?.video?.channelId?.let { channelId ->
+                Button(onClick = { onOpenChannel(channelId) }) {
+                    Text(stringResource(R.string.watch_channel))
+                }
+            }
+        }
+
+        val related = state.details?.related.orEmpty()
+        if (relatedVisible && related.isNotEmpty()) {
+            Text(stringResource(R.string.watch_related), style = MaterialTheme.typography.titleMedium, color = Color.White)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
+                itemsIndexed(related, key = { _, v -> v.id }) { index, video ->
+                    VideoCard(
+                        video = video,
+                        onClick = { onOpenVideo(video.id) },
+                        modifier = Modifier
+                            .width(CardWidth)
+                            .then(if (index == 0) Modifier.focusRequester(relatedFocus) else Modifier),
+                    )
                 }
             }
         }
