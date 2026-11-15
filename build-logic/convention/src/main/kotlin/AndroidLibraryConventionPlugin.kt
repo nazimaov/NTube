@@ -23,6 +23,8 @@ class AndroidLibraryConventionPlugin : Plugin<Project> {
                 targetCompatibility = LumenSdk.JAVA
                 isCoreLibraryDesugaringEnabled = true
             }
+            // JVM-тесты: заглушки android.* возвращают значения по умолчанию (OkHttp зовёт android.util.Log)
+            testOptions.unitTests.isReturnDefaultValues = true
         }
         dependencies {
             add("coreLibraryDesugaring", libs.lib("desugar-jdk-libs-nio"))

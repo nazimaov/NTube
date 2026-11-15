@@ -4,7 +4,32 @@ plugins {
 }
 
 dependencies {
-    implementation(project(":core:model"))
+    api(project(":core:model"))
     implementation(project(":core:common"))
-    // NewPipeExtractor подключается в фазе 1. Только этот модуль видит org.schabi.newpipe.*
+    implementation(project(":core:network"))
+
+    // Единственный модуль, который видит org.schabi.newpipe.* (SPEC, раздел 3)
+    implementation(libs.newpipe.extractor)
+
+    testImplementation(libs.kotlinx.coroutines.test)
+}
+
+// Живые запросы к YouTube (SPEC, раздел 12). Не входят в `test`: тесты *LiveTest
+// пропускаются без свойства lumen.liveTest. Запуск: ./gradlew :data:youtube:liveTest
+val unitTestTask = "testDebugUnitTest"
+tasks.register<Test>("liveTest") {
+    group = "verification"
+    description = "Живые интеграционные тесты YouTube (сеть)."
+    val unit = tasks.named<Test>(unitTestTask).get()
+    dependsOn(unit.dependsOn)
+    testClassesDirs = unit.testClassesDirs
+    classpath = unit.classpath
+    systemProperty("lumen.liveTest", "true")
+    filter { includeTestsMatching("*LiveTest") }
+    testLogging {
+        events("passed", "skipped", "failed")
+        showStandardStreams = true
+        exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL
+    }
+    outputs.upToDateWhen { false }
 }

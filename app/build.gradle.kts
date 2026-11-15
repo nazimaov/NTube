@@ -41,6 +41,8 @@ dependencies {
     implementation(project(":core:model"))
     implementation(project(":core:common"))
     implementation(project(":core:designsystem"))
+    implementation(project(":core:network"))
+    implementation(project(":data:youtube"))
 
     implementation(project(":feature:home"))
     implementation(project(":feature:search"))
