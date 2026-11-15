@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subscriptions_title">Подписки</string>
+    <string name="history_title">История</string>
+    <string name="library_placeholder">Появится в фазе 4.</string>
+</resources>

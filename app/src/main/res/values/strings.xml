@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- app_name задаётся в gradle.properties (lumen.appName) -->
+    <string name="menu_search">Search</string>
+    <string name="menu_home">Home</string>
+    <string name="menu_subscriptions">Subscriptions</string>
+    <string name="menu_history">History</string>
+    <string name="menu_settings">Settings</string>
+</resources>

@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="subscriptions_title">Subscriptions</string>
+    <string name="history_title">History</string>
+    <string name="library_placeholder">Will appear in phase 4.</string>
+</resources>
