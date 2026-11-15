@@ -1,15 +1,358 @@
 package tv.lumen.feature.settings
 
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.res.stringResource
-import tv.lumen.core.designsystem.component.PlaceholderScreen
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.Button
+import androidx.tv.material3.ListItem
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Switch
+import androidx.tv.material3.Text
+import tv.lumen.core.datastore.MenuItem
+import tv.lumen.core.datastore.PreferredCodec
+import tv.lumen.core.designsystem.focus.FocusMemoryScope
+import tv.lumen.core.designsystem.focus.rememberFocus
+import tv.lumen.core.designsystem.theme.LumenDimens
+import tv.lumen.core.model.SegmentMode
+import tv.lumen.core.model.SponsorCategory
+import java.util.Locale
+
+private data class Choice<T>(val label: String, val value: T)
+
+private class ChoiceRequest(val title: String, val options: List<Choice<*>>, val selected: Any?, val onSelect: (Any?) -> Unit)
 
 @Composable
-fun SettingsRoute(modifier: Modifier = Modifier) {
-    PlaceholderScreen(
-        title = stringResource(R.string.settings_title),
-        note = stringResource(R.string.settings_placeholder),
-        modifier = modifier,
+fun SettingsRoute(
+    versionName: String,
+    modifier: Modifier = Modifier,
+    viewModel: SettingsViewModel = hiltViewModel(),
+) {
+    val s by viewModel.settings.collectAsStateWithLifecycle()
+    val blocked by viewModel.blockedChannels.collectAsStateWithLifecycle()
+    var choice by remember { mutableStateOf<ChoiceRequest?>(null) }
+    var addingWord by remember { mutableStateOf(false) }
+    FocusMemoryScope(viewModel.focusMemory)
+    val memory = viewModel.focusMemory
+
+    val screen = stringResource(R.string.settings_res_screen)
+    val qualities = listOf(Choice(screen, 0)) + listOf(720, 1080, 1440, 2160).map { Choice("${it}p", it) }
+    val speeds = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f).map { Choice(formatSpeed(it), it) }
+    val codecs = listOf(
+        Choice(stringResource(R.string.settings_auto), PreferredCodec.AUTO),
+        Choice("AV1", PreferredCodec.AV1),
+        Choice("VP9", PreferredCodec.VP9),
+        Choice("H.264 (AVC)", PreferredCodec.AVC),
+    )
+    val off = stringResource(R.string.settings_off)
+    val original = stringResource(R.string.settings_original)
+    val system = stringResource(R.string.settings_system)
+    val subtitleLangs = listOf(Choice<String?>(off, null)) + LANGUAGES.map { Choice<String?>(languageName(it), it) }
+    val audioLangs = listOf(Choice<String?>(original, null)) + LANGUAGES.map { Choice<String?>(languageName(it), it) }
+    val contentLangs = listOf(Choice<String?>(system, null)) + LANGUAGES.map { Choice<String?>(languageName(it), it) }
+    val countries = listOf(Choice<String?>(system, null)) + COUNTRIES.map { Choice<String?>(countryName(it), it) }
+    val modes = listOf(
+        Choice(stringResource(R.string.settings_sb_skip), SegmentMode.SKIP),
+        Choice(stringResource(R.string.settings_sb_button), SegmentMode.BUTTON),
+        Choice(stringResource(R.string.settings_sb_off), SegmentMode.OFF),
+    )
+
+    fun <T> ask(title: String, options: List<Choice<T>>, selected: T, onSelect: (T) -> Unit) {
+        @Suppress("UNCHECKED_CAST")
+        choice = ChoiceRequest(title, options, selected) { onSelect(it as T) }
+    }
+
+    LazyColumn(
+        modifier = modifier.fillMaxSize(),
+        contentPadding = PaddingValues(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
+        verticalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        item { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp)) }
+
+        section(R.string.settings_section_player)
+        item {
+            val title = stringResource(R.string.settings_max_quality)
+            Row(title, qualities.label(s.maxResolution), Modifier.rememberFocus(memory, "quality", isFirst = true)) {
+                ask(title, qualities, s.maxResolution) { v -> viewModel.update { it.copy(maxResolution = v) } }
+            }
+        }
+        item {
+            val title = stringResource(R.string.settings_speed)
+            Row(title, formatSpeed(s.defaultSpeed), Modifier.rememberFocus(memory, "speed")) {
+                ask(title, speeds, s.defaultSpeed) { v -> viewModel.update { it.copy(defaultSpeed = v) } }
+            }
+        }
+        item {
+            val title = stringResource(R.string.settings_codec)
+            Row(title, codecs.label(s.preferredCodec), Modifier.rememberFocus(memory, "codec")) {
+                ask(title, codecs, s.preferredCodec) { v -> viewModel.update { it.copy(preferredCodec = v) } }
+            }
+        }
+        item {
+            Toggle(stringResource(R.string.settings_autoplay), s.autoplayNext, Modifier.rememberFocus(memory, "autoplay")) {
+                viewModel.update { it.copy(autoplayNext = !it.autoplayNext) }
+            }
+        }
+        item {
+            val title = stringResource(R.string.settings_subtitles)
+            Row(title, subtitleLangs.label(s.subtitlesLang), Modifier.rememberFocus(memory, "subs")) {
+                ask(title, subtitleLangs, s.subtitlesLang) { v -> viewModel.update { it.copy(subtitlesLang = v) } }
+            }
+        }
+        item {
+            val title = stringResource(R.string.settings_audio)
+            Row(title, audioLangs.label(s.audioLang), Modifier.rememberFocus(memory, "audio")) {
+                ask(title, audioLangs, s.audioLang) { v -> viewModel.update { it.copy(audioLang = v) } }
+            }
+        }
+
+        section(R.string.settings_section_sponsorblock)
+        item {
+            Toggle(stringResource(R.string.settings_sb_enabled), s.sponsorBlockEnabled, Modifier.rememberFocus(memory, "sb")) {
+                viewModel.update { it.copy(sponsorBlockEnabled = !it.sponsorBlockEnabled) }
+            }
+        }
+        if (s.sponsorBlockEnabled) {
+            items(SponsorCategory.entries, key = { "sb:${it.name}" }) { category ->
+                val title = categoryLabel(category)
+                Row(title, modes.label(s.modeOf(category)), Modifier.rememberFocus(memory, "sb:${category.name}")) {
+                    ask(title, modes, s.modeOf(category)) { v ->
+                        viewModel.update { it.copy(sponsorCategories = it.sponsorCategories + (category to v)) }
+                    }
+                }
+            }
+        }
+
+        section(R.string.settings_section_feed)
+        item {
+            Toggle(stringResource(R.string.settings_hide_shorts), s.hideShorts, Modifier.rememberFocus(memory, "shorts")) {
+                viewModel.update { it.copy(hideShorts = !it.hideShorts) }
+            }
+        }
+        item {
+            Toggle(stringResource(R.string.settings_hide_watched), s.hideWatched, Modifier.rememberFocus(memory, "watched")) {
+                viewModel.update { it.copy(hideWatched = !it.hideWatched) }
+            }
+        }
+        item {
+            Row(stringResource(R.string.settings_add_word), null, Modifier.rememberFocus(memory, "addword")) { addingWord = true }
+        }
+        items(s.blockedWords.sorted(), key = { "w:$it" }) { word ->
+            Row("«$word»", stringResource(R.string.settings_remove), Modifier.rememberFocus(memory, "w:$word")) { viewModel.removeBlockedWord(word) }
+        }
+        if (blocked.isNotEmpty()) {
+            item { Text(stringResource(R.string.settings_blocked_channels), style = MaterialTheme.typography.titleSmall, modifier = Modifier.padding(top = 8.dp)) }
+            items(blocked, key = { "bc:${it.id}" }) { channel ->
+                Row(channel.name.ifBlank { channel.id }, stringResource(R.string.settings_unblock), Modifier.rememberFocus(memory, "bc:${channel.id}")) {
+                    viewModel.unblockChannel(channel.id)
+                }
+            }
+        }
+
+        section(R.string.settings_section_general)
+        item {
+            val title = stringResource(R.string.settings_content_language)
+            Row(title, contentLangs.label(s.contentLanguage), Modifier.rememberFocus(memory, "lang")) {
+                ask(title, contentLangs, s.contentLanguage) { v -> viewModel.update { it.copy(contentLanguage = v) } }
+            }
+        }
+        item {
+            val title = stringResource(R.string.settings_content_country)
+            Row(title, countries.label(s.contentCountry), Modifier.rememberFocus(memory, "country")) {
+                ask(title, countries, s.contentCountry) { v -> viewModel.update { it.copy(contentCountry = v) } }
+            }
+        }
+        item {
+            Toggle(stringResource(R.string.settings_history_enabled), s.historyEnabled, Modifier.rememberFocus(memory, "history")) {
+                viewModel.update { it.copy(historyEnabled = !it.historyEnabled) }
+            }
+        }
+        item {
+            val title = stringResource(R.string.settings_clear_history)
+            val yes = stringResource(R.string.settings_clear_confirm)
+            val no = stringResource(R.string.settings_cancel)
+            Row(title, null, Modifier.rememberFocus(memory, "clear")) {
+                ask(title, listOf(Choice(no, false), Choice(yes, true)), false) { confirmed -> if (confirmed) viewModel.clearHistory() }
+            }
+        }
+
+        section(R.string.settings_section_menu)
+        items(s.menuItems, key = { "menu:${it.name}" }) { item ->
+            val title = menuLabel(item)
+            val shown = item !in s.hiddenMenuItems
+            val show = stringResource(R.string.settings_menu_show)
+            val hide = stringResource(R.string.settings_menu_hide)
+            val up = stringResource(R.string.settings_menu_up)
+            Row(title, if (shown) show else hide, Modifier.rememberFocus(memory, "menu:${item.name}")) {
+                ask(title, listOf(Choice(if (shown) hide else show, 0), Choice(up, 1)), -1) { action ->
+                    if (action == 0) viewModel.toggleMenuItem(item) else viewModel.moveMenuItemUp(item)
+                }
+            }
+        }
+
+        section(R.string.settings_section_about)
+        item { Text(stringResource(R.string.settings_version, versionName), style = MaterialTheme.typography.bodyLarge) }
+        item {
+            Text(
+                stringResource(R.string.settings_licenses),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.fillMaxWidth(0.8f),
+            )
+        }
+    }
+
+    choice?.let { req ->
+        ChoiceDialog(req) { choice = null }
+    }
+    if (addingWord) {
+        WordDialog(onDone = { word -> word?.let(viewModel::addBlockedWord); addingWord = false })
+    }
+}
+
+private fun LazyListScope.section(title: Int) {
+    item { Text(stringResource(title), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 24.dp, bottom = 8.dp)) }
+}
+
+@Composable
+private fun Row(title: String, value: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    ListItem(
+        selected = false,
+        onClick = onClick,
+        headlineContent = { Text(title) },
+        // Цвет не задаём: ListItem сам подбирает контрастный для фокуса
+        trailingContent = value?.let { { Text(it, style = MaterialTheme.typography.bodyLarge) } },
+        modifier = modifier.fillMaxWidth(0.8f),
     )
 }
+
+@Composable
+private fun Toggle(title: String, checked: Boolean, modifier: Modifier = Modifier, onToggle: () -> Unit) {
+    ListItem(
+        selected = false,
+        onClick = onToggle,
+        headlineContent = { Text(title) },
+        trailingContent = { Switch(checked = checked, onCheckedChange = null) },
+        modifier = modifier.fillMaxWidth(0.8f),
+    )
+}
+
+@Composable
+private fun ChoiceDialog(req: ChoiceRequest, onDismiss: () -> Unit) {
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(req) { runCatching { focus.requestFocus() } }
+    val selectedIndex = req.options.indexOfFirst { it.value == req.selected }.coerceAtLeast(0)
+    Dialog(onDismissRequest = onDismiss) {
+        Column(
+            modifier = Modifier.width(480.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp)).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(4.dp),
+        ) {
+            Text(req.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(bottom = 8.dp))
+            LazyColumn {
+                items(req.options.size) { i ->
+                    val option = req.options[i]
+                    ListItem(
+                        selected = option.value == req.selected,
+                        onClick = {
+                            onDismiss()
+                            req.onSelect(option.value)
+                        },
+                        headlineContent = { Text(option.label) },
+                        modifier = if (i == selectedIndex) Modifier.focusRequester(focus) else Modifier,
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun WordDialog(onDone: (String?) -> Unit) {
+    var text by remember { mutableStateOf("") }
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
+    Dialog(onDismissRequest = { onDone(null) }) {
+        Column(
+            modifier = Modifier.width(560.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp)).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Text(stringResource(R.string.settings_add_word), style = MaterialTheme.typography.titleLarge)
+            BasicTextField(
+                value = text,
+                onValueChange = { text = it },
+                singleLine = true,
+                textStyle = MaterialTheme.typography.titleMedium.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { onDone(text) }),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus)
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp)).padding(12.dp),
+            )
+            Button(onClick = { onDone(text) }) { Text(stringResource(R.string.settings_add)) }
+        }
+    }
+}
+
+private fun <T> List<Choice<T>>.label(value: T): String = firstOrNull { it.value == value }?.label ?: value.toString()
+
+private fun formatSpeed(speed: Float): String =
+    (if (speed % 1f == 0f) "%.1f" else "%.2f").format(speed).trimEnd('0').trimEnd('.', ',') + "×"
+
+private val LANGUAGES = listOf("ru", "en", "uk", "kk", "de", "fr", "es", "it", "pt", "tr", "ja", "ko", "zh")
+private val COUNTRIES = listOf("RU", "US", "GB", "KZ", "UA", "BY", "DE", "FR", "ES", "IT", "TR", "JP", "KR", "IN", "BR")
+
+private fun languageName(tag: String): String =
+    Locale.forLanguageTag(tag).let { it.getDisplayLanguage(it).replaceFirstChar { c -> c.titlecase(it) } }
+
+private fun countryName(code: String): String = Locale("", code).getDisplayCountry(Locale.getDefault())
+
+@Composable
+private fun categoryLabel(c: SponsorCategory): String = stringResource(
+    when (c) {
+        SponsorCategory.SPONSOR -> R.string.settings_sb_sponsor
+        SponsorCategory.SELF_PROMO -> R.string.settings_sb_selfpromo
+        SponsorCategory.INTERACTION -> R.string.settings_sb_interaction
+        SponsorCategory.INTRO -> R.string.settings_sb_intro
+        SponsorCategory.OUTRO -> R.string.settings_sb_outro
+        SponsorCategory.PREVIEW -> R.string.settings_sb_preview
+        SponsorCategory.MUSIC_OFFTOPIC -> R.string.settings_sb_music
+        SponsorCategory.FILLER -> R.string.settings_sb_filler
+    },
+)
+
+@Composable
+private fun menuLabel(item: MenuItem): String = stringResource(
+    when (item) {
+        MenuItem.SEARCH -> R.string.settings_menu_search
+        MenuItem.HOME -> R.string.settings_menu_home
+        MenuItem.SUBSCRIPTIONS -> R.string.settings_menu_subscriptions
+        MenuItem.HISTORY -> R.string.settings_menu_history
+    },
+)

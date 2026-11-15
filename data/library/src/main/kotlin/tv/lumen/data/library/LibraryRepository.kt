@@ -43,6 +43,12 @@ interface LibraryRepository {
     suspend fun removeFromHistory(videoId: String)
     suspend fun clearHistory()
 
+    /** Скорость, сохранённая для канала (только для подписок, SPEC 9.1). */
+    suspend fun channelSpeed(channelId: ChannelId): Float?
+    suspend fun setChannelSpeed(channelId: ChannelId, speed: Float?)
+
+    val blockedChannelList: Flow<List<ChannelSummary>>
+
     val blockedChannels: Flow<Set<ChannelId>>
     suspend fun blockChannel(channelId: ChannelId, name: String)
     suspend fun unblockChannel(channelId: ChannelId)

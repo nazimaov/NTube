@@ -37,5 +37,14 @@ interface PlayerController {
     /** Отменить автопереход к следующему видео. */
     fun cancelNextUp()
 
+    /** «Вернуть» пропущенный сегмент SponsorBlock. */
+    fun undoSkip()
+
+    /** Пропустить сегмент в режиме «кнопка пропуска». */
+    fun skipActiveSegment()
+
+    /** Запомнить текущую скорость для канала видео (SPEC 6.4). */
+    fun rememberSpeedForChannel()
+
     fun release()
 }

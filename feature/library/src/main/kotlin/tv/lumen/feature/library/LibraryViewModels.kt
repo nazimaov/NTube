@@ -15,6 +15,8 @@ import tv.lumen.core.model.AppResult
 import tv.lumen.core.model.ChannelSummary
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.WatchEntry
+import kotlinx.coroutines.flow.combine
+import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.library.VideoActions
 import javax.inject.Inject
@@ -22,6 +24,7 @@ import javax.inject.Inject
 @HiltViewModel
 class SubscriptionsViewModel @Inject constructor(
     private val library: LibraryRepository,
+    filter: ContentFilter,
 ) : ViewModel() {
 
     val focusMemory = FocusMemory()
@@ -30,7 +33,7 @@ class SubscriptionsViewModel @Inject constructor(
     /** null — ещё не загружено из БД. */
     val channels: StateFlow<List<ChannelSummary>?> = library.subscriptions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-    val feed: StateFlow<List<Video>> = library.feed
+    val feed: StateFlow<List<Video>> = combine(library.feed, filter.rules) { feed, rules -> rules.videos(feed) }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
     private val _refreshing = MutableStateFlow(false)

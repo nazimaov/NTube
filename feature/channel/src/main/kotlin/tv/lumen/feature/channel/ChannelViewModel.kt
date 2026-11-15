@@ -21,6 +21,7 @@ import tv.lumen.core.model.map
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
+import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.youtube.YouTubeRepository
 import javax.inject.Inject
@@ -36,6 +37,7 @@ class ChannelViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val youtube: YouTubeRepository,
     private val library: LibraryRepository,
+    filter: ContentFilter,
 ) : ViewModel() {
 
     /** Имя аргумента — поле маршрута Channel(channelId) в app. */
@@ -50,7 +52,10 @@ class ChannelViewModel @Inject constructor(
     val tab: StateFlow<ChannelTab> = _tab.asStateFlow()
 
     private val _items = MutableStateFlow(PagedState<SearchItem>())
-    val items: StateFlow<PagedState<SearchItem>> = _items.asStateFlow()
+    val items: StateFlow<PagedState<SearchItem>> = combine(_items, filter.rules) { s, rules ->
+        val own = rules.copy(blockedChannels = emptySet())
+        s.copy(items = s.items.filter(own::allows))
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, PagedState())
 
     /** Подписан ли пользователь: сравниваем и с ID из маршрута, и с каноническим ID канала. */
     val isSubscribed: StateFlow<Boolean> = combine(library.subscriptions, _header) { subs, header ->

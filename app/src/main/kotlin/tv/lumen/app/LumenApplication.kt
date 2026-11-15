@@ -13,6 +13,11 @@ import okhttp3.OkHttpClient
 import okio.Path.Companion.toOkioPath
 import tv.lumen.data.youtube.YouTubeInitializer
 import javax.inject.Inject
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+import tv.lumen.core.common.ApplicationScope
+import tv.lumen.core.datastore.SettingsRepository
+import java.util.Locale
 
 @HiltAndroidApp
 class LumenApplication : Application(), SingletonImageLoader.Factory {
@@ -23,10 +28,24 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
     @Inject
     lateinit var okHttpClient: OkHttpClient
 
+    @Inject
+    lateinit var settings: SettingsRepository
+
+    @Inject
+    @ApplicationScope
+    lateinit var appScope: CoroutineScope
+
     override fun onCreate() {
         super.onCreate()
         // SPEC 4.2: один раз при запуске. Язык и страна — из системной локали, позже из настроек.
         youTubeInitializer.initialize()
+        // Язык и страна контента из настроек; null — системная локаль (SPEC 4.2, 9.2)
+        appScope.launch {
+            settings.flow { it.contentLanguage to it.contentCountry }.collect { (language, country) ->
+                val system = Locale.getDefault()
+                youTubeInitializer.setContentLocale(language ?: system.language, country ?: system.country.ifBlank { "US" })
+            }
+        }
     }
 
     /** Картинки Coil: общий OkHttp, диск 100 МБ, память 15% (SPEC 9.3). */

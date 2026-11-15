@@ -20,6 +20,8 @@ import tv.lumen.core.designsystem.focus.FocusMemory
 import tv.lumen.core.model.SearchFilter
 import tv.lumen.core.model.SearchItem
 import tv.lumen.core.model.getOrNull
+import kotlinx.coroutines.flow.combine
+import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.library.VideoActions
 import tv.lumen.data.youtube.YouTubeRepository
@@ -29,6 +31,7 @@ import javax.inject.Inject
 class SearchViewModel @Inject constructor(
     private val youtube: YouTubeRepository,
     library: LibraryRepository,
+    filter: ContentFilter,
 ) : ViewModel() {
 
     val focusMemory = FocusMemory()
@@ -44,7 +47,11 @@ class SearchViewModel @Inject constructor(
     val filter: StateFlow<SearchFilter> = _filter.asStateFlow()
 
     private val _results = MutableStateFlow<PagedState<SearchItem>?>(null)
-    val results: StateFlow<PagedState<SearchItem>?> = _results.asStateFlow()
+
+    /** Результаты после фильтров 6.4; подгрузка идёт по нефильтрованному списку. */
+    val results: StateFlow<PagedState<SearchItem>?> = combine(_results, filter.rules) { r, rules ->
+        r?.copy(items = r.items.filter(rules::allows))
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     private var pager: Pager<SearchItem>? = null
     private var collectJob: Job? = null

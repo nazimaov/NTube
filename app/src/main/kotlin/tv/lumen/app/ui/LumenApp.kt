@@ -26,8 +26,11 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination.Companion.hierarchy
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
@@ -59,7 +62,12 @@ import tv.lumen.feature.watch.WatchRoute
 
 /** Корневой UI: боковое меню tv-material, свёрнутое до иконок, и NavHost с разделами. */
 @Composable
-fun LumenApp(pendingVideoId: String? = null, onPendingVideoHandled: () -> Unit = {}) {
+fun LumenApp(
+    pendingVideoId: String? = null,
+    onPendingVideoHandled: () -> Unit = {},
+    appViewModel: AppViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel(),
+) {
+    val menu by appViewModel.menu.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -112,7 +120,7 @@ fun LumenApp(pendingVideoId: String? = null, onPendingVideoHandled: () -> Unit =
                         .onFocusChanged { drawerHasFocus = it.hasFocus },
                     verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
                 ) {
-                    TopLevelDestination.entries.forEach { item ->
+                    menu.forEach { item ->
                         NavigationDrawerItem(
                             selected = currentDestination.isOn(item),
                             onClick = { navController.navigateToTopLevel(item) },
@@ -132,7 +140,7 @@ fun LumenApp(pendingVideoId: String? = null, onPendingVideoHandled: () -> Unit =
                 }
                 composable<Subscriptions> { SubscriptionsRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<History> { HistoryRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
-                composable<Settings> { SettingsRoute() }
+                composable<Settings> { SettingsRoute(versionName = tv.lumen.app.BuildConfig.VERSION_NAME) }
                 composable<Channel> {
                     ChannelRoute(onOpenVideo = { openVideo(it) }, onOpenPlaylist = ::openPlaylist)
                 }

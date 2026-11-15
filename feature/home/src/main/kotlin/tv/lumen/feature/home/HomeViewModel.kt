@@ -14,6 +14,7 @@ import tv.lumen.core.model.AppError
 import tv.lumen.core.model.AppResult
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.WatchEntry
+import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.library.VideoActions
 import tv.lumen.data.youtube.YouTubeRepository
@@ -36,6 +37,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val youtube: YouTubeRepository,
     private val library: LibraryRepository,
+    filter: ContentFilter,
 ) : ViewModel() {
 
     val focusMemory = FocusMemory()
@@ -43,8 +45,13 @@ class HomeViewModel @Inject constructor(
 
     private val trending = MutableStateFlow<TrendingState>(TrendingState.Loading)
 
-    val state: StateFlow<HomeUiState> = combine(library.continueWatching, library.feed, trending) { cont, feed, tr ->
-        HomeUiState(continueWatching = cont, subscriptionsNew = feed.take(ROW_SIZE), trending = tr)
+    // Фильтры 6.4 применяются ко всем рядам, кроме «Продолжить просмотр»
+    val state: StateFlow<HomeUiState> = combine(library.continueWatching, library.feed, trending, filter.rules) { cont, feed, tr, rules ->
+        HomeUiState(
+            continueWatching = cont.filter { it.video.channelId == null || it.video.channelId !in rules.blockedChannels },
+            subscriptionsNew = rules.videos(feed).take(ROW_SIZE),
+            trending = if (tr is TrendingState.Content) TrendingState.Content(rules.videos(tr.videos)) else tr,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     init {

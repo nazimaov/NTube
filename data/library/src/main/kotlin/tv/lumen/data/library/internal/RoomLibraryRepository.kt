@@ -14,6 +14,7 @@ import kotlinx.coroutines.sync.Semaphore
 import kotlinx.coroutines.sync.withPermit
 import kotlinx.coroutines.withContext
 import tv.lumen.core.common.IoDispatcher
+import tv.lumen.core.datastore.SettingsRepository
 import tv.lumen.core.database.BlockedChannelDao
 import tv.lumen.core.database.BlockedChannelEntity
 import tv.lumen.core.database.FeedDao
@@ -43,6 +44,7 @@ internal class RoomLibraryRepository @Inject constructor(
     private val historyDao: WatchHistoryDao,
     private val blockedDao: BlockedChannelDao,
     private val source: ChannelSource,
+    private val settings: SettingsRepository,
     @ApplicationContext context: Context,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : LibraryRepository {
@@ -120,7 +122,8 @@ internal class RoomLibraryRepository @Inject constructor(
         }
 
     override suspend fun savePosition(video: Video, positionMs: Long, durationMs: Long) = withContext(io) {
-        if (video.isLive || durationMs <= 0) return@withContext
+        // «Не вести историю» (SPEC 7.2)
+        if (video.isLive || durationMs <= 0 || !settings.current.value.historyEnabled) return@withContext
         historyDao.upsert(
             WatchHistoryEntity(
                 videoId = video.id,
@@ -143,6 +146,15 @@ internal class RoomLibraryRepository @Inject constructor(
     override suspend fun removeFromHistory(videoId: String) = withContext(io) { historyDao.delete(videoId) }
 
     override suspend fun clearHistory() = withContext(io) { historyDao.clear() }
+
+    override suspend fun channelSpeed(channelId: ChannelId): Float? = withContext(io) { subscriptionDao.get(channelId)?.playbackSpeed }
+
+    override suspend fun setChannelSpeed(channelId: ChannelId, speed: Float?) = withContext(io) {
+        subscriptionDao.get(channelId)?.let { subscriptionDao.upsert(it.copy(playbackSpeed = speed)) } ?: Unit
+    }
+
+    override val blockedChannelList: Flow<List<ChannelSummary>> =
+        blockedDao.observeAll().map { list -> list.map { ChannelSummary(it.channelId, it.name, null, -1, false) } }
 
     override val blockedChannels: Flow<Set<ChannelId>> =
         blockedDao.observeAll().map { list -> list.mapTo(HashSet()) { it.channelId } }

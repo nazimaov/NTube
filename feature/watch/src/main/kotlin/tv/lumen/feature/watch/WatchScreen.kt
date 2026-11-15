@@ -163,6 +163,12 @@ internal fun WatchScreen(
         }
         if (event.type != KeyEventType.KeyDown) return false
         interaction++
+        // SponsorBlock: OK при скрытой панели — «Вернуть» пропущенное или «Пропустить» сегмент (SPEC 6.1)
+        val isOk = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
+        if (isOk && !panelVisible && dialog == null) {
+            if (state.skippedSegment != null) { controller.undoSkip(); return true }
+            if (state.activeSegment != null) { controller.skipActiveSegment(); return true }
+        }
         when (event.key) {
             Key.MediaPlayPause -> { controller.togglePlayPause(); showPanel(PanelFocus.PLAY); return true }
             Key.MediaPlay -> { controller.play(); return true }
@@ -208,6 +214,23 @@ internal fun WatchScreen(
         }
 
         state.notice?.let { NoticeBanner(it, Modifier.align(Alignment.TopCenter)) }
+
+        // Плашки SponsorBlock: «Пропущено: спонсор · OK — вернуть», «Пропустить: … · OK»
+        val sponsorText = state.skippedSegment?.let { stringResource(R.string.watch_sb_skipped, categoryName(it.category)) }
+            ?: state.activeSegment?.let { stringResource(R.string.watch_sb_skip, categoryName(it.category)) }
+        if (sponsorText != null && dialog == null) {
+            Text(
+                text = sponsorText,
+                color = Color.White,
+                style = MaterialTheme.typography.titleMedium,
+                modifier = Modifier
+                    .align(Alignment.TopStart)
+                    .padding(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical)
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Color.Black.copy(alpha = 0.8f))
+                    .padding(horizontal = 20.dp, vertical = 12.dp),
+            )
+        }
 
         AnimatedVisibility(
             visible = panelVisible && state.error == null,
@@ -427,6 +450,14 @@ private fun SeekBar(state: PlayerState, controller: PlayerController, onInteract
         val shape = RoundedCornerShape(50)
         Box(Modifier.fillMaxWidth().height(height).clip(shape).background(Color.White.copy(alpha = 0.25f)))
         Box(Modifier.fillMaxWidth(buffered).height(height).clip(shape).background(Color.White.copy(alpha = 0.45f)))
+        // Сегменты SponsorBlock цветом категории (SPEC 6.1)
+        androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(height)) {
+            state.segments.forEach { s ->
+                val x0 = size.width * (s.startMs.toFloat() / duration).coerceIn(0f, 1f)
+                val x1 = size.width * (s.endMs.toFloat() / duration).coerceIn(0f, 1f)
+                drawRect(color = categoryColor(s.category), topLeft = androidx.compose.ui.geometry.Offset(x0, 0f), size = androidx.compose.ui.geometry.Size((x1 - x0).coerceAtLeast(2f), size.height))
+            }
+        }
         Box(
             Modifier.fillMaxWidth(played).height(height).clip(shape)
                 .background(if (focused) MaterialTheme.colorScheme.primary else Color.White),

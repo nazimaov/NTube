@@ -1,0 +1,50 @@
+package tv.lumen.core.datastore
+
+import tv.lumen.core.model.SegmentMode
+import tv.lumen.core.model.SponsorCategory
+
+enum class PreferredCodec { AUTO, AV1, VP9, AVC }
+
+/** Пункты бокового меню, которые можно скрыть и переставить (SPEC 6.4). «Настройки» всегда видны. */
+enum class MenuItem { SEARCH, HOME, SUBSCRIPTIONS, HISTORY }
+
+/** Снимок всех настроек (SPEC 9.2). */
+data class Settings(
+    // Плеер
+    val maxResolution: Int = 0,
+    val defaultSpeed: Float = 1.0f,
+    val preferredCodec: PreferredCodec = PreferredCodec.AUTO,
+    val autoplayNext: Boolean = true,
+    val subtitlesLang: String? = null,
+    val audioLang: String? = null,
+    val matchFrameRate: Boolean = false,
+    // SponsorBlock
+    val sponsorBlockEnabled: Boolean = true,
+    val sponsorCategories: Map<SponsorCategory, SegmentMode> = DEFAULT_SPONSOR_MODES,
+    // Моды
+    val deArrowTitles: Boolean = false,
+    val deArrowThumbnails: Boolean = false,
+    val rydEnabled: Boolean = false,
+    // Лента
+    val hideShorts: Boolean = true,
+    val hideWatched: Boolean = false,
+    val blockedWords: Set<String> = emptySet(),
+    // Общие
+    /** null — из системной локали. */
+    val contentCountry: String? = null,
+    val contentLanguage: String? = null,
+    val historyEnabled: Boolean = true,
+    val menuItems: List<MenuItem> = MenuItem.entries,
+    val hiddenMenuItems: Set<MenuItem> = emptySet(),
+    // Обновления
+    val updateCheckOnStart: Boolean = true,
+) {
+    fun modeOf(category: SponsorCategory): SegmentMode = sponsorCategories[category] ?: SegmentMode.OFF
+
+    companion object {
+        /** По умолчанию sponsor и selfpromo пропускаются, остальные выключены (SPEC 6.1). */
+        val DEFAULT_SPONSOR_MODES: Map<SponsorCategory, SegmentMode> = SponsorCategory.entries.associateWith {
+            if (it == SponsorCategory.SPONSOR || it == SponsorCategory.SELF_PROMO) SegmentMode.SKIP else SegmentMode.OFF
+        }
+    }
+}

@@ -28,4 +28,15 @@
     <string name="watch_subscribed">Subscribed</string>
     <string name="watch_next_in">Up next in %d s</string>
     <string name="watch_cancel">Cancel</string>
+<string name="watch_sb_skipped">Skipped: %1$s · OK to undo</string>
+    <string name="watch_sb_skip">%1$s · OK to skip</string>
+    <string name="watch_speed_remember">Remember %1$s for this channel</string>
+    <string name="sb_sponsor">sponsor</string>
+    <string name="sb_selfpromo">self-promotion</string>
+    <string name="sb_interaction">interaction reminder</string>
+    <string name="sb_intro">intro</string>
+    <string name="sb_outro">outro</string>
+    <string name="sb_preview">preview</string>
+    <string name="sb_music_offtopic">non-music part</string>
+    <string name="sb_filler">filler</string>
 </resources>

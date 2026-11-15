@@ -1,6 +1,9 @@
 package tv.lumen.player
 
 import tv.lumen.core.model.AppError
+import tv.lumen.core.model.Segment
+import tv.lumen.core.model.SegmentMode
+import tv.lumen.core.model.SponsorCategory
 import tv.lumen.core.model.SubtitleTrack
 import tv.lumen.core.model.VideoCodec
 import tv.lumen.core.model.Video
@@ -17,6 +20,8 @@ data class PlayerPreferences(
     val subtitleLanguage: String? = null,
     val defaultSpeed: Float = 1f,
     val autoplayNext: Boolean = true,
+    val sponsorBlockEnabled: Boolean = true,
+    val sponsorModes: Map<SponsorCategory, SegmentMode> = emptyMap(),
 )
 
 enum class CodecPreference { AUTO, AV1, VP9, AVC }
@@ -66,6 +71,12 @@ data class PlayerState(
     val isSubscribed: Boolean = false,
     /** Следующее видео после окончания: экран показывает отсчёт 10 с (SPEC 5.6). */
     val nextUp: Video? = null,
+    /** Сегменты SponsorBlock — рисуются на полосе прогресса. */
+    val segments: List<Segment> = emptyList(),
+    /** Только что пропущенный сегмент: плашка с «Вернуть» на 3 с. */
+    val skippedSegment: Segment? = null,
+    /** Сегмент в режиме «кнопка пропуска», внутри которого сейчас позиция. */
+    val activeSegment: Segment? = null,
 )
 
 const val MIN_SPEED = 0.25f

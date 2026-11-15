@@ -52,7 +52,12 @@ internal fun OptionsDialog(
         }
         WatchDialog.SPEED -> {
             title = stringResource(R.string.watch_speed)
-            options = SPEEDS.map { s -> Option(formatSpeed(s), s == state.speed) { controller.setSpeed(s) } }
+            options = SPEEDS.map { s -> Option(formatSpeed(s), s == state.speed) { controller.setSpeed(s) } } +
+                if (state.isSubscribed) {
+                    listOf(Option(stringResource(R.string.watch_speed_remember, formatSpeed(state.speed)), false) { controller.rememberSpeedForChannel() })
+                } else {
+                    emptyList()
+                }
         }
         WatchDialog.SUBTITLES -> {
             title = stringResource(R.string.watch_subtitles)

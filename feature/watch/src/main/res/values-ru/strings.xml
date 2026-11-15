@@ -28,4 +28,15 @@
     <string name="watch_subscribed">Вы подписаны</string>
     <string name="watch_next_in">Далее через %d с</string>
     <string name="watch_cancel">Отмена</string>
+<string name="watch_sb_skipped">Пропущено: %1$s · OK — вернуть</string>
+    <string name="watch_sb_skip">%1$s · OK — пропустить</string>
+    <string name="watch_speed_remember">Запомнить %1$s для канала</string>
+    <string name="sb_sponsor">спонсор</string>
+    <string name="sb_selfpromo">самореклама</string>
+    <string name="sb_interaction">просьба о подписке</string>
+    <string name="sb_intro">заставка</string>
+    <string name="sb_outro">концовка</string>
+    <string name="sb_preview">анонс</string>
+    <string name="sb_music_offtopic">не музыка</string>
+    <string name="sb_filler">отступление</string>
 </resources>

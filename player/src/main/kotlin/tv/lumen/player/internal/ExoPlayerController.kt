@@ -23,6 +23,11 @@ import tv.lumen.core.model.AppResult
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.VideoDetails
 import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.sponsorblock.SponsorBlockRepository
+import tv.lumen.core.model.Segment
+import tv.lumen.core.model.SegmentMode
+import androidx.media3.exoplayer.PlayerMessage
+import android.os.Looper
 import tv.lumen.data.youtube.YouTubeRepository
 import tv.lumen.player.MAX_SPEED
 import tv.lumen.player.MIN_SPEED
@@ -48,6 +53,7 @@ internal class ExoPlayerController(
     private val library: LibraryRepository,
     /** Переживает экран: последнее сохранение позиции после release(). */
     private val appScope: CoroutineScope,
+    private val sponsorBlock: SponsorBlockRepository,
 ) : PlayerController {
 
     private val exo: ExoPlayer = ExoPlayer.Builder(context)
@@ -74,6 +80,13 @@ internal class ExoPlayerController(
     private var saveJob: Job? = null
     private var subscribedJob: Job? = null
     private var playlistId: String? = null
+
+    // SponsorBlock (SPEC 6.1)
+    private var segments: List<Segment> = emptyList()
+    private val disabledSegments = HashSet<String>()
+    private val segmentMessages = ArrayList<PlayerMessage>()
+    private var segmentsJob: Job? = null
+    private var noticeJob: Job? = null
 
     init {
         exo.setPlaybackSpeed(prefs.defaultSpeed)
@@ -115,7 +128,86 @@ internal class ExoPlayerController(
         retries = 0
         this.playlistId = playlistId
         _state.value = PlayerState(videoId = videoId, isLoading = true, speed = exo.playbackParameters.speed)
+        segments = emptyList()
+        disabledSegments.clear()
+        loadSegments(videoId) // параллельно с загрузкой видео (SPEC 6.1)
         fetchAndPrepare(videoId, startPositionMs, forceRefresh = false, resume = startPositionMs == 0L)
+    }
+
+    private fun loadSegments(videoId: String) {
+        segmentsJob?.cancel()
+        if (!prefs.sponsorBlockEnabled) return
+        val categories = prefs.sponsorModes.filterValues { it != SegmentMode.OFF }.keys
+        segmentsJob = scope.launch {
+            segments = sponsorBlock.segments(videoId, categories)
+            _state.update { it.copy(segments = segments) }
+            scheduleSegments()
+        }
+    }
+
+    /** Пропуск через PlayerMessage на позиции начала сегмента; опрос позиции по таймеру не используется. */
+    private fun scheduleSegments() {
+        segmentMessages.forEach { it.cancel() }
+        segmentMessages.clear()
+        if (exo.currentMediaItem == null) return
+        for (segment in segments) {
+            val mode = prefs.sponsorModes[segment.category] ?: SegmentMode.OFF
+            if (mode == SegmentMode.OFF) continue
+            segmentMessages += exo.createMessage { _, _ -> onSegmentStart(segment, mode) }
+                .setLooper(Looper.getMainLooper())
+                .setPosition(segment.startMs)
+                .setDeleteAfterDelivery(false)
+                .send()
+            if (mode == SegmentMode.BUTTON) {
+                segmentMessages += exo.createMessage { _, _ -> if (_state.value.activeSegment == segment) _state.update { it.copy(activeSegment = null) } }
+                    .setLooper(Looper.getMainLooper())
+                    .setPosition(segment.endMs)
+                    .setDeleteAfterDelivery(false)
+                    .send()
+            }
+        }
+    }
+
+    private fun onSegmentStart(segment: Segment, mode: SegmentMode) {
+        if (segment.uuid in disabledSegments) return
+        when (mode) {
+            SegmentMode.SKIP -> {
+                exo.seekTo(segment.endMs)
+                showSkipped(segment)
+            }
+            SegmentMode.BUTTON -> _state.update { it.copy(activeSegment = segment) }
+            SegmentMode.OFF -> Unit
+        }
+    }
+
+    /** Плашка «Пропущено: …» на 3 с (SPEC 6.1). */
+    private fun showSkipped(segment: Segment) {
+        _state.update { it.copy(skippedSegment = segment) }
+        noticeJob?.cancel()
+        noticeJob = scope.launch {
+            delay(SKIPPED_NOTICE_MS)
+            _state.update { if (it.skippedSegment == segment) it.copy(skippedSegment = null) else it }
+        }
+    }
+
+    /** «Вернуть»: к началу сегмента и без пропуска до конца просмотра. */
+    override fun undoSkip() {
+        val segment = _state.value.skippedSegment ?: return
+        disabledSegments += segment.uuid
+        exo.seekTo(segment.startMs)
+        _state.update { it.copy(skippedSegment = null) }
+    }
+
+    override fun skipActiveSegment() {
+        val segment = _state.value.activeSegment ?: return
+        exo.seekTo(segment.endMs)
+        _state.update { it.copy(activeSegment = null) }
+    }
+
+    override fun rememberSpeedForChannel() {
+        val channelId = details?.video?.channelId ?: return
+        val speed = exo.playbackParameters.speed
+        appScope.launch { library.setChannelSpeed(channelId, speed) }
     }
 
     private fun fetchAndPrepare(videoId: String, positionMs: Long, forceRefresh: Boolean, resume: Boolean = false) {
@@ -127,6 +219,8 @@ internal class ExoPlayerController(
                 is AppResult.Success -> {
                     details = result.value
                     observeSubscription(result.value)
+                    // Скорость, сохранённая для канала (SPEC 6.4)
+                    if (!forceRefresh) result.value.video.channelId?.let { library.channelSpeed(it) }?.let(::setSpeed)
                     // Продолжение с сохранённой позиции, если просмотрено 5–95% (SPEC 5.6)
                     val start = if (resume && !result.value.video.isLive) library.resumePosition(videoId) ?: 0 else positionMs
                     prepare(result.value, start)
@@ -226,6 +320,7 @@ internal class ExoPlayerController(
         if (selection is Selection.Live) exo.setMediaSource(source) else exo.setMediaSource(source, positionMs)
         exo.prepare()
         exo.play()
+        scheduleSegments() // новый источник — сообщения ставятся заново
 
         _state.update {
             it.copy(
@@ -354,6 +449,8 @@ internal class ExoPlayerController(
         tickerJob?.cancel()
         saveJob?.cancel()
         subscribedJob?.cancel()
+        segmentsJob?.cancel()
+        noticeJob?.cancel()
         session.release()
         exo.release()
     }
@@ -362,6 +459,7 @@ internal class ExoPlayerController(
         const val MAX_RETRIES = 2
         const val TICK_MS = 500L
         const val SAVE_EVERY_MS = 5_000L
+        const val SKIPPED_NOTICE_MS = 3_000L
         const val MAX_PLAYLIST_PAGES = 5
     }
 }
