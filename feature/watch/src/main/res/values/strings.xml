@@ -40,4 +40,7 @@
     <string name="sb_music_offtopic">non-music part</string>
     <string name="sb_filler">filler</string>
 <string name="watch_check_update">Check for update</string>
+<string name="watch_comments">Comments</string>
+    <string name="watch_comments_empty">No comments.</string>
+    <string name="watch_dislikes">≈ %1$s dislikes</string>
 </resources>

@@ -9,6 +9,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import tv.lumen.core.designsystem.component.LocalVideoDecorator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -69,6 +71,7 @@ fun LumenApp(
 ) {
     val menu by appViewModel.menu.collectAsStateWithLifecycle()
     val updateState by appViewModel.updateState.collectAsStateWithLifecycle()
+    val decorator by appViewModel.decorator.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -101,6 +104,7 @@ fun LumenApp(
         return true
     }
 
+    CompositionLocalProvider(LocalVideoDecorator provides decorator) {
     Box(
         modifier = Modifier
             .fillMaxSize()
@@ -168,6 +172,7 @@ fun LumenApp(
         if (showExitDialog) {
             ExitDialog(onConfirm = { activity?.finish() }, onDismiss = { showExitDialog = false })
         }
+    }
     }
 
     // Внешняя ссылка youtube.com/watch или youtu.be открывает плеер

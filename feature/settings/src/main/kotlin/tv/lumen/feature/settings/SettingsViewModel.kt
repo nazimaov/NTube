@@ -12,16 +12,43 @@ import tv.lumen.core.datastore.Settings
 import tv.lumen.core.datastore.SettingsRepository
 import tv.lumen.core.designsystem.focus.FocusMemory
 import tv.lumen.core.model.ChannelSummary
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
 import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.library.backup.BackupServer
+import tv.lumen.data.library.backup.ImportResult
 import tv.lumen.data.updater.UpdateManager
 import javax.inject.Inject
+
+/** url = null — сеть недоступна. */
+data class BackupUiState(val url: String?, val lastResult: ImportResult? = null, val lastFailed: Boolean = false)
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     private val library: LibraryRepository,
     private val updates: UpdateManager,
+    private val backupServer: BackupServer,
 ) : ViewModel() {
+
+    private val _backup = MutableStateFlow<BackupUiState?>(null)
+    val backup: StateFlow<BackupUiState?> = _backup.asStateFlow()
+
+    /** Импорт и экспорт (SPEC 7.1): сервер работает, пока открыт диалог. */
+    fun openBackup() {
+        val url = backupServer.start { result -> _backup.update { it?.copy(lastResult = result, lastFailed = result == null) } }
+        _backup.value = BackupUiState(url = url)
+    }
+
+    fun closeBackup() {
+        backupServer.stop()
+        _backup.value = null
+    }
+
+    override fun onCleared() {
+        backupServer.stop()
+    }
 
     /** Результат показывает общий диалог обновления в app. */
     fun checkForUpdates() {

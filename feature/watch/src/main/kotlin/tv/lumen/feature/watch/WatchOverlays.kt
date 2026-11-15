@@ -68,6 +68,7 @@ internal fun OptionsDialog(
                     Option(label, t.languageTag == state.subtitle) { controller.setSubtitle(t.languageTag) }
                 }
         }
+        WatchDialog.COMMENTS -> return
         WatchDialog.AUDIO -> {
             title = stringResource(R.string.watch_audio)
             val original = stringResource(R.string.watch_audio_original)

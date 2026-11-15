@@ -10,6 +10,9 @@ import tv.lumen.app.navigation.TopLevelDestination
 import tv.lumen.core.datastore.MenuItem
 import tv.lumen.core.datastore.SettingsRepository
 import javax.inject.Inject
+import kotlinx.coroutines.flow.map
+import tv.lumen.core.designsystem.component.VideoDecorator
+import tv.lumen.data.dearrow.DeArrowRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import tv.lumen.data.updater.UpdateInfo
@@ -21,7 +24,13 @@ import tv.lumen.data.updater.UpdateState
 class AppViewModel @Inject constructor(
     settings: SettingsRepository,
     private val updates: UpdateManager,
+    dearrow: DeArrowRepository,
 ) : ViewModel() {
+
+    /** Новый декоратор при смене настроек — карточки перерисовываются сразу, без перезапуска. */
+    val decorator: StateFlow<VideoDecorator?> = settings.flow { it.deArrowTitles to it.deArrowThumbnails }
+        .map { (titles, thumbs) -> if (titles || thumbs) DeArrowDecorator(dearrow, titles, thumbs) else null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
     val updateState: StateFlow<UpdateState> = updates.state
 

@@ -121,4 +121,13 @@ class MappersTest {
         assertEquals(DeliveryMethod.OTHER, Mappers.delivery(NpDeliveryMethod.SS))
         ChannelTab.entries.forEach { assertEquals(it, Mappers.channelTab(Mappers.channelTabName(it))) }
     }
+
+    @Test
+    fun `html комментария превращается в текст`() {
+        val html = org.schabi.newpipe.extractor.stream.Description(
+            "Comments<br>90% - Big Chungus<br/>&quot;free&quot; &amp; <a href=\"x\">open</a>",
+            org.schabi.newpipe.extractor.stream.Description.Type.HTML,
+        )
+        assertEquals("Comments\n90% - Big Chungus\n\"free\" & open", Mappers.plainText(html))
+    }
 }

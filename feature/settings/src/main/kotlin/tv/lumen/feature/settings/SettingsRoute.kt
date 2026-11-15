@@ -57,6 +57,7 @@ fun SettingsRoute(
 ) {
     val s by viewModel.settings.collectAsStateWithLifecycle()
     val blocked by viewModel.blockedChannels.collectAsStateWithLifecycle()
+    val backup by viewModel.backup.collectAsStateWithLifecycle()
     var choice by remember { mutableStateOf<ChoiceRequest?>(null) }
     var addingWord by remember { mutableStateOf(false) }
     FocusMemoryScope(viewModel.focusMemory)
@@ -133,6 +134,12 @@ fun SettingsRoute(
             }
         }
 
+        item {
+            Toggle(stringResource(R.string.settings_match_fps), s.matchFrameRate, Modifier.rememberFocus(memory, "fps")) {
+                viewModel.update { it.copy(matchFrameRate = !it.matchFrameRate) }
+            }
+        }
+
         section(R.string.settings_section_sponsorblock)
         item {
             Toggle(stringResource(R.string.settings_sb_enabled), s.sponsorBlockEnabled, Modifier.rememberFocus(memory, "sb")) {
@@ -147,6 +154,23 @@ fun SettingsRoute(
                         viewModel.update { it.copy(sponsorCategories = it.sponsorCategories + (category to v)) }
                     }
                 }
+            }
+        }
+
+        section(R.string.settings_section_mods)
+        item {
+            Toggle(stringResource(R.string.settings_dearrow_titles), s.deArrowTitles, Modifier.rememberFocus(memory, "daTitles")) {
+                viewModel.update { it.copy(deArrowTitles = !it.deArrowTitles) }
+            }
+        }
+        item {
+            Toggle(stringResource(R.string.settings_dearrow_thumbs), s.deArrowThumbnails, Modifier.rememberFocus(memory, "daThumbs")) {
+                viewModel.update { it.copy(deArrowThumbnails = !it.deArrowThumbnails) }
+            }
+        }
+        item {
+            Toggle(stringResource(R.string.settings_ryd), s.rydEnabled, Modifier.rememberFocus(memory, "ryd")) {
+                viewModel.update { it.copy(rydEnabled = !it.rydEnabled) }
             }
         }
 
@@ -203,6 +227,10 @@ fun SettingsRoute(
             }
         }
 
+        item {
+            Row(stringResource(R.string.settings_backup), null, Modifier.rememberFocus(memory, "backup")) { viewModel.openBackup() }
+        }
+
         section(R.string.settings_section_menu)
         items(s.menuItems, key = { "menu:${it.name}" }) { item ->
             val title = menuLabel(item)
@@ -236,6 +264,8 @@ fun SettingsRoute(
             )
         }
     }
+
+    backup?.let { BackupDialog(it, onClose = viewModel::closeBackup) }
 
     choice?.let { req ->
         ChoiceDialog(req) { choice = null }

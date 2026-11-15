@@ -61,6 +61,9 @@ interface WatchHistoryDao {
     )
     fun observeInProgress(limit: Int): Flow<List<WatchHistoryEntity>>
 
+    @Query("SELECT * FROM watch_history ORDER BY watched_at DESC")
+    suspend fun getAll(): List<WatchHistoryEntity>
+
     @Query("SELECT * FROM watch_history WHERE video_id = :videoId")
     suspend fun get(videoId: String): WatchHistoryEntity?
 

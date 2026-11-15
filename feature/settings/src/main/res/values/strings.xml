@@ -54,4 +54,15 @@
     <string name="settings_licenses">Lumen is free software under GPLv3. YouTube data: NewPipeExtractor (GPLv3). Player: AndroidX Media3 (Apache 2.0). Sponsored segments: SponsorBlock by Ajay Ramachandran, sponsor.ajay.app, data licensed under CC BY-NC-SA 4.0. Not affiliated with YouTube or Google.</string>
 <string name="settings_check_updates">Check for updates</string>
     <string name="settings_update_on_start">Check for updates on start</string>
+<string name="settings_match_fps">Match display frame rate</string>
+    <string name="settings_section_mods">Mods</string>
+    <string name="settings_dearrow_titles">DeArrow: neutral titles</string>
+    <string name="settings_dearrow_thumbs">DeArrow: neutral thumbnails</string>
+    <string name="settings_ryd">Show dislike count (Return YouTube Dislike)</string>
+    <string name="settings_backup">Import and export</string>
+    <string name="settings_backup_hint">Open this address on a phone in the same network to import subscriptions.csv from Google Takeout or download a backup:</string>
+    <string name="settings_backup_no_network">No local network: connect the TV to Wi-Fi or Ethernet.</string>
+    <string name="settings_backup_done">Imported subscriptions: %1$d, history entries: %2$d</string>
+    <string name="settings_backup_failed">The file format was not recognized.</string>
+    <string name="settings_close">Close</string>
 </resources>

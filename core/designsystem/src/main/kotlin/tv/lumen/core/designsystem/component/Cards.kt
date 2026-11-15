@@ -30,6 +30,9 @@ import androidx.tv.material3.CardDefaults
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import coil3.compose.AsyncImage
+import coil3.compose.rememberAsyncImagePainter
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.produceState
 import tv.lumen.core.designsystem.R
 import tv.lumen.core.designsystem.format.formatDuration
 import tv.lumen.core.designsystem.format.subscribersText
@@ -64,6 +67,12 @@ fun VideoCard(
     onLongClick: (() -> Unit)? = null,
     progress: Float? = null,
 ) {
+    // DeArrow: сначала оригинал, подмена после ответа — без мигания (SPEC 6.2)
+    val decorator = LocalVideoDecorator.current
+    val decoration by produceState<VideoDecoration?>(null, video.id, decorator) {
+        value = decorator?.let { runCatching { it.decorate(video) }.getOrNull() }
+    }
+    val originalThumb = rememberAsyncImagePainter(video.thumbnailUrl)
     Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Card(
             onClick = onClick,
@@ -75,9 +84,11 @@ fun VideoCard(
         ) {
             Box(Modifier.fillMaxSize()) {
                 AsyncImage(
-                    model = video.thumbnailUrl,
+                    model = decoration?.thumbnailUrl ?: video.thumbnailUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
+                    placeholder = originalThumb,
+                    error = originalThumb, // 204 у DeArrow — показать оригинал
                     modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
                 )
                 val badge = if (video.isLive) stringResource(R.string.ds_live) else formatDuration(video.durationSec)
@@ -104,7 +115,7 @@ fun VideoCard(
             }
         }
         Text(
-            text = video.title,
+            text = decoration?.title ?: video.title,
             style = MaterialTheme.typography.titleSmall,
             maxLines = 2,
             overflow = TextOverflow.Ellipsis,

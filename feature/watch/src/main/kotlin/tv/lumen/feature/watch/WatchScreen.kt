@@ -67,7 +67,7 @@ import tv.lumen.player.PlayerState
 private const val PANEL_HIDE_MS = 5_000L
 private const val FAST_SEEK_MS = 30_000L
 
-internal enum class WatchDialog { QUALITY, SPEED, SUBTITLES, AUDIO }
+internal enum class WatchDialog { QUALITY, SPEED, SUBTITLES, AUDIO, COMMENTS }
 
 private enum class PanelFocus { PLAY, SEEK, RELATED }
 
@@ -81,7 +81,15 @@ fun WatchRoute(
     viewModel: WatchViewModel = hiltViewModel(),
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    val dislikes by viewModel.dislikes.collectAsStateWithLifecycle()
+    val comments by viewModel.comments.collectAsStateWithLifecycle()
+    val matchFrameRate by viewModel.matchFrameRate.collectAsStateWithLifecycle()
+    FrameRateMatcher(enabled = matchFrameRate, fps = state.quality?.fps?.takeIf { !state.isLive })
     WatchScreen(
+        dislikes = dislikes,
+        comments = comments,
+        onOpenComments = viewModel::openComments,
+        onLoadMoreComments = viewModel::loadMoreComments,
         state = state,
         controller = viewModel.controller,
         onBack = onBack,
@@ -103,6 +111,10 @@ internal fun WatchScreen(
     onOpenChannel: (String) -> Unit,
     onCheckUpdate: () -> Unit,
     modifier: Modifier = Modifier,
+    dislikes: Long? = null,
+    comments: tv.lumen.core.common.PagedState<tv.lumen.core.model.Comment>? = null,
+    onOpenComments: () -> Unit = {},
+    onLoadMoreComments: () -> Unit = {},
 ) {
     var panelVisible by remember { mutableStateOf(false) }
     // Ряд «Похожие» внизу панели: открывается кнопкой Вниз (SPEC 5.5)
@@ -248,9 +260,10 @@ internal fun WatchScreen(
                 relatedVisible = relatedVisible,
                 onButtonsFocusChanged = { buttonsFocused = it },
                 onInteraction = { interaction++ },
-                onOpenDialog = { dialog = it },
+                onOpenDialog = { if (it == WatchDialog.COMMENTS) onOpenComments(); dialog = it },
                 onOpenVideo = onOpenVideo,
                 onOpenChannel = onOpenChannel,
+                dislikes = dislikes,
             )
         }
 
@@ -267,7 +280,9 @@ internal fun WatchScreen(
             ErrorOverlay(error = error, onRetry = controller::retry, onCheckUpdate = onCheckUpdate, modifier = Modifier.align(Alignment.Center))
         }
 
-        dialog?.let { current ->
+        if (dialog == WatchDialog.COMMENTS) {
+            CommentsPanel(comments, onLoadMoreComments, Modifier.align(Alignment.CenterEnd))
+        } else dialog?.let { current ->
             OptionsDialog(
                 dialog = current,
                 state = state,
@@ -318,6 +333,7 @@ private fun ControlPanel(
     onOpenDialog: (WatchDialog) -> Unit,
     onOpenVideo: (String) -> Unit,
     onOpenChannel: (String) -> Unit,
+    dislikes: Long?,
 ) {
     val playFocus = remember { FocusRequester() }
     val seekFocus = remember { FocusRequester() }
@@ -348,8 +364,13 @@ private fun ControlPanel(
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
             )
-            details.video.channelName?.let {
-                Text(it, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
+            val meta = listOfNotNull(
+                details.video.channelName,
+                // Оценка RYD — со знаком «≈» (SPEC 6.3)
+                dislikes?.let { stringResource(R.string.watch_dislikes, tv.lumen.core.designsystem.format.formatCompact(it)) },
+            )
+            if (meta.isNotEmpty()) {
+                Text(meta.joinToString("  ·  "), style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
             }
         }
 
@@ -397,6 +418,9 @@ private fun ControlPanel(
             state.details?.video?.channelId?.let { channelId ->
                 Button(onClick = { onOpenChannel(channelId) }) {
                     Text(stringResource(R.string.watch_channel))
+                }
+                Button(onClick = { onOpenDialog(WatchDialog.COMMENTS) }) {
+                    Text(stringResource(R.string.watch_comments))
                 }
                 Button(onClick = controller::toggleSubscribe) {
                     Text(stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe))

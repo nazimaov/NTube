@@ -54,4 +54,15 @@
     <string name="settings_licenses">Lumen — свободное приложение под лицензией GPLv3. Данные YouTube: NewPipeExtractor (GPLv3). Плеер: AndroidX Media3 (Apache 2.0). Спонсорские сегменты: SponsorBlock, автор Ajay Ramachandran, sponsor.ajay.app, данные по лицензии CC BY-NC-SA 4.0. Приложение не связано с YouTube и Google.</string>
 <string name="settings_check_updates">Проверить обновления</string>
     <string name="settings_update_on_start">Проверять обновления при запуске</string>
+<string name="settings_match_fps">Подстраивать частоту кадров экрана</string>
+    <string name="settings_section_mods">Моды</string>
+    <string name="settings_dearrow_titles">DeArrow: нейтральные заголовки</string>
+    <string name="settings_dearrow_thumbs">DeArrow: нейтральные обложки</string>
+    <string name="settings_ryd">Показывать дизлайки (Return YouTube Dislike)</string>
+    <string name="settings_backup">Импорт и экспорт</string>
+    <string name="settings_backup_hint">Откройте этот адрес на телефоне в той же сети, чтобы загрузить subscriptions.csv из Google Takeout или скачать резервную копию:</string>
+    <string name="settings_backup_no_network">Нет локальной сети: подключите ТВ к Wi-Fi или Ethernet.</string>
+    <string name="settings_backup_done">Импортировано подписок: %1$d, записей истории: %2$d</string>
+    <string name="settings_backup_failed">Формат файла не распознан.</string>
+    <string name="settings_close">Закрыть</string>
 </resources>

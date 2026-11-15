@@ -10,6 +10,7 @@ import org.schabi.newpipe.extractor.channel.tabs.ChannelTabs
 import org.schabi.newpipe.extractor.comments.CommentsInfoItem
 import org.schabi.newpipe.extractor.playlist.PlaylistInfoItem
 import org.schabi.newpipe.extractor.stream.AudioTrackType
+import org.schabi.newpipe.extractor.stream.Description
 import org.schabi.newpipe.extractor.stream.StreamInfo
 import org.schabi.newpipe.extractor.stream.StreamInfoItem
 import org.schabi.newpipe.extractor.stream.StreamType
@@ -139,7 +140,7 @@ internal object Mappers {
         id = item.commentId.orEmpty(),
         authorName = item.uploaderName.orEmpty(),
         authorAvatarUrl = bestImageUrl(item.uploaderAvatars, maxHeight = 240),
-        text = item.commentText?.content.orEmpty(),
+        text = plainText(item.commentText),
         likeCount = item.likeCount,
         publishedText = item.textualUploadDate,
         replyCount = item.replyCount.coerceAtLeast(0),
@@ -195,7 +196,7 @@ internal object Mappers {
                 isLive = isLive,
                 isShort = info.isShortFormContent,
             ),
-            description = info.description.content,
+            description = plainText(info.description),
             likeCount = info.likeCount.takeIf { it >= 0 } ?: -1,
             channelAvatarUrl = bestImageUrl(info.uploaderAvatars, maxHeight = 240),
             channelSubscriberCount = info.uploaderSubscriberCount.takeIf { it >= 0 } ?: -1,
@@ -294,6 +295,19 @@ internal object Mappers {
             format == MediaFormat.M4A -> AudioCodec.AAC
             else -> AudioCodec.OTHER
         }
+    }
+
+    /** Текст описания или комментария: HTML (YouTube отдаёт `<br>`, ссылки, сущности) → обычный текст. */
+    fun plainText(description: Description?): String {
+        description ?: return ""
+        if (description.type != Description.Type.HTML) return description.content
+        return description.content
+            .replace(Regex("""<br\s*/?>""", RegexOption.IGNORE_CASE), "\n")
+            .replace(Regex("<[^>]+>"), "")
+            .replace("&quot;", "\"").replace("&#39;", "'").replace("&apos;", "'")
+            .replace("&lt;", "<").replace("&gt;", ">").replace("&nbsp;", " ")
+            .replace("&amp;", "&")
+            .trim()
     }
 
     /** `1080p60 HDR` → 1080. */
