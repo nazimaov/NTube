@@ -1,0 +1,375 @@
+package tv.lumen.feature.watch
+
+import android.graphics.Color as AndroidColor
+import android.view.ViewGroup
+import androidx.activity.compose.BackHandler
+import androidx.annotation.OptIn
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.foundation.background
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.key.Key
+import androidx.compose.ui.input.key.KeyEvent
+import androidx.compose.ui.input.key.KeyEventType
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onKeyEvent
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.viewinterop.AndroidView
+import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.media3.common.util.UnstableApi
+import androidx.media3.ui.PlayerView
+import androidx.tv.material3.Button
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Text
+import kotlinx.coroutines.delay
+import tv.lumen.core.designsystem.theme.LumenDimens
+import tv.lumen.player.PlayerController
+import tv.lumen.player.PlayerNotice
+import tv.lumen.player.PlayerState
+
+private const val PANEL_HIDE_MS = 5_000L
+private const val FAST_SEEK_MS = 30_000L
+
+internal enum class WatchDialog { QUALITY, SPEED, SUBTITLES, AUDIO }
+
+private enum class PanelFocus { PLAY, SEEK }
+
+@Composable
+fun WatchRoute(modifier: Modifier = Modifier, viewModel: WatchViewModel = hiltViewModel()) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    WatchScreen(state = state, controller = viewModel.controller, modifier = modifier)
+}
+
+@Composable
+internal fun WatchScreen(state: PlayerState, controller: PlayerController, modifier: Modifier = Modifier) {
+    var panelVisible by remember { mutableStateOf(false) }
+    var panelFocus by remember { mutableStateOf(PanelFocus.PLAY) }
+    var dialog by remember { mutableStateOf<WatchDialog?>(null) }
+    var interaction by remember { mutableIntStateOf(0) }
+    // Каждый показ панели заново ставит фокус: элемент с фокусом мог исчезнуть (закрытый диалог)
+    var focusRequest by remember { mutableIntStateOf(0) }
+    val rootFocus = remember { FocusRequester() }
+
+    fun showPanel(focus: PanelFocus) {
+        panelFocus = focus
+        panelVisible = true
+        interaction++
+        focusRequest++
+    }
+
+    // Back: закрыть диалог → скрыть панель → выйти из плеера (SPEC 5.5).
+    // Основная обработка — в onKey; BackHandler — запасной путь, если фокуса нет нигде.
+    BackHandler(enabled = dialog != null || panelVisible) {
+        if (dialog != null) dialog = null else panelVisible = false
+    }
+
+    // Панель скрывается через 5 с без нажатий во время воспроизведения
+    LaunchedEffect(panelVisible, interaction, state.isPlaying, dialog) {
+        if (panelVisible && state.isPlaying && dialog == null) {
+            delay(PANEL_HIDE_MS)
+            panelVisible = false
+        }
+    }
+    LaunchedEffect(panelVisible, dialog) {
+        if (!panelVisible && dialog == null) rootFocus.requestFocus()
+    }
+    // Ошибка или пауза в конце — показать панель с кнопками
+    LaunchedEffect(state.isEnded) { if (state.isEnded) showPanel(PanelFocus.PLAY) }
+
+    fun onKey(event: KeyEvent): Boolean {
+        // Back перехватываем здесь: иначе Compose на ТВ снимает фокус с элемента и событие не доходит
+        // до BackHandler — панель остаётся без фокуса, пульт перестаёт работать.
+        if (event.key == Key.Back) {
+            if (dialog == null && !panelVisible) return false // выход из плеера
+            if (event.type == KeyEventType.KeyUp) {
+                if (dialog != null) {
+                    dialog = null
+                    showPanel(PanelFocus.PLAY)
+                } else {
+                    panelVisible = false
+                }
+            }
+            return true
+        }
+        if (event.type != KeyEventType.KeyDown) return false
+        interaction++
+        when (event.key) {
+            Key.MediaPlayPause -> { controller.togglePlayPause(); showPanel(PanelFocus.PLAY); return true }
+            Key.MediaPlay -> { controller.play(); return true }
+            Key.MediaPause -> { controller.pause(); showPanel(PanelFocus.PLAY); return true }
+            Key.MediaFastForward -> { controller.seekBy(FAST_SEEK_MS); return true }
+            Key.MediaRewind -> { controller.seekBy(-FAST_SEEK_MS); return true }
+        }
+        if (dialog != null || panelVisible || state.error != null) return false
+        return when (event.key) {
+            Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
+                controller.togglePlayPause(); showPanel(PanelFocus.PLAY); true
+            }
+            Key.DirectionLeft -> { controller.seekBy(-seekStep(event)); showPanel(PanelFocus.SEEK); true }
+            Key.DirectionRight -> { controller.seekBy(seekStep(event)); showPanel(PanelFocus.SEEK); true }
+            // Вниз — ряд «Похожие» появится в фазе 3 вместе с карточками; пока показывает панель
+            Key.DirectionUp, Key.DirectionDown -> { showPanel(PanelFocus.PLAY); true }
+            else -> false
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .background(Color.Black)
+            .onPreviewKeyEvent(::onKey)
+            .focusRequester(rootFocus)
+            .focusable(),
+    ) {
+        VideoSurface(controller = controller, keepScreenOn = state.isPlaying || state.isBuffering)
+
+        if (state.isLoading || (state.isBuffering && !panelVisible)) {
+            Text(
+                text = stringResource(R.string.watch_loading),
+                style = MaterialTheme.typography.titleLarge,
+                color = Color.White,
+                modifier = Modifier.align(Alignment.Center),
+            )
+        }
+
+        state.notice?.let { NoticeBanner(it, Modifier.align(Alignment.TopCenter)) }
+
+        AnimatedVisibility(
+            visible = panelVisible && state.error == null,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.BottomCenter),
+        ) {
+            ControlPanel(
+                state = state,
+                controller = controller,
+                initialFocus = panelFocus,
+                focusRequest = focusRequest,
+                onInteraction = { interaction++ },
+                onOpenDialog = { dialog = it },
+            )
+        }
+
+        state.error?.let { error ->
+            ErrorOverlay(error = error, onRetry = controller::retry, modifier = Modifier.align(Alignment.Center))
+        }
+
+        dialog?.let { current ->
+            OptionsDialog(
+                dialog = current,
+                state = state,
+                controller = controller,
+                onDismiss = { dialog = null; showPanel(PanelFocus.PLAY) },
+                modifier = Modifier.align(Alignment.CenterEnd),
+            )
+        }
+    }
+}
+
+/** Шаг перемотки: 10 с, при удержании растёт до 60 с (SPEC 5.5). */
+private fun seekStep(event: KeyEvent): Long {
+    val repeat = event.nativeKeyEvent.repeatCount
+    return (10_000L * (1 + repeat / 5)).coerceAtMost(60_000L)
+}
+
+@OptIn(UnstableApi::class)
+@Composable
+private fun VideoSurface(controller: PlayerController, keepScreenOn: Boolean) {
+    AndroidView(
+        factory = { context ->
+            PlayerView(context).apply {
+                layoutParams = ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT)
+                useController = false // своя панель на Compose (SPEC 5)
+                isFocusable = false
+                descendantFocusability = ViewGroup.FOCUS_BLOCK_DESCENDANTS
+                setShutterBackgroundColor(AndroidColor.BLACK)
+                setKeepContentOnPlayerReset(true)
+                player = controller.player
+            }
+        },
+        update = { view -> view.keepScreenOn = keepScreenOn },
+        onRelease = { view -> view.player = null },
+        modifier = Modifier.fillMaxSize(),
+    )
+}
+
+@Composable
+private fun ControlPanel(
+    state: PlayerState,
+    controller: PlayerController,
+    initialFocus: PanelFocus,
+    focusRequest: Int,
+    onInteraction: () -> Unit,
+    onOpenDialog: (WatchDialog) -> Unit,
+) {
+    val playFocus = remember { FocusRequester() }
+    val seekFocus = remember { FocusRequester() }
+    LaunchedEffect(focusRequest) {
+        runCatching { if (initialFocus == PanelFocus.SEEK) seekFocus.requestFocus() else playFocus.requestFocus() }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))))
+            .padding(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
+        verticalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        val details = state.details
+        if (details != null) {
+            Text(
+                text = details.video.title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = Color.White,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+            )
+            details.video.channelName?.let {
+                Text(it, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
+            }
+        }
+
+        if (state.isLive) {
+            Text(
+                text = stringResource(R.string.watch_live),
+                style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.primary,
+            )
+        } else {
+            SeekBar(state, controller, onInteraction, Modifier.focusRequester(seekFocus))
+            Text(
+                text = "${formatTime(state.positionMs)} / ${formatTime(state.durationMs)}",
+                style = MaterialTheme.typography.bodyMedium,
+                color = Color.White.copy(alpha = 0.8f),
+            )
+        }
+
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            Button(onClick = controller::togglePlayPause, modifier = Modifier.focusRequester(playFocus)) {
+                Text(stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play))
+            }
+            if (state.qualities.isNotEmpty()) {
+                Button(onClick = { onOpenDialog(WatchDialog.QUALITY) }) {
+                    Text("${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}")
+                }
+            }
+            if (!state.isLive) {
+                Button(onClick = { onOpenDialog(WatchDialog.SPEED) }) {
+                    Text("${stringResource(R.string.watch_speed)}: ${formatSpeed(state.speed)}")
+                }
+            }
+            if (state.subtitles.isNotEmpty()) {
+                Button(onClick = { onOpenDialog(WatchDialog.SUBTITLES) }) {
+                    val current = state.subtitles.firstOrNull { it.languageTag == state.subtitle }?.name
+                        ?: stringResource(R.string.watch_subtitles_off)
+                    Text("${stringResource(R.string.watch_subtitles)}: $current")
+                }
+            }
+            if (state.audioTracks.size > 1) {
+                Button(onClick = { onOpenDialog(WatchDialog.AUDIO) }) {
+                    Text(stringResource(R.string.watch_audio))
+                }
+            }
+        }
+    }
+}
+
+/** Полоса прогресса: в фокусе Влево/Вправо перематывают, OK — пауза. */
+@Composable
+private fun SeekBar(state: PlayerState, controller: PlayerController, onInteraction: () -> Unit, modifier: Modifier) {
+    var focused by remember { mutableStateOf(false) }
+    val duration = state.durationMs.coerceAtLeast(1)
+    val played = (state.positionMs.toFloat() / duration).coerceIn(0f, 1f)
+    val buffered = (state.bufferedMs.toFloat() / duration).coerceIn(0f, 1f)
+    val height = if (focused) 10.dp else 4.dp
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .height(20.dp)
+            .onFocusChanged { focused = it.isFocused }
+            .onKeyEvent { event ->
+                if (event.type != KeyEventType.KeyDown) return@onKeyEvent false
+                onInteraction()
+                when (event.key) {
+                    Key.DirectionLeft -> { controller.seekBy(-seekStep(event)); true }
+                    Key.DirectionRight -> { controller.seekBy(seekStep(event)); true }
+                    Key.DirectionCenter, Key.Enter -> { controller.togglePlayPause(); true }
+                    else -> false
+                }
+            }
+            .focusable(),
+        contentAlignment = Alignment.CenterStart,
+    ) {
+        val shape = RoundedCornerShape(50)
+        Box(Modifier.fillMaxWidth().height(height).clip(shape).background(Color.White.copy(alpha = 0.25f)))
+        Box(Modifier.fillMaxWidth(buffered).height(height).clip(shape).background(Color.White.copy(alpha = 0.45f)))
+        Box(
+            Modifier.fillMaxWidth(played).height(height).clip(shape)
+                .background(if (focused) MaterialTheme.colorScheme.primary else Color.White),
+        )
+    }
+}
+
+@Composable
+private fun NoticeBanner(notice: PlayerNotice, modifier: Modifier) {
+    var visible by remember(notice) { mutableStateOf(true) }
+    LaunchedEffect(notice) { delay(6_000); visible = false }
+    if (!visible) return
+    val text = when (notice) {
+        PlayerNotice.LOW_QUALITY_ONLY -> stringResource(R.string.watch_low_quality_notice)
+    }
+    Text(
+        text = text,
+        color = Color.White,
+        style = MaterialTheme.typography.bodyLarge,
+        modifier = modifier
+            .padding(top = LumenDimens.SafeVertical)
+            .clip(RoundedCornerShape(8.dp))
+            .background(Color.Black.copy(alpha = 0.75f))
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+            .widthIn(max = 720.dp),
+    )
+}
+
+internal fun formatTime(ms: Long): String {
+    val total = (ms / 1000).coerceAtLeast(0)
+    val h = total / 3600
+    val m = (total % 3600) / 60
+    val s = total % 60
+    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+}
+
+internal fun formatSpeed(speed: Float): String =
+    (if (speed % 1f == 0f) "%.1f" else "%.2f").format(speed).trimEnd('0').trimEnd('.', ',') + "×"

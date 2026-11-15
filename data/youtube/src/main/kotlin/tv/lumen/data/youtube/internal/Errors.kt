@@ -47,6 +47,8 @@ internal fun Throwable.toAppError(): AppError = when (this) {
     else -> AppError.Unknown(message ?: this::class.java.simpleName)
 }
 
+private const val LOG_TAG = "Lumen/YouTube"
+
 private fun Throwable.unavailable(reason: UnavailableReason) = AppError.ContentUnavailable(reason, message)
 
 /**
@@ -60,6 +62,8 @@ internal suspend fun <T> extract(io: CoroutineDispatcher, block: () -> T): AppRe
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
+            // Только локальный logcat для диагностики; никуда не отправляется
+            android.util.Log.w(LOG_TAG, "Ошибка экстрактора", e)
             AppResult.Failure(e.toAppError())
         } catch (e: StackOverflowError) {
             // Rhino при расшифровке подписи иногда уходит в глубокую рекурсию

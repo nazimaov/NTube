@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="watch_loading">Loading…</string>
+    <string name="watch_play">Play</string>
+    <string name="watch_pause">Pause</string>
+    <string name="watch_quality">Quality</string>
+    <string name="watch_speed">Speed</string>
+    <string name="watch_subtitles">Subtitles</string>
+    <string name="watch_subtitles_off">Off</string>
+    <string name="watch_audio">Audio</string>
+    <string name="watch_audio_original">original</string>
+    <string name="watch_live">LIVE</string>
+    <string name="watch_retry">Retry</string>
+    <string name="watch_auto_generated">auto-generated</string>
+    <string name="watch_low_quality_notice">High quality is temporarily unavailable. Check for an app update.</string>
+    <string name="watch_error_network">No connection to the video server.</string>
+    <string name="watch_error_extraction">YouTube changed something and the video can\'t be loaded. Check for an app update.</string>
+    <string name="watch_error_age">This video is age-restricted.</string>
+    <string name="watch_error_private">This video is private.</string>
+    <string name="watch_error_geo">This video is not available in your country.</string>
+    <string name="watch_error_paid">This video requires a paid subscription.</string>
+    <string name="watch_error_bot">YouTube asked to confirm you are not a bot. Try again later.</string>
+    <string name="watch_error_unavailable">This video is unavailable.</string>
+    <string name="watch_error_unknown">Something went wrong.</string>
+</resources>

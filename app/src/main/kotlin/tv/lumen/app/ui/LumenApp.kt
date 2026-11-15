@@ -30,6 +30,8 @@ import tv.lumen.app.navigation.Search
 import tv.lumen.app.navigation.Settings
 import tv.lumen.app.navigation.Subscriptions
 import tv.lumen.app.navigation.TopLevelDestination
+import tv.lumen.app.navigation.Watch
+import tv.lumen.feature.watch.WatchRoute
 import tv.lumen.feature.home.HomeRoute
 import tv.lumen.feature.library.HistoryRoute
 import tv.lumen.feature.library.SubscriptionsRoute
@@ -43,8 +45,12 @@ fun LumenApp() {
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
 
+    // На экране плеера бокового меню нет: видео на весь экран
+    val isWatching = currentDestination?.hasRoute(Watch::class) == true
+
     NavigationDrawer(
         drawerContent = {
+            if (isWatching) return@NavigationDrawer
             Column(
                 modifier = Modifier
                     .fillMaxHeight()
@@ -65,7 +71,8 @@ fun LumenApp() {
         },
     ) {
         NavHost(navController = navController, startDestination = Home) {
-            composable<Home> { HomeRoute() }
+            composable<Home> { HomeRoute(onOpenVideo = { id -> navController.navigate(Watch(videoId = id)) }) }
+            composable<Watch> { WatchRoute() }
             composable<Search> { SearchRoute() }
             composable<Subscriptions> { SubscriptionsRoute() }
             composable<History> { HistoryRoute() }

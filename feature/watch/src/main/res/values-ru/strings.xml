@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="watch_loading">Загрузка…</string>
+    <string name="watch_play">Смотреть</string>
+    <string name="watch_pause">Пауза</string>
+    <string name="watch_quality">Качество</string>
+    <string name="watch_speed">Скорость</string>
+    <string name="watch_subtitles">Субтитры</string>
+    <string name="watch_subtitles_off">Выкл.</string>
+    <string name="watch_audio">Звук</string>
+    <string name="watch_audio_original">оригинал</string>
+    <string name="watch_live">ЭФИР</string>
+    <string name="watch_retry">Повторить</string>
+    <string name="watch_auto_generated">автоматические</string>
+    <string name="watch_low_quality_notice">Высокое качество временно недоступно, проверьте обновление.</string>
+    <string name="watch_error_network">Нет связи с сервером видео.</string>
+    <string name="watch_error_extraction">YouTube что-то изменил, и видео не загружается. Проверьте обновление приложения.</string>
+    <string name="watch_error_age">У видео возрастное ограничение.</string>
+    <string name="watch_error_private">Это видео скрыто автором.</string>
+    <string name="watch_error_geo">Видео недоступно в вашей стране.</string>
+    <string name="watch_error_paid">Видео доступно только по платной подписке.</string>
+    <string name="watch_error_bot">YouTube просит подтвердить, что вы не бот. Попробуйте позже.</string>
+    <string name="watch_error_unavailable">Видео недоступно.</string>
+    <string name="watch_error_unknown">Что-то пошло не так.</string>
+</resources>
