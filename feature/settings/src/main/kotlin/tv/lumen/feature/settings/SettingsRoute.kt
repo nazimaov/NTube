@@ -218,6 +218,14 @@ fun SettingsRoute(
         }
 
         section(R.string.settings_section_about)
+        item {
+            Row(stringResource(R.string.settings_check_updates), null, Modifier.rememberFocus(memory, "update")) { viewModel.checkForUpdates() }
+        }
+        item {
+            Toggle(stringResource(R.string.settings_update_on_start), s.updateCheckOnStart, Modifier.rememberFocus(memory, "updateOnStart")) {
+                viewModel.update { it.copy(updateCheckOnStart = !it.updateCheckOnStart) }
+            }
+        }
         item { Text(stringResource(R.string.settings_version, versionName), style = MaterialTheme.typography.bodyLarge) }
         item {
             Text(

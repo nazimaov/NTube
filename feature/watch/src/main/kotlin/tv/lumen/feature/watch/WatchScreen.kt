@@ -88,6 +88,7 @@ fun WatchRoute(
         onOpenVideo = { id -> onOpenVideo(id, null) },
         onPlayNext = { id -> onOpenVideo(id, viewModel.playlistId) },
         onOpenChannel = onOpenChannel,
+        onCheckUpdate = viewModel::checkForUpdates,
         modifier = modifier,
     )
 }
@@ -100,6 +101,7 @@ internal fun WatchScreen(
     onOpenVideo: (String) -> Unit,
     onPlayNext: (String) -> Unit,
     onOpenChannel: (String) -> Unit,
+    onCheckUpdate: () -> Unit,
     modifier: Modifier = Modifier,
 ) {
     var panelVisible by remember { mutableStateOf(false) }
@@ -262,7 +264,7 @@ internal fun WatchScreen(
         }
 
         state.error?.let { error ->
-            ErrorOverlay(error = error, onRetry = controller::retry, modifier = Modifier.align(Alignment.Center))
+            ErrorOverlay(error = error, onRetry = controller::retry, onCheckUpdate = onCheckUpdate, modifier = Modifier.align(Alignment.Center))
         }
 
         dialog?.let { current ->

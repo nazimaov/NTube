@@ -9,4 +9,16 @@
 <string name="exit_title">Exit Lumen?</string>
     <string name="exit_confirm">Exit</string>
     <string name="exit_cancel">Cancel</string>
+<string name="update_available">Version %1$s is available</string>
+    <string name="update_install">Update</string>
+    <string name="update_later">Later</string>
+    <string name="update_close">Close</string>
+    <string name="update_downloading">Downloading %1$s…</string>
+    <string name="update_installing">Installing… Confirm the installation in the system dialog.</string>
+    <string name="update_up_to_date">You have the latest version.</string>
+    <string name="update_checking">Checking for updates…</string>
+    <string name="update_network">Could not check for updates. Check your connection.</string>
+    <string name="update_no_apk">The new release has no APK file.</string>
+    <string name="update_install_failed">The update could not be installed.</string>
+    <string name="update_not_configured">Updates are not configured: set lumen.updateRepoOwner in gradle.properties.</string>
 </resources>

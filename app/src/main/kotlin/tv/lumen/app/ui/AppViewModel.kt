@@ -10,10 +10,34 @@ import tv.lumen.app.navigation.TopLevelDestination
 import tv.lumen.core.datastore.MenuItem
 import tv.lumen.core.datastore.SettingsRepository
 import javax.inject.Inject
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
+import tv.lumen.data.updater.UpdateInfo
+import tv.lumen.data.updater.UpdateManager
+import tv.lumen.data.updater.UpdateState
 
 /** Пункты бокового меню по настройкам видимости и порядка (SPEC 6.4); «Настройки» всегда последние. */
 @HiltViewModel
-class AppViewModel @Inject constructor(settings: SettingsRepository) : ViewModel() {
+class AppViewModel @Inject constructor(
+    settings: SettingsRepository,
+    private val updates: UpdateManager,
+) : ViewModel() {
+
+    val updateState: StateFlow<UpdateState> = updates.state
+
+    init {
+        // При запуске, не чаще раза в 3 часа (SPEC 10.5); выключается в настройках
+        viewModelScope.launch {
+            if (settings.settings.first().updateCheckOnStart) updates.check(force = false)
+        }
+    }
+
+    fun installUpdate(info: UpdateInfo) {
+        viewModelScope.launch { updates.downloadAndInstall(info) }
+    }
+
+    fun dismissUpdate() = updates.dismiss()
+
     val menu: StateFlow<List<TopLevelDestination>> = settings.flow { s ->
         s.menuItems.filter { it !in s.hiddenMenuItems }.map { it.toDestination() } + TopLevelDestination.SETTINGS
     }.stateIn(viewModelScope, SharingStarted.Eagerly, TopLevelDestination.entries)

@@ -13,13 +13,20 @@ import tv.lumen.core.datastore.SettingsRepository
 import tv.lumen.core.designsystem.focus.FocusMemory
 import tv.lumen.core.model.ChannelSummary
 import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.updater.UpdateManager
 import javax.inject.Inject
 
 @HiltViewModel
 class SettingsViewModel @Inject constructor(
     private val repository: SettingsRepository,
     private val library: LibraryRepository,
+    private val updates: UpdateManager,
 ) : ViewModel() {
+
+    /** Результат показывает общий диалог обновления в app. */
+    fun checkForUpdates() {
+        viewModelScope.launch { updates.check(force = true, userInitiated = true) }
+    }
 
     val focusMemory = FocusMemory()
 

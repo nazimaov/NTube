@@ -52,4 +52,6 @@
     <string name="settings_menu_history">История</string>
     <string name="settings_version">Версия %1$s</string>
     <string name="settings_licenses">Lumen — свободное приложение под лицензией GPLv3. Данные YouTube: NewPipeExtractor (GPLv3). Плеер: AndroidX Media3 (Apache 2.0). Спонсорские сегменты: SponsorBlock, автор Ajay Ramachandran, sponsor.ajay.app, данные по лицензии CC BY-NC-SA 4.0. Приложение не связано с YouTube и Google.</string>
+<string name="settings_check_updates">Проверить обновления</string>
+    <string name="settings_update_on_start">Проверять обновления при запуске</string>
 </resources>

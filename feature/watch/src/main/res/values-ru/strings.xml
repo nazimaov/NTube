@@ -39,4 +39,5 @@
     <string name="sb_preview">анонс</string>
     <string name="sb_music_offtopic">не музыка</string>
     <string name="sb_filler">отступление</string>
+<string name="watch_check_update">Проверить обновление</string>
 </resources>

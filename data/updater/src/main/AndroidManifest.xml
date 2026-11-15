@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <application>
+        <!-- Статус установки от PackageInstaller: показывает системное подтверждение -->
+        <receiver
+            android:name="tv.lumen.data.updater.internal.InstallResultReceiver"
+            android:exported="false" />
+    </application>
+</manifest>

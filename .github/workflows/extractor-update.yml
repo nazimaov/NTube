@@ -1,0 +1,114 @@
+# Автоматическая починка (SPEC 10.7): каждый час проверяет новую версию NewPipeExtractor,
+# при её выходе собирает, подписывает и публикует релиз. Падение сборки — issue без релиза.
+name: Extractor update
+
+on:
+  schedule:
+    - cron: "17 * * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency: extractor-update
+
+jobs:
+  update:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Latest NewPipeExtractor
+        id: versions
+        run: |
+          LATEST=$(gh api repos/TeamNewPipe/NewPipeExtractor/releases/latest --jq .tag_name)
+          CURRENT=$(grep '^newpipeExtractor' gradle/libs.versions.toml | sed -E 's/.*"(.*)".*/\1/')
+          echo "latest=$LATEST" >> "$GITHUB_OUTPUT"
+          echo "current=$CURRENT" >> "$GITHUB_OUTPUT"
+          echo "Текущая $CURRENT, последняя $LATEST"
+
+      - name: Stop if up to date
+        if: steps.versions.outputs.latest == steps.versions.outputs.current
+        run: echo "Экстрактор актуален"
+
+      - name: Bump versions
+        id: bump
+        if: steps.versions.outputs.latest != steps.versions.outputs.current
+        run: |
+          LATEST="${{ steps.versions.outputs.latest }}"
+          sed -i -E "s/^newpipeExtractor = \".*\"/newpipeExtractor = \"$LATEST\"/" gradle/libs.versions.toml
+          CODE=$(grep '^lumen.versionCode=' gradle.properties | cut -d= -f2)
+          NAME=$(grep '^lumen.versionName=' gradle.properties | cut -d= -f2)
+          NEW_CODE=$((CODE + 1))
+          NEW_NAME=$(echo "$NAME" | awk -F. '{ printf "%d.%d.%d", $1, $2, $3 + 1 }')
+          sed -i "s/^lumen.versionCode=.*/lumen.versionCode=$NEW_CODE/" gradle.properties
+          sed -i "s/^lumen.versionName=.*/lumen.versionName=$NEW_NAME/" gradle.properties
+          echo "name=$NEW_NAME" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/setup-java@v4
+        if: steps.bump.outcome == 'success'
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - uses: gradle/actions/setup-gradle@v4
+        if: steps.bump.outcome == 'success'
+
+      - name: Restore signing key
+        if: steps.bump.outcome == 'success'
+        env:
+          LUMEN_KEYSTORE_BASE64: ${{ secrets.LUMEN_KEYSTORE_BASE64 }}
+        run: |
+          echo "$LUMEN_KEYSTORE_BASE64" | base64 --decode > "$RUNNER_TEMP/lumen-release.jks"
+          echo "LUMEN_KEYSTORE=$RUNNER_TEMP/lumen-release.jks" >> "$GITHUB_ENV"
+
+      # JitPack собирает новую версию при первом обращении — до 5 попыток с паузой 2 минуты.
+      # Живые тесты YouTube релиз не блокируют: с серверов GitHub бывает проверка на бота.
+      - name: Build, test, lint
+        id: build
+        if: steps.bump.outcome == 'success'
+        continue-on-error: true
+        env:
+          LUMEN_KEYSTORE_PASSWORD: ${{ secrets.LUMEN_KEYSTORE_PASSWORD }}
+          LUMEN_KEY_ALIAS: ${{ secrets.LUMEN_KEY_ALIAS }}
+          LUMEN_KEY_PASSWORD: ${{ secrets.LUMEN_KEY_PASSWORD }}
+        run: |
+          for attempt in 1 2 3 4 5; do
+            if ./gradlew test lint :app:assembleRelease 2>&1 | tee build.log; then exit 0; fi
+            if ! grep -qiE "jitpack|Could not (resolve|find|GET)" build.log; then exit 1; fi
+            echo "JitPack ещё собирает библиотеку, попытка $attempt из 5"; sleep 120
+          done
+          exit 1
+
+      - name: Live tests (informational)
+        if: steps.build.outcome == 'success'
+        continue-on-error: true
+        run: ./gradlew :data:youtube:liveTest
+
+      - name: Publish release
+        if: steps.build.outcome == 'success'
+        run: |
+          NAME="${{ steps.bump.outputs.name }}"
+          LATEST="${{ steps.versions.outputs.latest }}"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -am "Обновлён NewPipeExtractor до $LATEST"
+          git tag "v$NAME"
+          git push origin HEAD "v$NAME"
+          cp app/build/outputs/apk/release/app-release.apk "lumen-$NAME.apk"
+          gh release create "v$NAME" "lumen-$NAME.apk" --title "v$NAME" --notes "Обновлён NewPipeExtractor до $LATEST"
+
+      - name: Open issue on failure
+        if: steps.build.outcome == 'failure'
+        run: |
+          LATEST="${{ steps.versions.outputs.latest }}"
+          TITLE="Автосборка не прошла: NewPipeExtractor $LATEST"
+          if gh issue list --state all --search "\"$TITLE\" in:title" --json title --jq '.[].title' | grep -qxF "$TITLE"; then
+            echo "Issue уже есть"; exit 0
+          fi
+          { echo "Сборка с NewPipeExtractor $LATEST упала. Хвост лога:"; echo '```'; tail -n 80 build.log; echo '```'; } > body.md
+          gh issue create --title "$TITLE" --body-file body.md

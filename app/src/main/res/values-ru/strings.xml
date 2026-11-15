@@ -8,4 +8,16 @@
 <string name="exit_title">Выйти из Lumen?</string>
     <string name="exit_confirm">Выйти</string>
     <string name="exit_cancel">Отмена</string>
+<string name="update_available">Доступна версия %1$s</string>
+    <string name="update_install">Обновить</string>
+    <string name="update_later">Позже</string>
+    <string name="update_close">Закрыть</string>
+    <string name="update_downloading">Загрузка %1$s…</string>
+    <string name="update_installing">Установка… Подтвердите её в системном окне.</string>
+    <string name="update_up_to_date">Установлена последняя версия.</string>
+    <string name="update_checking">Проверка обновлений…</string>
+    <string name="update_network">Не удалось проверить обновления. Проверьте подключение.</string>
+    <string name="update_no_apk">В новом релизе нет файла APK.</string>
+    <string name="update_install_failed">Не удалось установить обновление.</string>
+    <string name="update_not_configured">Обновления не настроены: укажите lumen.updateRepoOwner в gradle.properties.</string>
 </resources>

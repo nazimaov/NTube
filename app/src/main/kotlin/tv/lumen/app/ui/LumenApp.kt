@@ -68,6 +68,7 @@ fun LumenApp(
     appViewModel: AppViewModel = androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel(),
 ) {
     val menu by appViewModel.menu.collectAsStateWithLifecycle()
+    val updateState by appViewModel.updateState.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -161,6 +162,8 @@ fun LumenApp(
                 }
             }
         }
+
+        UpdateDialog(state = updateState, onUpdate = appViewModel::installUpdate, onDismiss = appViewModel::dismissUpdate)
 
         if (showExitDialog) {
             ExitDialog(onConfirm = { activity?.finish() }, onDismiss = { showExitDialog = false })

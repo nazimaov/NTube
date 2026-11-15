@@ -108,7 +108,7 @@ internal fun OptionsDialog(
 }
 
 @Composable
-internal fun ErrorOverlay(error: AppError, onRetry: () -> Unit, modifier: Modifier = Modifier) {
+internal fun ErrorOverlay(error: AppError, onRetry: () -> Unit, onCheckUpdate: () -> Unit, modifier: Modifier = Modifier) {
     val focus = remember { FocusRequester() }
     LaunchedEffect(error) { runCatching { focus.requestFocus() } }
     Column(
@@ -120,8 +120,14 @@ internal fun ErrorOverlay(error: AppError, onRetry: () -> Unit, modifier: Modifi
         verticalArrangement = Arrangement.spacedBy(24.dp),
     ) {
         Text(errorText(error), style = MaterialTheme.typography.titleLarge, color = Color.White)
-        Button(onClick = onRetry, modifier = Modifier.focusRequester(focus)) {
-            Text(stringResource(R.string.watch_retry))
+        androidx.compose.foundation.layout.Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            Button(onClick = onRetry, modifier = Modifier.focusRequester(focus)) {
+                Text(stringResource(R.string.watch_retry))
+            }
+            // ExtractionBroken — экстрактор устарел, починка в новой версии приложения
+            if (error == AppError.ExtractionBroken) {
+                Button(onClick = onCheckUpdate) { Text(stringResource(R.string.watch_check_update)) }
+            }
         }
     }
 }
