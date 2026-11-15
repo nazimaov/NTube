@@ -3,6 +3,7 @@ package tv.lumen.player
 import tv.lumen.core.model.AppError
 import tv.lumen.core.model.SubtitleTrack
 import tv.lumen.core.model.VideoCodec
+import tv.lumen.core.model.Video
 import tv.lumen.core.model.VideoDetails
 
 /** Предпочтения плеера. До фазы 5 — значения по умолчанию, потом из SettingsRepository (SPEC 9.2). */
@@ -15,6 +16,7 @@ data class PlayerPreferences(
     /** null — субтитры выключены. */
     val subtitleLanguage: String? = null,
     val defaultSpeed: Float = 1f,
+    val autoplayNext: Boolean = true,
 )
 
 enum class CodecPreference { AUTO, AV1, VP9, AVC }
@@ -61,6 +63,9 @@ data class PlayerState(
     val audioTrack: String? = null,
     val notice: PlayerNotice? = null,
     val error: AppError? = null,
+    val isSubscribed: Boolean = false,
+    /** Следующее видео после окончания: экран показывает отсчёт 10 с (SPEC 5.6). */
+    val nextUp: Video? = null,
 )
 
 const val MIN_SPEED = 0.25f

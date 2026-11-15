@@ -31,4 +31,10 @@
     <string name="ds_error_bot">YouTube просит подтвердить, что вы не бот. Попробуйте позже.</string>
     <string name="ds_error_unavailable">Контент недоступен.</string>
     <string name="ds_error_unknown">Что-то пошло не так.</string>
+<string name="ds_menu_open_channel">Открыть канал</string>
+    <string name="ds_menu_subscribe">Подписаться</string>
+    <string name="ds_menu_unsubscribe">Отписаться</string>
+    <string name="ds_menu_hide_channel">Не показывать канал</string>
+    <string name="ds_menu_remove_history">Удалить из истории</string>
+    <string name="ds_refresh">Обновить</string>
 </resources>

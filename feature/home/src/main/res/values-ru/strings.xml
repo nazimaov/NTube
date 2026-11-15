@@ -2,4 +2,6 @@
 <resources>
     <string name="home_title">Главная</string>
     <string name="home_trending">В тренде</string>
+    <string name="home_continue">Продолжить просмотр</string>
+    <string name="home_subscriptions">Подписки — новое</string>
 </resources>

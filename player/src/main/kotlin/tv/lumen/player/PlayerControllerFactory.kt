@@ -3,6 +3,8 @@ package tv.lumen.player
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import tv.lumen.core.common.ApplicationScope
+import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.youtube.YouTubeRepository
 import tv.lumen.player.internal.AndroidDeviceCapabilities
 import tv.lumen.player.internal.ExoPlayerController
@@ -16,8 +18,10 @@ class PlayerControllerFactory @Inject internal constructor(
     private val repository: YouTubeRepository,
     private val sources: MediaSourceBuilder,
     private val capabilities: AndroidDeviceCapabilities,
+    private val library: LibraryRepository,
+    @ApplicationScope private val appScope: CoroutineScope,
 ) {
     /** [scope] — scope главного потока (viewModelScope). */
     fun create(scope: CoroutineScope, prefs: PlayerPreferences = PlayerPreferences()): PlayerController =
-        ExoPlayerController(context, scope, repository, sources, StreamSelector(capabilities), prefs)
+        ExoPlayerController(context, scope, repository, sources, StreamSelector(capabilities), prefs, library, appScope)
 }

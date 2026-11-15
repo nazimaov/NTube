@@ -4,44 +4,66 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tv.lumen.core.designsystem.focus.FocusMemory
 import tv.lumen.core.model.AppError
 import tv.lumen.core.model.AppResult
 import tv.lumen.core.model.Video
+import tv.lumen.core.model.WatchEntry
+import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.library.VideoActions
 import tv.lumen.data.youtube.YouTubeRepository
 import javax.inject.Inject
 
-sealed interface HomeUiState {
-    data object Loading : HomeUiState
-    /** Ряды «Продолжить просмотр» и «Подписки — новое» добавятся в фазе 4 (SPEC 8). */
-    data class Content(val trending: List<Video>) : HomeUiState
-    data class Error(val error: AppError) : HomeUiState
+sealed interface TrendingState {
+    data object Loading : TrendingState
+    data class Content(val videos: List<Video>) : TrendingState
+    data class Error(val error: AppError) : TrendingState
 }
+
+/** Ряды главной (SPEC 8): «Продолжить просмотр», «Подписки — новое», «В тренде». */
+data class HomeUiState(
+    val continueWatching: List<WatchEntry> = emptyList(),
+    val subscriptionsNew: List<Video> = emptyList(),
+    val trending: TrendingState = TrendingState.Loading,
+)
 
 @HiltViewModel
 class HomeViewModel @Inject constructor(
     private val youtube: YouTubeRepository,
+    private val library: LibraryRepository,
 ) : ViewModel() {
 
     val focusMemory = FocusMemory()
+    val actions = VideoActions(library, viewModelScope)
 
-    private val _state = MutableStateFlow<HomeUiState>(HomeUiState.Loading)
-    val state: StateFlow<HomeUiState> = _state.asStateFlow()
+    private val trending = MutableStateFlow<TrendingState>(TrendingState.Loading)
+
+    val state: StateFlow<HomeUiState> = combine(library.continueWatching, library.feed, trending) { cont, feed, tr ->
+        HomeUiState(continueWatching = cont, subscriptionsNew = feed.take(ROW_SIZE), trending = tr)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 
     init {
-        load()
+        loadTrending()
+        // Лента подписок обновляется, если с прошлого раза прошло больше 30 минут (SPEC 7.1)
+        viewModelScope.launch { library.refreshFeed(force = false) }
     }
 
-    fun load() {
-        _state.value = HomeUiState.Loading
+    fun loadTrending() {
+        trending.value = TrendingState.Loading
         viewModelScope.launch {
-            _state.value = when (val result = youtube.trending()) {
-                is AppResult.Success -> HomeUiState.Content(result.value)
-                is AppResult.Failure -> HomeUiState.Error(result.error)
+            trending.value = when (val result = youtube.trending()) {
+                is AppResult.Success -> TrendingState.Content(result.value)
+                is AppResult.Failure -> TrendingState.Error(result.error)
             }
         }
+    }
+
+    private companion object {
+        const val ROW_SIZE = 20
     }
 }

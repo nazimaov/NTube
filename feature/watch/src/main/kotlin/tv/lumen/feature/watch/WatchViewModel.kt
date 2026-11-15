@@ -19,11 +19,15 @@ class WatchViewModel @Inject constructor(
     val controller: PlayerController = factory.create(viewModelScope)
     val state: StateFlow<PlayerState> = controller.state
 
+    /** Плейлист, из которого запущено видео: следующее видео берётся из него. */
+    val playlistId: String?
+
     init {
         // Имена аргументов — поля маршрута Watch(videoId, playlistId, startMs) в app
         val videoId: String = checkNotNull(savedStateHandle["videoId"]) { "Нет videoId" }
         val startMs: Long = savedStateHandle["startMs"] ?: 0L
-        controller.load(videoId, startMs)
+        playlistId = savedStateHandle["playlistId"]
+        controller.load(videoId, startMs, playlistId)
     }
 
     override fun onCleared() {

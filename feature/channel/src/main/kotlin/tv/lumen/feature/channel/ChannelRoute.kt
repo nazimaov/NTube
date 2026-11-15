@@ -20,6 +20,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRow
@@ -47,6 +48,7 @@ fun ChannelRoute(
     val header by viewModel.header.collectAsStateWithLifecycle()
     val tab by viewModel.tab.collectAsStateWithLifecycle()
     val items by viewModel.items.collectAsStateWithLifecycle()
+    val isSubscribed by viewModel.isSubscribed.collectAsStateWithLifecycle()
     FocusMemoryScope(viewModel.focusMemory)
 
     when (val h = header) {
@@ -73,6 +75,9 @@ fun ChannelRoute(
                             subscribersText(h.details.channel.subscriberCount)?.let {
                                 Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
+                        }
+                        Button(onClick = viewModel::toggleSubscribe, modifier = Modifier.rememberFocus(viewModel.focusMemory, "subscribe")) {
+                            Text(stringResource(if (isSubscribed) R.string.channel_subscribed else R.string.channel_subscribe))
                         }
                     }
                     if (h.tabs.size > 1) {

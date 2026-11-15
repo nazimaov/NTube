@@ -10,7 +10,8 @@ interface PlayerController {
     /** Поверхность для PlayerView; управление — только через методы контроллера. */
     val player: Player
 
-    fun load(videoId: String, startPositionMs: Long = 0)
+    /** startPositionMs = 0 — продолжить с сохранённой позиции (5–95%) или с начала. */
+    fun load(videoId: String, startPositionMs: Long = 0, playlistId: String? = null)
     fun play()
     fun pause()
     fun togglePlayPause()
@@ -29,6 +30,12 @@ interface PlayerController {
 
     /** Повторить загрузку после ошибки с той же позиции. */
     fun retry()
+
+    /** Подписаться на канал текущего видео или отписаться. */
+    fun toggleSubscribe()
+
+    /** Отменить автопереход к следующему видео. */
+    fun cancelNextUp()
 
     fun release()
 }

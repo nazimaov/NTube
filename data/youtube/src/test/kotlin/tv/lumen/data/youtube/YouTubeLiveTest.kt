@@ -1,7 +1,10 @@
 package tv.lumen.data.youtube
 
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.withPermit
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -121,6 +124,29 @@ class YouTubeLiveTest {
             println("playlist «${first.title}»: ${playlist.items.size} видео")
             assertTrue(playlist.items.isNotEmpty())
         }
+    }
+
+    /** Критерий фазы 4: лента 20 каналов быстрее 10 с при не более 6 запросах одновременно (SPEC 7.1, 11). */
+    @Test
+    fun feedOf20ChannelsUnder10s() = runBlocking {
+        val ids = LinkedHashSet<String>()
+        for (q in listOf("music", "news", "science", "gaming", "cooking")) {
+            val page = repo.search(q, SearchFilter.CHANNELS, null).ok("search channels $q")
+            page.items.filterIsInstance<SearchItem.ChannelItem>().map { it.channel.id }.filter { it.startsWith("UC") }.forEach { ids += it }
+            if (ids.size >= 20) break
+        }
+        val channels = ids.take(20)
+        assertTrue("нашлось только ${channels.size} каналов", channels.size == 20)
+        val semaphore = kotlinx.coroutines.sync.Semaphore(6)
+        val start = System.currentTimeMillis()
+        val results = kotlinx.coroutines.coroutineScope {
+            channels.map { id -> async { semaphore.withPermit { repo.channelFeed(id) } } }.awaitAll()
+        }
+        val took = System.currentTimeMillis() - start
+        val ok = results.count { it is AppResult.Success }
+        println("feed: 20 каналов за $took мс, успешно $ok")
+        assertTrue("успешно только $ok из 20", ok >= 18)
+        assertTrue("обновление заняло $took мс", took < 10_000)
     }
 
     @Test

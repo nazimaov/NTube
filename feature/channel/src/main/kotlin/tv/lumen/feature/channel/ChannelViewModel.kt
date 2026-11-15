@@ -18,6 +18,10 @@ import tv.lumen.core.model.ChannelDetails
 import tv.lumen.core.model.ChannelTab
 import tv.lumen.core.model.SearchItem
 import tv.lumen.core.model.map
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.youtube.YouTubeRepository
 import javax.inject.Inject
 
@@ -31,6 +35,7 @@ sealed interface ChannelHeaderState {
 class ChannelViewModel @Inject constructor(
     savedStateHandle: SavedStateHandle,
     private val youtube: YouTubeRepository,
+    private val library: LibraryRepository,
 ) : ViewModel() {
 
     /** Имя аргумента — поле маршрута Channel(channelId) в app. */
@@ -46,6 +51,19 @@ class ChannelViewModel @Inject constructor(
 
     private val _items = MutableStateFlow(PagedState<SearchItem>())
     val items: StateFlow<PagedState<SearchItem>> = _items.asStateFlow()
+
+    /** Подписан ли пользователь: сравниваем и с ID из маршрута, и с каноническим ID канала. */
+    val isSubscribed: StateFlow<Boolean> = combine(library.subscriptions, _header) { subs, header ->
+        val canonical = (header as? ChannelHeaderState.Content)?.details?.channel?.id
+        subs.any { it.id == channelId || it.id == canonical }
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun toggleSubscribe() {
+        val channel = (_header.value as? ChannelHeaderState.Content)?.details?.channel ?: return
+        viewModelScope.launch {
+            if (isSubscribed.value) library.unsubscribe(channel.id) else library.subscribe(channel.id, channel.name, channel.avatarUrl)
+        }
+    }
 
     private var pager: Pager<SearchItem>? = null
     private var collectJob: Job? = null

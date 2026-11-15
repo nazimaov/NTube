@@ -2,5 +2,7 @@
 <resources>
     <string name="subscriptions_title">Subscriptions</string>
     <string name="history_title">History</string>
-    <string name="library_placeholder">Will appear in phase 4.</string>
+    <string name="subscriptions_empty">No subscriptions yet. Press Subscribe on a channel or in the player.</string>
+    <string name="history_empty">Nothing watched yet.</string>
+    <string name="subscriptions_feed_failed">Couldn\'t refresh the feed. Showing saved videos.</string>
 </resources>

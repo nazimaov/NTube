@@ -25,4 +25,10 @@
     <string name="ds_error_bot">YouTube asked to confirm you are not a bot. Try again later.</string>
     <string name="ds_error_unavailable">Content is unavailable.</string>
     <string name="ds_error_unknown">Something went wrong.</string>
+<string name="ds_menu_open_channel">Open channel</string>
+    <string name="ds_menu_subscribe">Subscribe</string>
+    <string name="ds_menu_unsubscribe">Unsubscribe</string>
+    <string name="ds_menu_hide_channel">Don\'t show this channel</string>
+    <string name="ds_menu_remove_history">Remove from history</string>
+    <string name="ds_refresh">Refresh</string>
 </resources>

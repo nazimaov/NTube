@@ -56,6 +56,8 @@ import tv.lumen.core.designsystem.focus.rememberFocus
 import tv.lumen.core.designsystem.theme.LumenDimens
 import tv.lumen.core.model.SearchFilter
 import tv.lumen.core.model.SearchItem
+import tv.lumen.core.model.Video
+import tv.lumen.core.designsystem.component.VideoMenu
 
 // FilterChip в tv-material 1.1.0 помечен как экспериментальный
 @OptIn(ExperimentalTvMaterial3Api::class)
@@ -72,6 +74,9 @@ fun SearchRoute(
     val filter by viewModel.filter.collectAsStateWithLifecycle()
     val suggestions by viewModel.suggestions.collectAsStateWithLifecycle()
     val results by viewModel.results.collectAsStateWithLifecycle()
+    val subscribed by viewModel.actions.subscribedIds.collectAsStateWithLifecycle()
+    val progress by viewModel.actions.progress.collectAsStateWithLifecycle()
+    var menuFor by remember { mutableStateOf<Video?>(null) }
     val keyboard = LocalSoftwareKeyboardController.current
     FocusMemoryScope(viewModel.focusMemory)
 
@@ -136,7 +141,13 @@ fun SearchRoute(
                         onLoadMore = viewModel::loadMore,
                     ) { item, itemModifier ->
                         when (item) {
-                            is SearchItem.VideoItem -> VideoCard(item.video, onClick = { onOpenVideo(item.video.id) }, modifier = itemModifier)
+                            is SearchItem.VideoItem -> VideoCard(
+                                item.video,
+                                onClick = { onOpenVideo(item.video.id) },
+                                onLongClick = { menuFor = item.video },
+                                progress = progress[item.video.id],
+                                modifier = itemModifier,
+                            )
                             is SearchItem.ChannelItem -> ChannelCard(item.channel, onClick = { onOpenChannel(item.channel.id) }, modifier = itemModifier)
                             is SearchItem.PlaylistItem -> PlaylistCard(
                                 item.playlist,
@@ -149,6 +160,30 @@ fun SearchRoute(
             }
         }
     }
+
+    menuFor?.let { video ->
+        SearchMenu(video, subscribed, progress, viewModel, onOpenChannel) { menuFor = null }
+    }
+}
+
+@Composable
+private fun SearchMenu(
+    video: Video,
+    subscribed: Set<String>,
+    progress: Map<String, Float>,
+    viewModel: SearchViewModel,
+    onOpenChannel: (String) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    VideoMenu(
+        video = video,
+        isSubscribed = video.channelId in subscribed,
+        onDismiss = onDismiss,
+        onOpenChannel = { video.channelId?.let(onOpenChannel) },
+        onToggleSubscribe = { viewModel.actions.toggleSubscribe(video) },
+        onHideChannel = { viewModel.actions.hideChannel(video) },
+        onRemoveFromHistory = if (progress.containsKey(video.id)) ({ viewModel.actions.removeFromHistory(video) }) else null,
+    )
 }
 
 @Composable

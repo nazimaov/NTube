@@ -20,15 +20,19 @@ import tv.lumen.core.designsystem.focus.FocusMemory
 import tv.lumen.core.model.SearchFilter
 import tv.lumen.core.model.SearchItem
 import tv.lumen.core.model.getOrNull
+import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.library.VideoActions
 import tv.lumen.data.youtube.YouTubeRepository
 import javax.inject.Inject
 
 @HiltViewModel
 class SearchViewModel @Inject constructor(
     private val youtube: YouTubeRepository,
+    library: LibraryRepository,
 ) : ViewModel() {
 
     val focusMemory = FocusMemory()
+    val actions = VideoActions(library, viewModelScope)
 
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()

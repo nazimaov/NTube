@@ -24,4 +24,8 @@
     <string name="watch_error_unknown">Что-то пошло не так.</string>
 <string name="watch_channel">Канал</string>
     <string name="watch_related">Похожие видео</string>
+<string name="watch_subscribe">Подписаться</string>
+    <string name="watch_subscribed">Вы подписаны</string>
+    <string name="watch_next_in">Далее через %d с</string>
+    <string name="watch_cancel">Отмена</string>
 </resources>

@@ -3,4 +3,6 @@
     <string name="channel_tab_videos">Видео</string>
     <string name="channel_tab_live">Трансляции</string>
     <string name="channel_tab_playlists">Плейлисты</string>
+<string name="channel_subscribe">Подписаться</string>
+    <string name="channel_subscribed">Вы подписаны</string>
 </resources>

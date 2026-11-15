@@ -59,7 +59,7 @@ import tv.lumen.feature.watch.WatchRoute
 
 /** Корневой UI: боковое меню tv-material, свёрнутое до иконок, и NavHost с разделами. */
 @Composable
-fun LumenApp() {
+fun LumenApp(pendingVideoId: String? = null, onPendingVideoHandled: () -> Unit = {}) {
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
     val currentDestination = backStackEntry?.destination
@@ -126,12 +126,12 @@ fun LumenApp() {
             },
         ) {
             NavHost(navController = navController, startDestination = Home) {
-                composable<Home> { HomeRoute(onOpenVideo = { openVideo(it) }) }
+                composable<Home> { HomeRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<Search> {
                     SearchRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel, onOpenPlaylist = ::openPlaylist)
                 }
-                composable<Subscriptions> { SubscriptionsRoute() }
-                composable<History> { HistoryRoute() }
+                composable<Subscriptions> { SubscriptionsRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
+                composable<History> { HistoryRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<Settings> { SettingsRoute() }
                 composable<Channel> {
                     ChannelRoute(onOpenVideo = { openVideo(it) }, onOpenPlaylist = ::openPlaylist)
@@ -143,8 +143,8 @@ fun LumenApp() {
                     WatchRoute(
                         onBack = { navController.popBackStack() },
                         // Похожее видео заменяет текущее, чтобы Back вёл туда, откуда пришли
-                        onOpenVideo = { id ->
-                            navController.navigate(Watch(videoId = id)) {
+                        onOpenVideo = { id, playlistId ->
+                            navController.navigate(Watch(videoId = id, playlistId = playlistId)) {
                                 popUpTo<Watch> { inclusive = true }
                             }
                         },
@@ -156,6 +156,14 @@ fun LumenApp() {
 
         if (showExitDialog) {
             ExitDialog(onConfirm = { activity?.finish() }, onDismiss = { showExitDialog = false })
+        }
+    }
+
+    // Внешняя ссылка youtube.com/watch или youtu.be открывает плеер
+    LaunchedEffect(pendingVideoId) {
+        pendingVideoId?.let {
+            openVideo(it)
+            onPendingVideoHandled()
         }
     }
 

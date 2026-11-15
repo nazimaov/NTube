@@ -74,7 +74,8 @@ private enum class PanelFocus { PLAY, SEEK, RELATED }
 @Composable
 fun WatchRoute(
     onBack: () -> Unit,
-    onOpenVideo: (String) -> Unit,
+    /** videoId, playlistId */
+    onOpenVideo: (String, String?) -> Unit,
     onOpenChannel: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: WatchViewModel = hiltViewModel(),
@@ -84,7 +85,8 @@ fun WatchRoute(
         state = state,
         controller = viewModel.controller,
         onBack = onBack,
-        onOpenVideo = onOpenVideo,
+        onOpenVideo = { id -> onOpenVideo(id, null) },
+        onPlayNext = { id -> onOpenVideo(id, viewModel.playlistId) },
         onOpenChannel = onOpenChannel,
         modifier = modifier,
     )
@@ -96,6 +98,7 @@ internal fun WatchScreen(
     controller: PlayerController,
     onBack: () -> Unit,
     onOpenVideo: (String) -> Unit,
+    onPlayNext: (String) -> Unit,
     onOpenChannel: (String) -> Unit,
     modifier: Modifier = Modifier,
 ) {
@@ -223,6 +226,15 @@ internal fun WatchScreen(
                 onOpenDialog = { dialog = it },
                 onOpenVideo = onOpenVideo,
                 onOpenChannel = onOpenChannel,
+            )
+        }
+
+        state.nextUp?.let { next ->
+            NextUpOverlay(
+                title = next.title,
+                onPlay = { onPlayNext(next.id) },
+                onCancel = controller::cancelNextUp,
+                modifier = Modifier.align(Alignment.TopEnd),
             )
         }
 
@@ -360,6 +372,9 @@ private fun ControlPanel(
             state.details?.video?.channelId?.let { channelId ->
                 Button(onClick = { onOpenChannel(channelId) }) {
                     Text(stringResource(R.string.watch_channel))
+                }
+                Button(onClick = controller::toggleSubscribe) {
+                    Text(stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe))
                 }
             }
         }

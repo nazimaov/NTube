@@ -2,4 +2,6 @@
 <resources>
     <string name="home_title">Home</string>
     <string name="home_trending">Trending</string>
+    <string name="home_continue">Continue watching</string>
+    <string name="home_subscriptions">New from subscriptions</string>
 </resources>

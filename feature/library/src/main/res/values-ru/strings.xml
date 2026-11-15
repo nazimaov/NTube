@@ -2,5 +2,7 @@
 <resources>
     <string name="subscriptions_title">Подписки</string>
     <string name="history_title">История</string>
-    <string name="library_placeholder">Появится в фазе 4.</string>
+    <string name="subscriptions_empty">Подписок пока нет. Нажмите «Подписаться» на канале или в плеере.</string>
+    <string name="history_empty">Вы ещё ничего не смотрели.</string>
+    <string name="subscriptions_feed_failed">Не удалось обновить ленту. Показаны сохранённые видео.</string>
 </resources>

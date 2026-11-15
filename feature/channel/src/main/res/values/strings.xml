@@ -3,4 +3,6 @@
     <string name="channel_tab_videos">Videos</string>
     <string name="channel_tab_live">Live</string>
     <string name="channel_tab_playlists">Playlists</string>
+<string name="channel_subscribe">Subscribe</string>
+    <string name="channel_subscribed">Subscribed</string>
 </resources>

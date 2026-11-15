@@ -22,3 +22,7 @@
 | 2026-11-15 | Back обрабатывается в `onPreviewKeyEvent` корня и экрана плеера, а не `BackHandler` | На ТВ Compose при Back снимает фокус с элемента, событие до BackHandler не доходит |
 | 2026-11-15 | Shorts-вкладка канала не показывается | Shorts — после MVP (раздел 1) |
 | 2026-11-15 | `FilterChip` из tv-material используется с `@OptIn(ExperimentalTvMaterial3Api)` | В 1.1.0 API помечен экспериментальным, но стабильной альтернативы для фильтра нет |
+| 2026-11-15 | `data:library` получает данные каналов через интерфейс `ChannelSource`, реализация — в `app` | Правило: data:* зависит только от core:* |
+| 2026-11-15 | Подписка уточняет канал (канонический UC-ID, имя, аватар) запросом канала | Из карточек приходит только имя; RSS-фид требует UC-ID |
+| 2026-11-15 | `PlayerController`: `load(..., playlistId)`, `toggleSubscribe()`, `cancelNextUp()` | Подписка из плеера и автопереход по плейлисту (5.5, 5.6) |
+| 2026-11-15 | Обработка ссылок youtube.com/watch и youtu.be в MainActivity, `launchMode=singleTask` | Intent-filter есть в манифесте из раздела 8 — без обработки он бесполезен |

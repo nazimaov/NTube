@@ -20,7 +20,9 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tv.lumen.core.model.AppError
 import tv.lumen.core.model.AppResult
+import tv.lumen.core.model.Video
 import tv.lumen.core.model.VideoDetails
+import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.youtube.YouTubeRepository
 import tv.lumen.player.MAX_SPEED
 import tv.lumen.player.MIN_SPEED
@@ -43,6 +45,9 @@ internal class ExoPlayerController(
     private val sources: MediaSourceBuilder,
     private val selector: StreamSelector,
     private val prefs: PlayerPreferences,
+    private val library: LibraryRepository,
+    /** Переживает экран: последнее сохранение позиции после release(). */
+    private val appScope: CoroutineScope,
 ) : PlayerController {
 
     private val exo: ExoPlayer = ExoPlayer.Builder(context)
@@ -66,13 +71,21 @@ internal class ExoPlayerController(
     private var retries = 0
     private var loadJob: Job? = null
     private var tickerJob: Job? = null
+    private var saveJob: Job? = null
+    private var subscribedJob: Job? = null
+    private var playlistId: String? = null
 
     init {
         exo.setPlaybackSpeed(prefs.defaultSpeed)
         exo.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _state.update { it.copy(isPlaying = isPlaying) }
-                if (isPlaying) startTicker()
+                if (isPlaying) {
+                    startTicker()
+                    startSaving()
+                } else {
+                    savePosition() // пауза
+                }
             }
 
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
@@ -88,22 +101,24 @@ internal class ExoPlayerController(
                     )
                 }
                 updatePosition()
+                if (playbackState == Player.STATE_ENDED) onEnded()
             }
 
             override fun onPlayerError(error: PlaybackException) = handleError(error)
         })
     }
 
-    override fun load(videoId: String, startPositionMs: Long) {
+    override fun load(videoId: String, startPositionMs: Long, playlistId: String?) {
         details = null
         requestedHeight = null
         audioTrackId = null
         retries = 0
+        this.playlistId = playlistId
         _state.value = PlayerState(videoId = videoId, isLoading = true, speed = exo.playbackParameters.speed)
-        fetchAndPrepare(videoId, startPositionMs, forceRefresh = false)
+        fetchAndPrepare(videoId, startPositionMs, forceRefresh = false, resume = startPositionMs == 0L)
     }
 
-    private fun fetchAndPrepare(videoId: String, positionMs: Long, forceRefresh: Boolean) {
+    private fun fetchAndPrepare(videoId: String, positionMs: Long, forceRefresh: Boolean, resume: Boolean = false) {
         loadJob?.cancel()
         loadJob = scope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -111,10 +126,79 @@ internal class ExoPlayerController(
                 is AppResult.Failure -> _state.update { it.copy(isLoading = false, error = result.error) }
                 is AppResult.Success -> {
                     details = result.value
-                    prepare(result.value, positionMs)
+                    observeSubscription(result.value)
+                    // Продолжение с сохранённой позиции, если просмотрено 5–95% (SPEC 5.6)
+                    val start = if (resume && !result.value.video.isLive) library.resumePosition(videoId) ?: 0 else positionMs
+                    prepare(result.value, start)
                 }
             }
         }
+    }
+
+    private fun observeSubscription(details: VideoDetails) {
+        subscribedJob?.cancel()
+        val channelId = details.video.channelId ?: return
+        subscribedJob = scope.launch {
+            library.isSubscribed(channelId).collect { subscribed -> _state.update { it.copy(isSubscribed = subscribed) } }
+        }
+    }
+
+    override fun toggleSubscribe() {
+        val video = details?.video ?: return
+        val channelId = video.channelId ?: return
+        val avatar = details?.channelAvatarUrl
+        appScope.launch {
+            if (_state.value.isSubscribed) library.unsubscribe(channelId)
+            else library.subscribe(channelId, video.channelName.orEmpty(), avatar)
+        }
+    }
+
+    /** Позиция в БД каждые 5 с во время воспроизведения (SPEC 5.6). */
+    private fun startSaving() {
+        if (saveJob?.isActive == true) return
+        saveJob = scope.launch {
+            while (isActive && exo.isPlaying) {
+                delay(SAVE_EVERY_MS)
+                savePosition()
+            }
+        }
+    }
+
+    private fun savePosition() {
+        val video = details?.video ?: return
+        if (video.isLive) return
+        val duration = exo.duration.takeIf { it != C.TIME_UNSET && it > 0 } ?: return
+        val position = if (exo.playbackState == Player.STATE_ENDED) duration else exo.currentPosition
+        appScope.launch { library.savePosition(video, position, duration) }
+    }
+
+    /** Конец видео: следующее из плейлиста или первое похожее (SPEC 5.6). */
+    private fun onEnded() {
+        savePosition()
+        if (!prefs.autoplayNext) return
+        val current = details ?: return
+        scope.launch {
+            val next = playlistId?.let { nextInPlaylist(it, current.video.id) } ?: current.related.firstOrNull()
+            _state.update { it.copy(nextUp = next) }
+        }
+    }
+
+    private suspend fun nextInPlaylist(playlistId: String, currentId: String): Video? {
+        var token: tv.lumen.core.model.PageToken? = null
+        var found = false
+        repeat(MAX_PLAYLIST_PAGES) {
+            val page = (repository.playlist(playlistId, token) as? AppResult.Success)?.value ?: return null
+            for (v in page.items) {
+                if (found) return v
+                if (v.id == currentId) found = true
+            }
+            token = page.next ?: return null
+        }
+        return null
+    }
+
+    override fun cancelNextUp() {
+        _state.update { it.copy(nextUp = null) }
     }
 
     /** Выбор потоков и сборка источника; позиция сохраняется (ручная смена качества, повтор). */
@@ -191,7 +275,7 @@ internal class ExoPlayerController(
         val videoId = _state.value.videoId ?: return
         retries = 0
         val position = exo.currentPosition.takeIf { details != null } ?: 0
-        fetchAndPrepare(videoId, position, forceRefresh = true)
+        fetchAndPrepare(videoId, position, forceRefresh = true, resume = details == null)
     }
 
     override fun play() = exo.play()
@@ -265,8 +349,11 @@ internal class ExoPlayerController(
     }
 
     override fun release() {
+        savePosition() // при выходе из плеера (SPEC 5.6)
         loadJob?.cancel()
         tickerJob?.cancel()
+        saveJob?.cancel()
+        subscribedJob?.cancel()
         session.release()
         exo.release()
     }
@@ -274,5 +361,7 @@ internal class ExoPlayerController(
     private companion object {
         const val MAX_RETRIES = 2
         const val TICK_MS = 500L
+        const val SAVE_EVERY_MS = 5_000L
+        const val MAX_PLAYLIST_PAGES = 5
     }
 }
