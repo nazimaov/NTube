@@ -12,3 +12,13 @@ fun interface VideoDecorator {
 }
 
 val LocalVideoDecorator = staticCompositionLocalOf<VideoDecorator?> { null }
+
+/**
+ * Аватар канала для карточки, если его нет в самом видео (история, импортированные подписки).
+ * Подключается в app; null — показать букву.
+ */
+fun interface ChannelAvatarResolver {
+    suspend fun avatarUrl(channelId: String): String?
+}
+
+val LocalChannelAvatarResolver = staticCompositionLocalOf<ChannelAvatarResolver?> { null }

@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import tv.lumen.core.designsystem.component.LocalChannelAvatarResolver
 import tv.lumen.core.designsystem.component.LocalVideoDecorator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -107,7 +108,10 @@ fun LumenApp(
         return true
     }
 
-    CompositionLocalProvider(LocalVideoDecorator provides decorator) {
+    CompositionLocalProvider(
+        LocalVideoDecorator provides decorator,
+        LocalChannelAvatarResolver provides appViewModel.channelAvatars,
+    ) {
     Box(
         modifier = Modifier
             .fillMaxSize()

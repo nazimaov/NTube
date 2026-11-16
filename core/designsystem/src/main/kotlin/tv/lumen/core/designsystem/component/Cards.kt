@@ -101,6 +101,14 @@ fun VideoCard(
     val decoration by produceState<VideoDecoration?>(null, video.id, decorator) {
         value = decorator?.let { runCatching { it.decorate(video) }.getOrNull() }
     }
+    // Аватара нет в видео (история, импорт) — спросить у приложения
+    val avatarResolver = LocalChannelAvatarResolver.current
+    val channelAvatar by produceState(video.channelAvatarUrl, video.channelAvatarUrl, video.channelId, avatarResolver, showAvatar) {
+        val channelId = video.channelId
+        if (value == null && showAvatar && channelId != null && avatarResolver != null) {
+            value = runCatching { avatarResolver.avatarUrl(channelId) }.getOrNull()
+        }
+    }
     val originalThumb = rememberAsyncImagePainter(video.thumbnailUrl)
     Card(
         onClick = onClick,
@@ -144,7 +152,7 @@ fun VideoCard(
                 }
             }
             Row(Modifier.padding(horizontal = 4.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                if (showAvatar) ChannelAvatar(video.channelAvatarUrl, video.channelName)
+                if (showAvatar) ChannelAvatar(channelAvatar, video.channelName)
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = decoration?.title ?: video.title,

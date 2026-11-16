@@ -25,6 +25,8 @@ class AppViewModel @Inject constructor(
     settings: SettingsRepository,
     private val updates: UpdateManager,
     dearrow: DeArrowRepository,
+    /** Недостающие аватары каналов на карточках. */
+    val channelAvatars: ChannelAvatars,
 ) : ViewModel() {
 
     /** Новый декоратор при смене настроек — карточки перерисовываются сразу, без перезапуска. */
