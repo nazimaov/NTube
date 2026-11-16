@@ -5,6 +5,8 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
@@ -44,6 +46,8 @@ internal class RoomProfileRepository @Inject constructor(
         list.firstOrNull { it.id == id } ?: list.firstOrNull()
     }.map { it ?: Profile(0, "") }.distinctUntilChanged()
 
+    override val currentId: Flow<Long> = current.map { it.id }.filter { it > 0 }.distinctUntilChanged()
+
     override suspend fun create(name: String): Profile = withContext(io) {
         val id = profileDao.insert(ProfileEntity(name = name.trim(), createdAt = System.currentTimeMillis()))
         settings.set { it.copy(currentProfileId = id) }
@@ -82,11 +86,12 @@ internal class RoomProfileRepository @Inject constructor(
         }
     }
 
-    private suspend fun currentId(): Long {
+    override suspend fun currentId(): Long = withContext(io) {
         ensureDefault()
         val all = profileDao.getAll()
-        val id = settings.current.value.currentProfileId
-        return all.firstOrNull { it.id == id }?.id ?: all.first().id
+        // Не снимок StateFlow: при холодном старте он ещё может быть значением по умолчанию
+        val id = settings.settings.first().currentProfileId
+        all.firstOrNull { it.id == id }?.id ?: all.first().id
     }
 
     /** Первый запуск: создать профиль по умолчанию (пустое имя — подпись берёт UI). */

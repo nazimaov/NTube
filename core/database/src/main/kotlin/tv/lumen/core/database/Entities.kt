@@ -7,10 +7,19 @@ import androidx.room.Index
 import androidx.room.PrimaryKey
 
 // Схема БД — SPEC 9.1. Время хранится в миллисекундах эпохи.
+// С версии 3 подписки и история принадлежат локальному профилю (profile_id).
 
-@Entity(tableName = "subscription")
+@Entity(
+    tableName = "subscription",
+    primaryKeys = ["profile_id", "channel_id"],
+    foreignKeys = [
+        ForeignKey(entity = ProfileEntity::class, parentColumns = ["id"], childColumns = ["profile_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("channel_id")],
+)
 data class SubscriptionEntity(
-    @PrimaryKey @ColumnInfo(name = "channel_id") val channelId: String,
+    @ColumnInfo(name = "profile_id") val profileId: Long,
+    @ColumnInfo(name = "channel_id") val channelId: String,
     @ColumnInfo(name = "name") val name: String,
     @ColumnInfo(name = "avatar_url") val avatarUrl: String?,
     @ColumnInfo(name = "subscribed_at") val subscribedAt: Long,
@@ -18,18 +27,11 @@ data class SubscriptionEntity(
     @ColumnInfo(name = "playback_speed") val playbackSpeed: Float?,
 )
 
-@Entity(
-    tableName = "feed_item",
-    foreignKeys = [
-        ForeignKey(
-            entity = SubscriptionEntity::class,
-            parentColumns = ["channel_id"],
-            childColumns = ["channel_id"],
-            onDelete = ForeignKey.CASCADE,
-        ),
-    ],
-    indices = [Index("published_at"), Index("channel_id")],
-)
+/**
+ * Кэш RSS-ленты каналов — общий для всех профилей: видео канала одинаковы.
+ * Показывается только по подпискам текущего профиля; каналы без подписок чистятся.
+ */
+@Entity(tableName = "feed_item", indices = [Index("published_at"), Index("channel_id")])
 data class FeedItemEntity(
     @PrimaryKey @ColumnInfo(name = "video_id") val videoId: String,
     @ColumnInfo(name = "channel_id") val channelId: String,
@@ -41,9 +43,17 @@ data class FeedItemEntity(
     @ColumnInfo(name = "is_short") val isShort: Boolean,
 )
 
-@Entity(tableName = "watch_history", indices = [Index("watched_at")])
+@Entity(
+    tableName = "watch_history",
+    primaryKeys = ["profile_id", "video_id"],
+    foreignKeys = [
+        ForeignKey(entity = ProfileEntity::class, parentColumns = ["id"], childColumns = ["profile_id"], onDelete = ForeignKey.CASCADE),
+    ],
+    indices = [Index("profile_id", "watched_at")],
+)
 data class WatchHistoryEntity(
-    @PrimaryKey @ColumnInfo(name = "video_id") val videoId: String,
+    @ColumnInfo(name = "profile_id") val profileId: Long,
+    @ColumnInfo(name = "video_id") val videoId: String,
     @ColumnInfo(name = "title") val title: String,
     @ColumnInfo(name = "channel_id") val channelId: String?,
     @ColumnInfo(name = "channel_name") val channelName: String?,

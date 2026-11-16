@@ -22,9 +22,9 @@ import javax.inject.Singleton
         ProfileEntity::class,
         VideoReactionEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
-    // 1 → 2: новые таблицы profile и video_reaction
+    // 1 → 2: новые таблицы profile и video_reaction; 2 → 3 — вручную, MIGRATION_2_3
     autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class LumenDatabase : RoomDatabase() {
@@ -48,7 +48,9 @@ object DatabaseModule {
     @Provides
     @Singleton
     fun database(@ApplicationContext context: Context): LumenDatabase =
-        Room.databaseBuilder(context, LumenDatabase::class.java, LumenDatabase.NAME).build()
+        Room.databaseBuilder(context, LumenDatabase::class.java, LumenDatabase.NAME)
+            .addMigrations(MIGRATION_2_3)
+            .build()
 
     @Provides fun subscriptionDao(db: LumenDatabase) = db.subscriptions()
     @Provides fun feedDao(db: LumenDatabase) = db.feed()

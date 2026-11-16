@@ -66,7 +66,7 @@
     <string name="settings_backup_failed">The file format was not recognized.</string>
     <string name="settings_close">Close</string>
     <string name="settings_section_profiles">Profiles</string>
-    <string name="settings_profile_hint">Likes and dislikes are kept separately for each profile, only on this device. YouTube does not receive them.</string>
+    <string name="settings_profile_hint">Each profile has its own subscriptions, history, Continue watching, likes and dislikes. Everything is stored only on this device; YouTube does not receive it. Settings and hidden channels are shared.</string>
     <string name="settings_profile_default">Main</string>
     <string name="settings_profile_current">Current</string>
     <string name="settings_profile_add">Add profile</string>
@@ -74,5 +74,5 @@
     <string name="settings_profile_save">Save</string>
     <string name="settings_profile_select">Switch to this profile</string>
     <string name="settings_profile_rename">Rename</string>
-    <string name="settings_profile_delete">Delete with its likes</string>
+    <string name="settings_profile_delete">Delete with its subscriptions and history</string>
 </resources>

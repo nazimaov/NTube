@@ -3,6 +3,8 @@ package tv.lumen.data.library.internal
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
@@ -33,40 +35,52 @@ import tv.lumen.core.model.Video
 import tv.lumen.core.model.WatchEntry
 import tv.lumen.data.library.ChannelSource
 import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.library.ProfileRepository
 import java.time.Instant
 import javax.inject.Inject
 import javax.inject.Singleton
 
+/**
+ * Подписки, лента и история текущего локального профиля ([ProfileRepository]).
+ * Чёрный список каналов и настройки — общие для устройства.
+ */
+@OptIn(ExperimentalCoroutinesApi::class)
 @Singleton
 internal class RoomLibraryRepository @Inject constructor(
     private val subscriptionDao: SubscriptionDao,
     private val feedDao: FeedDao,
     private val historyDao: WatchHistoryDao,
     private val blockedDao: BlockedChannelDao,
+    private val profiles: ProfileRepository,
     private val source: ChannelSource,
     private val settings: SettingsRepository,
     @ApplicationContext context: Context,
     @IoDispatcher private val io: CoroutineDispatcher,
 ) : LibraryRepository {
 
-    // Время последнего обновления ленты. DataStore появится в фазе 5 вместе с настройками.
+    // Время последнего обновления ленты — своё у каждого профиля (подписки разные)
     private val prefs = context.getSharedPreferences("library", Context.MODE_PRIVATE)
     internal var clock: () -> Long = System::currentTimeMillis
 
+    private fun <T> perProfile(block: (Long) -> Flow<T>): Flow<T> = profiles.currentId.flatMapLatest(block)
+
     override val subscriptions: Flow<List<ChannelSummary>> =
-        subscriptionDao.observeAll().map { list -> list.map { it.toSummary() } }
+        perProfile { subscriptionDao.observeAll(it) }.map { list -> list.map { it.toSummary() } }
 
     override fun isSubscribed(channelId: ChannelId): Flow<Boolean> =
-        subscriptionDao.observeIsSubscribed(channelId).distinctUntilChanged()
+        perProfile { subscriptionDao.observeIsSubscribed(it, channelId) }.distinctUntilChanged()
 
     override suspend fun subscribe(channelId: ChannelId, name: String, avatarUrl: String?): AppResult<Unit> = withContext(io) {
+        val profileId = profiles.currentId()
         val resolved = (source.channel(channelId) as? AppResult.Success)?.value
+        val id = resolved?.id ?: channelId
         val entity = SubscriptionEntity(
-            channelId = resolved?.id ?: channelId,
+            profileId = profileId,
+            channelId = id,
             name = resolved?.name?.takeIf { it.isNotBlank() } ?: name,
             avatarUrl = resolved?.avatarUrl ?: avatarUrl,
             subscribedAt = clock(),
-            playbackSpeed = subscriptionDao.get(resolved?.id ?: channelId)?.playbackSpeed,
+            playbackSpeed = subscriptionDao.get(profileId, id)?.playbackSpeed,
         )
         subscriptionDao.upsert(entity)
         refreshChannel(entity.channelId)
@@ -74,19 +88,23 @@ internal class RoomLibraryRepository @Inject constructor(
     }
 
     override suspend fun unsubscribe(channelId: ChannelId) = withContext(io) {
-        subscriptionDao.delete(channelId) // лента канала удаляется каскадом
+        subscriptionDao.delete(profiles.currentId(), channelId)
+        feedDao.deleteOrphans() // кэш ленты удаляется, только если канал больше не нужен ни одному профилю
     }
 
-    override val feed: Flow<List<Video>> =
-        combine(feedDao.observeLatest(FEED_LIMIT), subscriptionDao.observeAll()) { items, subs ->
-            val names = subs.associate { it.channelId to it.name }
-            items.map { it.toVideo(names[it.channelId]) }
+    override val feed: Flow<List<Video>> = perProfile { profileId ->
+        combine(feedDao.observeLatest(profileId, FEED_LIMIT), subscriptionDao.observeAll(profileId)) { items, subs ->
+            val byId = subs.associateBy { it.channelId }
+            items.map { item -> byId[item.channelId].let { item.toVideo(it?.name, it?.avatarUrl) } }
         }
+    }
 
     override suspend fun refreshFeed(force: Boolean): AppResult<FeedRefreshResult> = withContext(io) {
+        val profileId = profiles.currentId()
+        val key = "$KEY_FEED_REFRESHED_AT.$profileId"
         val start = clock()
-        val last = prefs.getLong(KEY_FEED_REFRESHED_AT, 0)
-        val subs = subscriptionDao.getAll()
+        val last = prefs.getLong(key, 0)
+        val subs = subscriptionDao.getAll(profileId)
         if (!force && start - last < FEED_STALE_MS) {
             return@withContext AppResult.Success(FeedRefreshResult(subs.size, 0, 0, refreshed = false))
         }
@@ -96,7 +114,7 @@ internal class RoomLibraryRepository @Inject constructor(
         }
         val failed = results.count { !it }
         if (subs.isNotEmpty() && failed == subs.size) return@withContext AppResult.Failure(AppError.Network)
-        prefs.edit().putLong(KEY_FEED_REFRESHED_AT, clock()).apply()
+        prefs.edit().putLong(key, clock()).apply()
         AppResult.Success(FeedRefreshResult(subs.size, failed, clock() - start, refreshed = true))
     }
 
@@ -111,21 +129,23 @@ internal class RoomLibraryRepository @Inject constructor(
         }
 
     override val history: Flow<List<WatchEntry>> =
-        historyDao.observeRecent(HISTORY_LIMIT).map { list -> list.map { it.toEntry() } }
+        perProfile { historyDao.observeRecent(it, HISTORY_LIMIT) }.map { list -> list.map { it.toEntry() } }
 
     override val continueWatching: Flow<List<WatchEntry>> =
-        historyDao.observeInProgress(CONTINUE_LIMIT).map { list -> list.map { it.toEntry() } }
+        perProfile { historyDao.observeInProgress(it, CONTINUE_LIMIT) }.map { list -> list.map { it.toEntry() } }
 
     override val progress: Flow<Map<String, Float>> =
-        historyDao.observeAllProgress().map { rows ->
+        perProfile { historyDao.observeAllProgress(it) }.map { rows ->
             rows.filter { it.durationMs > 0 }.associate { it.videoId to (it.positionMs.toFloat() / it.durationMs).coerceIn(0f, 1f) }
         }
 
     override suspend fun savePosition(video: Video, positionMs: Long, durationMs: Long) = withContext(io) {
         // «Не вести историю» (SPEC 7.2)
         if (video.isLive || durationMs <= 0 || !settings.current.value.historyEnabled) return@withContext
+        val profileId = profiles.currentId()
         historyDao.upsert(
             WatchHistoryEntity(
+                profileId = profileId,
                 videoId = video.id,
                 title = video.title,
                 channelId = video.channelId,
@@ -136,21 +156,23 @@ internal class RoomLibraryRepository @Inject constructor(
                 watchedAt = clock(),
             ),
         )
-        historyDao.trim(HISTORY_LIMIT)
+        historyDao.trim(profileId, HISTORY_LIMIT)
     }
 
     override suspend fun resumePosition(videoId: String): Long? = withContext(io) {
-        historyDao.get(videoId)?.let { ResumePolicy.resumePosition(it.positionMs, it.durationMs) }
+        historyDao.get(profiles.currentId(), videoId)?.let { ResumePolicy.resumePosition(it.positionMs, it.durationMs) }
     }
 
-    override suspend fun removeFromHistory(videoId: String) = withContext(io) { historyDao.delete(videoId) }
+    override suspend fun removeFromHistory(videoId: String) = withContext(io) { historyDao.delete(profiles.currentId(), videoId) }
 
-    override suspend fun clearHistory() = withContext(io) { historyDao.clear() }
+    override suspend fun clearHistory() = withContext(io) { historyDao.clear(profiles.currentId()) }
 
-    override suspend fun channelSpeed(channelId: ChannelId): Float? = withContext(io) { subscriptionDao.get(channelId)?.playbackSpeed }
+    override suspend fun channelSpeed(channelId: ChannelId): Float? = withContext(io) {
+        subscriptionDao.get(profiles.currentId(), channelId)?.playbackSpeed
+    }
 
     override suspend fun setChannelSpeed(channelId: ChannelId, speed: Float?) = withContext(io) {
-        subscriptionDao.get(channelId)?.let { subscriptionDao.upsert(it.copy(playbackSpeed = speed)) } ?: Unit
+        subscriptionDao.get(profiles.currentId(), channelId)?.let { subscriptionDao.upsert(it.copy(playbackSpeed = speed)) } ?: Unit
     }
 
     override val blockedChannelList: Flow<List<ChannelSummary>> =
@@ -194,7 +216,7 @@ internal fun Video.toFeedItem(channelId: ChannelId) = FeedItemEntity(
     isShort = isShort,
 )
 
-internal fun FeedItemEntity.toVideo(channelName: String?) = Video(
+internal fun FeedItemEntity.toVideo(channelName: String?, channelAvatarUrl: String? = null) = Video(
     id = videoId,
     title = title,
     channelId = channelId,
@@ -206,6 +228,7 @@ internal fun FeedItemEntity.toVideo(channelName: String?) = Video(
     publishedText = null,
     isLive = isLive,
     isShort = isShort,
+    channelAvatarUrl = channelAvatarUrl,
 )
 
 internal fun WatchHistoryEntity.toEntry() = WatchEntry(

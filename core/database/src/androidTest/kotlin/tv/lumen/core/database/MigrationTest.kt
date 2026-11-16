@@ -29,6 +29,29 @@ class MigrationTest {
         }
     }
 
+    @Test
+    fun миграция_2_3_переносит_подписки_и_историю_в_профиль_по_умолчанию() {
+        helper.createDatabase(DB, 2).use { db ->
+            db.execSQL("INSERT INTO subscription (channel_id, name, avatar_url, subscribed_at, playback_speed) VALUES ('UC1', 'Ch', NULL, 1, 1.5)")
+            db.execSQL("INSERT INTO feed_item VALUES ('v1', 'UC1', 'T', NULL, 60, 10, 0, 0)")
+            db.execSQL("INSERT INTO watch_history VALUES ('v1', 'T', 'UC1', 'Ch', NULL, 100, 50, 5)")
+        }
+        helper.runMigrationsAndValidate(DB, 3, true, MIGRATION_2_3).use { db ->
+            val profileId = db.query("SELECT MIN(id) FROM profile").use { c -> c.moveToFirst(); c.getLong(0) }
+            db.query("SELECT profile_id, playback_speed FROM subscription WHERE channel_id = 'UC1'").use { c ->
+                c.moveToFirst()
+                assertEquals(profileId, c.getLong(0))
+                assertEquals(1.5, c.getDouble(1), 0.0)
+            }
+            db.query("SELECT profile_id, position_ms FROM watch_history WHERE video_id = 'v1'").use { c ->
+                c.moveToFirst()
+                assertEquals(profileId, c.getLong(0))
+                assertEquals(50L, c.getLong(1))
+            }
+            db.query("SELECT COUNT(*) FROM feed_item").use { c -> c.moveToFirst(); assertEquals(1, c.getInt(0)) }
+        }
+    }
+
     private companion object {
         const val DB = "migration-test"
     }

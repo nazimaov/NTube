@@ -14,6 +14,11 @@ interface ProfileRepository {
     /** Текущий профиль; при первом запуске создаётся профиль по умолчанию. */
     val current: Flow<Profile>
 
+    /** id текущего профиля; подписки, история и отметки берутся по нему. */
+    val currentId: Flow<Long>
+
+    suspend fun currentId(): Long
+
     /** Создаёт профиль и делает его текущим. */
     suspend fun create(name: String): Profile
 
