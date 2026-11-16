@@ -30,7 +30,7 @@ class BackupCodecTest {
             preferredCodec = PreferredCodec.VP9,
             blockedWords = setOf("asmr"),
             sponsorCategories = Settings.DEFAULT_SPONSOR_MODES + (SponsorCategory.INTRO to SegmentMode.BUTTON),
-            hiddenMenuItems = setOf(MenuItem.HISTORY),
+            hiddenMenuItems = setOf(MenuItem.LIBRARY),
         )
         val backup = Backup(
             subscriptions = listOf(SubscriptionBackup("UCSMOQeBJ2RAnuFungnQOxLg", "Blender", playbackSpeed = 1.5f)),
