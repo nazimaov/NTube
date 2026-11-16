@@ -11,6 +11,7 @@ import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import tv.lumen.core.designsystem.component.LocalChannelAvatarResolver
+import tv.lumen.core.designsystem.component.LocalQueueActions
 import tv.lumen.core.designsystem.component.LocalVideoDecorator
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -123,6 +124,7 @@ fun LumenApp(
     CompositionLocalProvider(
         LocalVideoDecorator provides decorator,
         LocalChannelAvatarResolver provides appViewModel.channelAvatars,
+        LocalQueueActions provides appViewModel.queueActions,
     ) {
     Box(
         modifier = Modifier

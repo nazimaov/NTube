@@ -31,4 +31,7 @@
     <string name="ds_menu_hide_channel">Don\'t show this channel</string>
     <string name="ds_menu_remove_history">Remove from history</string>
     <string name="ds_refresh">Refresh</string>
+    <string name="ds_menu_add_queue">Add to queue</string>
+    <string name="ds_menu_in_queue">Already in queue</string>
+    <string name="ds_toast_added_queue">Added to queue</string>
 </resources>

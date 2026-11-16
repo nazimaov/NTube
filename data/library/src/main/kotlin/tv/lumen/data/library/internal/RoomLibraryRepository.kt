@@ -35,6 +35,7 @@ import tv.lumen.core.model.Video
 import tv.lumen.core.model.WatchEntry
 import tv.lumen.data.library.ChannelSource
 import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.library.PlayQueue
 import tv.lumen.data.library.ProfileRepository
 import java.time.Instant
 import javax.inject.Inject
@@ -53,6 +54,7 @@ internal class RoomLibraryRepository @Inject constructor(
     private val blockedDao: BlockedChannelDao,
     private val profiles: ProfileRepository,
     private val source: ChannelSource,
+    override val queue: PlayQueue,
     private val settings: SettingsRepository,
     @ApplicationContext context: Context,
     @IoDispatcher private val io: CoroutineDispatcher,

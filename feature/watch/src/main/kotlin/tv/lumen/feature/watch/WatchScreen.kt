@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import tv.lumen.core.designsystem.component.PlayerIconButton
 import tv.lumen.core.designsystem.format.formatCompact
 import tv.lumen.core.model.Reaction
+import tv.lumen.core.model.Video
 import tv.lumen.core.model.PlaybackOrder
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.AccountCircle
@@ -98,8 +99,14 @@ fun WatchRoute(
     val comments by viewModel.comments.collectAsStateWithLifecycle()
     val matchFrameRate by viewModel.matchFrameRate.collectAsStateWithLifecycle()
     FrameRateMatcher(enabled = matchFrameRate, fps = state.quality?.fps?.takeIf { !state.isLive })
+    val queue by viewModel.queue.collectAsStateWithLifecycle()
     WatchScreen(
         dislikes = dislikes,
+        queue = queue,
+        onQueueAdd = { viewModel.queueAdd(it) },
+        onQueueRemove = viewModel::queueRemove,
+        onQueueMove = viewModel::queueMove,
+        onQueueClear = viewModel::queueClear,
         reaction = reaction,
         onReact = viewModel::toggleReaction,
         comments = comments,
@@ -130,11 +137,17 @@ internal fun WatchScreen(
     reaction: Reaction? = null,
     onReact: (Reaction) -> Unit = {},
     comments: tv.lumen.core.common.PagedState<tv.lumen.core.model.Comment>? = null,
+    queue: List<Video> = emptyList(),
+    onQueueAdd: (Video) -> Unit = {},
+    onQueueRemove: (String) -> Unit = {},
+    onQueueMove: (String, Int) -> Unit = { _, _ -> },
+    onQueueClear: () -> Unit = {},
     onOpenComments: () -> Unit = {},
     onLoadMoreComments: () -> Unit = {},
 ) {
     var panelVisible by remember { mutableStateOf(false) }
     // Ряд «Похожие» внизу панели: открывается кнопкой Вниз (SPEC 5.5)
+    var queueEdit by remember { mutableStateOf<Video?>(null) }
     var relatedVisible by remember { mutableStateOf(false) }
     var buttonsFocused by remember { mutableStateOf(false) }
     val related = state.details?.related.orEmpty()
@@ -208,7 +221,7 @@ internal fun WatchScreen(
             Key.MediaRewind -> { controller.seekBy(-FAST_SEEK_MS); return true }
         }
         // Вниз с ряда кнопок открывает «Похожие»
-        if (panelVisible && dialog == null && !relatedVisible && buttonsFocused && event.key == Key.DirectionDown && related.isNotEmpty()) {
+        if (panelVisible && dialog == null && !relatedVisible && buttonsFocused && event.key == Key.DirectionDown && (related.isNotEmpty() || queue.isNotEmpty())) {
             showPanel(PanelFocus.RELATED)
             return true
         }
@@ -283,7 +296,28 @@ internal fun WatchScreen(
                 dislikes = dislikes,
                 reaction = reaction,
                 onReact = onReact,
+                queue = queue,
+                onQueueEdit = { queueEdit = it },
+                onAddToQueue = onQueueAdd,
             )
+        }
+
+        queueEdit?.let { edited ->
+            val index = queue.indexOfFirst { it.id == edited.id }
+            if (index >= 0) {
+                QueueItemDialog(
+                    video = edited,
+                    index = index,
+                    size = queue.size,
+                    onPlay = { onOpenVideo(edited.id) },
+                    onMove = { onQueueMove(edited.id, it) },
+                    onRemove = { onQueueRemove(edited.id) },
+                    onClear = onQueueClear,
+                    onDismiss = { queueEdit = null; showPanel(PanelFocus.RELATED) },
+                )
+            } else {
+                queueEdit = null
+            }
         }
 
         state.nextUp?.let { next ->
@@ -355,7 +389,11 @@ private fun ControlPanel(
     dislikes: Long?,
     reaction: Reaction?,
     onReact: (Reaction) -> Unit,
+    queue: List<Video>,
+    onQueueEdit: (Video) -> Unit,
+    onAddToQueue: (Video) -> Unit,
 ) {
+    val context = androidx.compose.ui.platform.LocalContext.current
     val playFocus = remember { FocusRequester() }
     val seekFocus = remember { FocusRequester() }
     val relatedFocus = remember { FocusRequester() }
@@ -517,6 +555,22 @@ private fun ControlPanel(
         }
 
         val related = state.details?.related.orEmpty()
+        // Ряды: сначала своя очередь (долгое нажатие — редактировать), ниже — похожие (долгое — в очередь)
+        if (relatedVisible && queue.isNotEmpty()) {
+            Text(stringResource(R.string.watch_queue), style = MaterialTheme.typography.titleMedium, color = Color.White)
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
+                itemsIndexed(queue, key = { _, v -> "q:" + v.id }) { index, video ->
+                    VideoCard(
+                        video = video,
+                        onClick = { onOpenVideo(video.id) },
+                        onLongClick = { onQueueEdit(video) },
+                        modifier = Modifier
+                            .width(CardWidth)
+                            .then(if (index == 0) Modifier.focusRequester(relatedFocus) else Modifier),
+                    )
+                }
+            }
+        }
         if (relatedVisible && related.isNotEmpty()) {
             Text(stringResource(R.string.watch_related), style = MaterialTheme.typography.titleMedium, color = Color.White)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
@@ -524,9 +578,15 @@ private fun ControlPanel(
                     VideoCard(
                         video = video,
                         onClick = { onOpenVideo(video.id) },
+                        onLongClick = {
+                            if (!queue.any { it.id == video.id }) {
+                                onAddToQueue(video)
+                                android.widget.Toast.makeText(context, R.string.queue_added, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        },
                         modifier = Modifier
                             .width(CardWidth)
-                            .then(if (index == 0) Modifier.focusRequester(relatedFocus) else Modifier),
+                            .then(if (index == 0 && queue.isEmpty()) Modifier.focusRequester(relatedFocus) else Modifier),
                     )
                 }
             }

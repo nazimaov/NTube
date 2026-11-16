@@ -5,6 +5,8 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import tv.lumen.core.model.Video
+import tv.lumen.data.library.LibraryRepository
 import tv.lumen.core.model.Reaction
 import tv.lumen.data.library.ProfileRepository
 import kotlinx.coroutines.flow.flatMapLatest
@@ -41,6 +43,7 @@ class WatchViewModel @Inject constructor(
     private val dislikeRepository: DislikeRepository,
     private val profiles: ProfileRepository,
     private val youtube: YouTubeRepository,
+    private val library: LibraryRepository,
     settings: SettingsRepository,
 ) : ViewModel() {
 
@@ -59,6 +62,13 @@ class WatchViewModel @Inject constructor(
     val reaction: StateFlow<Reaction?> = controller.state.map { it.details?.video?.id }.distinctUntilChanged()
         .flatMapLatest { id -> if (id == null) flowOf(null) else profiles.reaction(id) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Очередь воспроизведения (только в памяти) и её редактирование. */
+    val queue: StateFlow<List<Video>> = library.queue.items
+    fun queueAdd(video: Video) = library.queue.add(video)
+    fun queueRemove(id: String) = library.queue.remove(id)
+    fun queueMove(id: String, delta: Int) = library.queue.move(id, delta)
+    fun queueClear() = library.queue.clear()
 
     /** Повторное нажатие снимает отметку. */
     fun toggleReaction(value: Reaction) {

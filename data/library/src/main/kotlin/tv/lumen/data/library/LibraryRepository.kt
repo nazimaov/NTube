@@ -10,6 +10,9 @@ import tv.lumen.core.model.WatchEntry
 
 /** Локальные подписки, лента, история и позиции просмотра (SPEC 7.1, 7.2). */
 interface LibraryRepository {
+    /** Очередь воспроизведения (только в памяти). */
+    val queue: PlayQueue
+
     val subscriptions: Flow<List<ChannelSummary>>
     fun isSubscribed(channelId: ChannelId): Flow<Boolean>
 

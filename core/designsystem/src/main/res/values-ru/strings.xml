@@ -37,4 +37,7 @@
     <string name="ds_menu_hide_channel">Не показывать канал</string>
     <string name="ds_menu_remove_history">Удалить из истории</string>
     <string name="ds_refresh">Обновить</string>
+    <string name="ds_menu_add_queue">Добавить в очередь</string>
+    <string name="ds_menu_in_queue">Уже в очереди</string>
+    <string name="ds_toast_added_queue">Добавлено в очередь</string>
 </resources>

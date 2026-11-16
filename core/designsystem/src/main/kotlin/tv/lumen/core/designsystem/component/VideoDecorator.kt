@@ -22,3 +22,13 @@ fun interface ChannelAvatarResolver {
 }
 
 val LocalChannelAvatarResolver = staticCompositionLocalOf<ChannelAvatarResolver?> { null }
+
+
+/** Очередь воспроизведения для меню карточек; подключается в app, экраны о ней не знают. */
+interface QueueActions {
+    /** true — добавлено, false — такое видео уже в очереди. */
+    fun add(video: Video): Boolean
+    fun contains(videoId: String): Boolean
+}
+
+val LocalQueueActions = staticCompositionLocalOf<QueueActions?> { null }

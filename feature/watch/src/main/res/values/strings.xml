@@ -48,4 +48,11 @@
     <string name="watch_order_sequential">In order</string>
     <string name="watch_order_repeat">Repeat</string>
     <string name="watch_order_shuffle">Shuffle</string>
+    <string name="watch_queue">Queue</string>
+    <string name="queue_play">Play now</string>
+    <string name="queue_move_left">Move left</string>
+    <string name="queue_move_right">Move right</string>
+    <string name="queue_remove">Remove from queue</string>
+    <string name="queue_clear">Clear queue</string>
+    <string name="queue_added">Added to queue</string>
 </resources>

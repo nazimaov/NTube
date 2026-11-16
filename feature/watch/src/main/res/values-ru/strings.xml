@@ -48,4 +48,11 @@
     <string name="watch_order_sequential">По очереди</string>
     <string name="watch_order_repeat">Повтор</string>
     <string name="watch_order_shuffle">Вперемешку</string>
+    <string name="watch_queue">Очередь</string>
+    <string name="queue_play">Играть сейчас</string>
+    <string name="queue_move_left">Сдвинуть левее</string>
+    <string name="queue_move_right">Сдвинуть правее</string>
+    <string name="queue_remove">Убрать из очереди</string>
+    <string name="queue_clear">Очистить очередь</string>
+    <string name="queue_added">Добавлено в очередь</string>
 </resources>

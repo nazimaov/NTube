@@ -280,7 +280,13 @@ internal class ExoPlayerController(
         val current = details ?: return
         val order = _state.value.playbackOrder
         scope.launch {
-            val next = when (order) {
+            // Своя очередь важнее: сначала играет она, и только потом «похожие» и плейлист
+            val queued = if (order == PlaybackOrder.SHUFFLE) {
+                library.queue.items.value.filter { it.id != current.video.id }.randomOrNull()
+            } else {
+                library.queue.nextAfter(current.video.id)
+            }
+            val next = queued ?: when (order) {
                 PlaybackOrder.SHUFFLE -> PlaybackQueue.shuffleNext(
                     playlist = playlistId?.let { playlistItems(it) }.orEmpty(),
                     related = current.related,

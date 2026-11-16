@@ -11,7 +11,10 @@ import tv.lumen.core.datastore.MenuItem
 import tv.lumen.core.datastore.SettingsRepository
 import javax.inject.Inject
 import kotlinx.coroutines.flow.map
+import tv.lumen.core.designsystem.component.QueueActions
 import tv.lumen.core.designsystem.component.VideoDecorator
+import tv.lumen.core.model.Video
+import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.dearrow.DeArrowRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
@@ -27,6 +30,7 @@ class AppViewModel @Inject constructor(
     dearrow: DeArrowRepository,
     /** Недостающие аватары каналов на карточках. */
     val channelAvatars: ChannelAvatars,
+    library: LibraryRepository,
 ) : ViewModel() {
 
     /** Новый декоратор при смене настроек — карточки перерисовываются сразу, без перезапуска. */
@@ -36,6 +40,12 @@ class AppViewModel @Inject constructor(
 
     /** Язык интерфейса из настроек — без начального значения, только реально сохранённый. */
     val appLanguage: kotlinx.coroutines.flow.Flow<String?> = settings.flow { it.appLanguage }
+
+    /** Очередь воспроизведения для меню карточек. */
+    val queueActions: QueueActions = object : QueueActions {
+        override fun add(video: Video) = library.queue.add(video)
+        override fun contains(videoId: String) = library.queue.contains(videoId)
+    }
 
     val updateState: StateFlow<UpdateState> = updates.state
 

@@ -1,6 +1,8 @@
 package tv.lumen.core.designsystem.component
 
 import androidx.compose.foundation.background
+import android.widget.Toast
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -38,8 +40,21 @@ fun VideoMenu(
 ) {
     val first = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    val queue = LocalQueueActions.current
+    val context = LocalContext.current
     val hasChannel = video.channelId != null
     val items = buildList {
+        if (queue != null) {
+            val queued = queue.contains(video.id)
+            add(
+                stringResource(if (queued) R.string.ds_menu_in_queue else R.string.ds_menu_add_queue) to {
+                    if (!queued) {
+                        queue.add(video)
+                        Toast.makeText(context, R.string.ds_toast_added_queue, Toast.LENGTH_SHORT).show()
+                    }
+                },
+            )
+        }
         if (hasChannel && onOpenChannel != null) add(stringResource(R.string.ds_menu_open_channel) to onOpenChannel)
         if (hasChannel && onToggleSubscribe != null) {
             add(stringResource(if (isSubscribed) R.string.ds_menu_unsubscribe else R.string.ds_menu_subscribe) to onToggleSubscribe)
