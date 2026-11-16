@@ -37,8 +37,11 @@
     <string name="settings_remove">Удалить</string>
     <string name="settings_blocked_channels">Скрытые каналы</string>
     <string name="settings_unblock">Показывать снова</string>
-    <string name="settings_content_language">Язык контента</string>
-    <string name="settings_content_country">Страна контента</string>
+    <string name="settings_content_language">Язык видео</string>
+    <string name="settings_section_language">Язык и регион</string>
+    <string name="settings_app_language">Язык интерфейса</string>
+    <string name="settings_region">Регион</string>
+    <string name="settings_region_hint">От региона зависят тренды, чарты и поиск, а каждая четвёртая рекомендация — популярное в этом регионе. Остальные рекомендации — по тому, что вы смотрите и лайкаете.</string>
     <string name="settings_history_enabled">Вести историю просмотра</string>
     <string name="settings_clear_history">Очистить историю</string>
     <string name="settings_clear_confirm">Очистить</string>

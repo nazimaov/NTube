@@ -29,6 +29,9 @@ import tv.lumen.core.model.WatchEntry
 import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.library.ProfileRepository
+import tv.lumen.core.datastore.SettingsRepository
+import tv.lumen.core.model.getOrNull
+import tv.lumen.data.youtube.YouTubeInitializer
 import tv.lumen.data.library.VideoActions
 import tv.lumen.data.youtube.YouTubeRepository
 import javax.inject.Inject
@@ -54,6 +57,8 @@ class HomeViewModel @Inject constructor(
     private val youtube: YouTubeRepository,
     private val library: LibraryRepository,
     private val profiles: ProfileRepository,
+    settings: SettingsRepository,
+    youTubeInitializer: YouTubeInitializer,
     filter: ContentFilter,
 ) : ViewModel() {
 
@@ -80,9 +85,19 @@ class HomeViewModel @Inject constructor(
         }
     }
 
+    // Популярное в регионе из настроек: меняется вместе с регионом и языком контента
+    private val regional: Flow<List<Video>> = settings.flow { it.contentLanguage to it.contentCountry }
+        .mapLatest { (language, country) ->
+            youTubeInitializer.applyContentLocale(language, country) // до запроса, чтобы не было гонки с Application
+            youtube.regionalPopular().getOrNull().orEmpty()
+        }
+        .onStart { emit(emptyList()) }
+
+    // Личные рекомендации; каждое четвёртое место — региональное
     private val recommendations: Flow<List<Video>> =
-        combine(related, library.progress, profiles.dislikedVideoIds) { (sources, lists), progress, disliked ->
-            Recommendations.mix(lists, exclude = progress.keys + disliked + sources)
+        combine(related, regional, library.progress, profiles.dislikedVideoIds) { (sources, lists), reg, progress, disliked ->
+            val exclude = progress.keys + disliked + sources
+            Recommendations.withRegional(Recommendations.mix(lists, exclude), reg, exclude)
         }.onStart { emit(emptyList()) }
 
     // Фильтры 6.4 применяются ко всем рядам, кроме «Продолжить просмотр»

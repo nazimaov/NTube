@@ -21,6 +21,12 @@ class YouTubeInitializer @Inject constructor(private val client: OkHttpClient) {
     }
 
     /** Язык и страну контента меняют настройки (фаза 5). */
+    /** Язык и страна контента из настроек; null — системная локаль (SPEC 4.2, 9.2). */
+    fun applyContentLocale(language: String?, country: String?) {
+        val system = Locale.getDefault()
+        setContentLocale(language ?: system.language, country ?: system.country.ifBlank { "US" })
+    }
+
     fun setContentLocale(language: String, country: String) {
         ensureInitialized(client, Locale.getDefault())
         NewPipe.setupLocalization(localization(language, country), ContentCountry(country))

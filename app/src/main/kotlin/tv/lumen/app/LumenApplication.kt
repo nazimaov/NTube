@@ -17,7 +17,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 import tv.lumen.core.common.ApplicationScope
 import tv.lumen.core.datastore.SettingsRepository
-import java.util.Locale
 
 @HiltAndroidApp
 class LumenApplication : Application(), SingletonImageLoader.Factory {
@@ -42,8 +41,7 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
         // Язык и страна контента из настроек; null — системная локаль (SPEC 4.2, 9.2)
         appScope.launch {
             settings.flow { it.contentLanguage to it.contentCountry }.collect { (language, country) ->
-                val system = Locale.getDefault()
-                youTubeInitializer.setContentLocale(language ?: system.language, country ?: system.country.ifBlank { "US" })
+                youTubeInitializer.applyContentLocale(language, country)
             }
         }
     }

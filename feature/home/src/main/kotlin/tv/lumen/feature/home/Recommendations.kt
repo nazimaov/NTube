@@ -54,4 +54,32 @@ object Recommendations {
         }
         return result
     }
+
+    /** Каждое [every]-е место в рекомендациях — популярное в регионе из настроек. */
+    const val REGIONAL_EVERY = 4
+
+    /**
+     * Подмешивает [regional] в [personal]: после каждых `every - 1` личных — одно региональное.
+     * Региональные без [exclude] и повторов; если личных нет (новый профиль) — только региональные.
+     */
+    fun withRegional(
+        personal: List<Video>,
+        regional: List<Video>,
+        exclude: Set<String>,
+        every: Int = REGIONAL_EVERY,
+        limit: Int = LIMIT,
+    ): List<Video> {
+        val seen = HashSet<String>(exclude).apply { personal.forEach { add(it.id) } }
+        val extra = regional.filter { !it.isLive && !it.isShort && seen.add(it.id) }.iterator()
+        val result = ArrayList<Video>(limit)
+        for (video in personal) {
+            if (result.size >= limit) break
+            if (result.size % every == every - 1 && extra.hasNext()) result += extra.next()
+            if (result.size < limit) result += video
+        }
+        while (result.size < limit && extra.hasNext() && (personal.isEmpty() || result.size % every == every - 1)) {
+            result += extra.next()
+        }
+        return result
+    }
 }

@@ -39,4 +39,19 @@ class RecommendationsTest {
         val many = (1..100).map { v("v$it") }
         assertEquals(10, Recommendations.mix(listOf(many), exclude = emptySet(), limit = 10).size)
     }
+
+    @Test
+    fun `каждое четвёртое - региональное, без повторов и исключённых`() {
+        val personal = (1..6).map { v("p$it") }
+        val regional = listOf(v("p2"), v("seen"), v("r1"), v("r2"), v("r3"))
+        val mixed = Recommendations.withRegional(personal, regional, exclude = setOf("seen"), every = 4)
+        assertEquals(listOf("p1", "p2", "p3", "r1", "p4", "p5", "p6", "r2"), mixed.map { it.id })
+    }
+
+    @Test
+    fun `новый профиль без истории - только региональное`() {
+        val regional = (1..5).map { v("r$it") }
+        val mixed = Recommendations.withRegional(emptyList(), regional, exclude = emptySet(), limit = 3)
+        assertEquals(listOf("r1", "r2", "r3"), mixed.map { it.id })
+    }
 }

@@ -34,6 +34,9 @@ class AppViewModel @Inject constructor(
         .map { (titles, thumbs) -> if (titles || thumbs) DeArrowDecorator(dearrow, titles, thumbs) else null }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
 
+    /** Язык интерфейса из настроек — без начального значения, только реально сохранённый. */
+    val appLanguage: kotlinx.coroutines.flow.Flow<String?> = settings.flow { it.appLanguage }
+
     val updateState: StateFlow<UpdateState> = updates.state
 
     init {

@@ -3,6 +3,8 @@ package tv.lumen.data.youtube.internal
 import kotlinx.coroutines.CoroutineDispatcher
 import okhttp3.OkHttpClient
 import org.schabi.newpipe.extractor.InfoItem
+import org.schabi.newpipe.extractor.NewPipe
+import org.schabi.newpipe.extractor.exceptions.ExtractionException
 import org.schabi.newpipe.extractor.ListExtractor.InfoItemsPage
 import org.schabi.newpipe.extractor.ServiceList
 import org.schabi.newpipe.extractor.channel.ChannelInfo
@@ -33,6 +35,7 @@ import tv.lumen.core.model.PageToken
 import tv.lumen.core.model.PlaylistSummary
 import tv.lumen.core.model.SearchFilter
 import tv.lumen.core.model.SearchItem
+import java.util.Locale
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.VideoDetails
 import tv.lumen.core.model.channelUrl
@@ -85,6 +88,36 @@ internal class NewPipeYouTubeRepository @Inject constructor(
         val kiosks = youtube.kioskList
         val url = kiosks.getListLinkHandlerFactoryByType(MUSIC_KIOSK_ID).fromId(MUSIC_KIOSK_ID).url
         Mappers.videos(KioskInfo.getInfo(youtube, url).relatedItems)
+    }
+
+    /**
+     * Популярное в регионе из настроек (страна контента): тренды, музыкальные и игровые чарты,
+     * подкасты — без эфиров и Shorts. Для стран, где чартов YouTube нет, добавляется поиск
+     * на языке региона по названию страны.
+     */
+    override suspend fun regionalPopular(): AppResult<List<Video>> = call {
+        val kiosks = youtube.kioskList
+        val country = NewPipe.getPreferredContentCountry().countryCode
+        val collected = LinkedHashMap<String, Video>()
+        for (id in REGIONAL_KIOSKS) {
+            runCatching {
+                val url = kiosks.getListLinkHandlerFactoryByType(id).fromId(id).url
+                Mappers.videos(KioskInfo.getInfo(youtube, url).relatedItems)
+            }.getOrNull()?.filter { !it.isLive && !it.isShort }?.forEach { collected.putIfAbsent(it.id, it) }
+        }
+        if (collected.size < MIN_REGIONAL) {
+            val locale = Locale(RegionLanguages.languageFor(country), country)
+            val query = locale.getDisplayCountry(locale).ifBlank { country }
+            runCatching {
+                val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(SearchFilter.VIDEOS)), "")
+                SearchInfo.getInfo(youtube, handler).relatedItems.mapNotNull(Mappers::searchItem)
+            }.getOrNull()?.forEach { item ->
+                val video = (item as? SearchItem.VideoItem)?.video ?: return@forEach
+                if (!video.isLive && !video.isShort) collected.putIfAbsent(video.id, video)
+            }
+        }
+        if (collected.isEmpty()) throw ExtractionException("Нет популярного для региона $country")
+        collected.values.toList()
     }
 
     override suspend fun search(query: String, filter: SearchFilter, page: PageToken?) = call {
@@ -207,5 +240,11 @@ internal class NewPipeYouTubeRepository @Inject constructor(
     private companion object {
         // Идентификатор киоска из YoutubeTrendingMusicLinkHandlerFactory (NewPipeExtractor v0.27.1)
         const val MUSIC_KIOSK_ID = "trending_music"
+
+        // Региональные киоски экстрактора v0.27.1; «Trending» — YoutubeTrendingExtractor.KIOSK_ID
+        val REGIONAL_KIOSKS = listOf(
+            YoutubeTrendingExtractor.KIOSK_ID, "trending_music", "trending_gaming", "trending_podcasts_episodes",
+        )
+        const val MIN_REGIONAL = 15
     }
 }

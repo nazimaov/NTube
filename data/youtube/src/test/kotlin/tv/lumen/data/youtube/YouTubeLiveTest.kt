@@ -59,6 +59,18 @@ class YouTubeLiveTest {
     }
 
     @Test
+    fun regionalPopular() = runBlocking {
+        val init = YouTubeInitializer(LumenHttp.baseClientBuilder().build())
+        for ((lang, country) in listOf("ru" to "RU", "az" to "AZ")) {
+            init.setContentLocale(lang, country)
+            val videos = repo.regionalPopular().ok("regionalPopular $country")
+            println("regional $country: ${videos.size} видео; " + videos.take(4).joinToString(" | ") { it.title })
+            assertTrue("пусто для $country", videos.size >= 10)
+        }
+        init.setContentLocale("en", "US")
+    }
+
+    @Test
     fun musicSearch() = runBlocking {
         val songs = repo.search("daft punk", SearchFilter.MUSIC_SONGS, null).ok("music songs").items
         val albums = repo.search("daft punk", SearchFilter.MUSIC_ALBUMS, null).ok("music albums").items

@@ -88,6 +88,8 @@ fun SettingsRoute(
     val audioLangs = listOf(Choice<String?>(original, null)) + LANGUAGES.map { Choice<String?>(languageName(it), it) }
     val contentLangs = listOf(Choice<String?>(system, null)) + LANGUAGES.map { Choice<String?>(languageName(it), it) }
     val countries = listOf(Choice<String?>(system, null)) + COUNTRIES.map { Choice<String?>(countryName(it), it) }
+    // Языки, на которые переведён интерфейс; название — на самом языке
+    val appLangs = listOf(Choice<String?>(system, null)) + UI_LANGUAGES.map { Choice<String?>(nativeLanguageName(it), it) }
     val modes = listOf(
         Choice(stringResource(R.string.settings_sb_skip), SegmentMode.SKIP),
         Choice(stringResource(R.string.settings_sb_button), SegmentMode.BUTTON),
@@ -251,19 +253,35 @@ fun SettingsRoute(
             }
         }
 
-        section(R.string.settings_section_general)
+        section(R.string.settings_section_language)
+        item {
+            val title = stringResource(R.string.settings_app_language)
+            Row(title, appLangs.label(s.appLanguage), Modifier.rememberFocus(memory, "app_lang")) {
+                ask(title, appLangs, s.appLanguage) { v -> viewModel.update { it.copy(appLanguage = v) } }
+            }
+        }
+        item {
+            val title = stringResource(R.string.settings_region)
+            Row(title, countries.label(s.contentCountry), Modifier.rememberFocus(memory, "country")) {
+                ask(title, countries, s.contentCountry) { v -> viewModel.update { it.copy(contentCountry = v) } }
+            }
+        }
+        item {
+            Text(
+                stringResource(R.string.settings_region_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp).fillMaxWidth(0.8f),
+            )
+        }
         item {
             val title = stringResource(R.string.settings_content_language)
             Row(title, contentLangs.label(s.contentLanguage), Modifier.rememberFocus(memory, "lang")) {
                 ask(title, contentLangs, s.contentLanguage) { v -> viewModel.update { it.copy(contentLanguage = v) } }
             }
         }
-        item {
-            val title = stringResource(R.string.settings_content_country)
-            Row(title, countries.label(s.contentCountry), Modifier.rememberFocus(memory, "country")) {
-                ask(title, countries, s.contentCountry) { v -> viewModel.update { it.copy(contentCountry = v) } }
-            }
-        }
+
+        section(R.string.settings_section_general)
         item {
             Toggle(stringResource(R.string.settings_history_enabled), s.historyEnabled, Modifier.rememberFocus(memory, "history")) {
                 viewModel.update { it.copy(historyEnabled = !it.historyEnabled) }
@@ -434,13 +452,28 @@ private fun <T> List<Choice<T>>.label(value: T): String = firstOrNull { it.value
 private fun formatSpeed(speed: Float): String =
     (if (speed % 1f == 0f) "%.1f" else "%.2f").format(speed).trimEnd('0').trimEnd('.', ',') + "×"
 
-private val LANGUAGES = listOf("ru", "en", "uk", "kk", "de", "fr", "es", "it", "pt", "tr", "ja", "ko", "zh")
-private val COUNTRIES = listOf("RU", "US", "GB", "KZ", "UA", "BY", "DE", "FR", "ES", "IT", "TR", "JP", "KR", "IN", "BR")
+private val LANGUAGES = listOf(
+    "ru", "en", "az", "tr", "uk", "kk", "uz", "be", "ky", "hy", "ka", "de", "fr", "es", "it", "pt", "pl", "nl",
+    "ar", "fa", "he", "hi", "ja", "ko", "zh",
+)
+
+// Языки, на которые переведён интерфейс (есть values-XX/strings.xml)
+private val UI_LANGUAGES = listOf("ru", "en")
+
+private val COUNTRIES = listOf(
+    "RU", "AZ", "TR", "KZ", "UA", "BY", "UZ", "KG", "TJ", "AM", "GE", "MD", "US", "GB", "DE", "FR", "ES", "IT",
+    "PT", "PL", "NL", "JP", "KR", "IN", "BR", "AE", "SA", "EG", "IL", "IR",
+)
 
 private fun languageName(tag: String): String =
     Locale.forLanguageTag(tag).let { it.getDisplayLanguage(it).replaceFirstChar { c -> c.titlecase(it) } }
 
 private fun countryName(code: String): String = Locale("", code).getDisplayCountry(Locale.getDefault())
+
+private fun nativeLanguageName(tag: String): String {
+    val locale = Locale.forLanguageTag(tag)
+    return locale.getDisplayName(locale).replaceFirstChar { it.titlecase(locale) }
+}
 
 @Composable
 private fun categoryLabel(c: SponsorCategory): String = stringResource(

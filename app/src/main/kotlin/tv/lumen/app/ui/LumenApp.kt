@@ -196,6 +196,17 @@ fun LumenApp(
     }
     }
 
+    // Смена языка интерфейса — сохранить и пересоздать экран (SharedPreferences читает attachBaseContext)
+    LaunchedEffect(Unit) {
+        appViewModel.appLanguage.collect { tag ->
+            val current = activity ?: return@collect
+            if (tag != tv.lumen.app.AppLocale.saved(current)) {
+                tv.lumen.app.AppLocale.save(current, tag)
+                current.recreate()
+            }
+        }
+    }
+
     // Внешняя ссылка youtube.com/watch или youtu.be открывает плеер
     LaunchedEffect(pendingVideoId) {
         pendingVideoId?.let {

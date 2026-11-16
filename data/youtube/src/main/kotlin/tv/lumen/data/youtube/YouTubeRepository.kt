@@ -23,6 +23,9 @@ interface YouTubeRepository {
     /** Музыкальные чарты YouTube («Музыка в тренде»). */
     suspend fun musicTrending(): AppResult<List<Video>>
 
+    /** Популярное в регионе из настроек — подмешивается в рекомендации. */
+    suspend fun regionalPopular(): AppResult<List<Video>>
+
     suspend fun search(query: String, filter: SearchFilter, page: PageToken?): AppResult<Page<SearchItem>>
 
     suspend fun searchSuggestions(query: String): AppResult<List<String>>

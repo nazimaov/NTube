@@ -70,6 +70,7 @@ class SettingsRepository @Inject constructor(
         blockedWords = p[BLOCKED_WORDS] ?: emptySet(),
         contentCountry = p[COUNTRY],
         contentLanguage = p[LANGUAGE],
+        appLanguage = p[APP_LANGUAGE],
         historyEnabled = p[HISTORY] ?: true,
         menuItems = p[MENU_ORDER]?.split(',')?.mapNotNull { runCatching { MenuItem.valueOf(it) }.getOrNull() }
             ?.let(::withNewMenuItems) ?: MenuItem.entries,
@@ -96,6 +97,7 @@ class SettingsRepository @Inject constructor(
         p[BLOCKED_WORDS] = s.blockedWords
         if (s.contentCountry != null) p[COUNTRY] = s.contentCountry else p.remove(COUNTRY)
         if (s.contentLanguage != null) p[LANGUAGE] = s.contentLanguage else p.remove(LANGUAGE)
+        if (s.appLanguage != null) p[APP_LANGUAGE] = s.appLanguage else p.remove(APP_LANGUAGE)
         p[HISTORY] = s.historyEnabled
         p[MENU_ORDER] = s.menuItems.joinToString(",") { it.name }
         p[MENU_HIDDEN] = s.hiddenMenuItems.mapTo(HashSet()) { it.name }
@@ -130,6 +132,7 @@ class SettingsRepository @Inject constructor(
         val BLOCKED_WORDS = stringSetPreferencesKey("feed.blocked_words")
         val COUNTRY = stringPreferencesKey("general.content_country")
         val LANGUAGE = stringPreferencesKey("general.content_language")
+        val APP_LANGUAGE = stringPreferencesKey("general.app_language")
         val HISTORY = booleanPreferencesKey("general.history_enabled")
         val MENU_ORDER = stringPreferencesKey("general.menu_order")
         val MENU_HIDDEN = stringSetPreferencesKey("general.menu_hidden")

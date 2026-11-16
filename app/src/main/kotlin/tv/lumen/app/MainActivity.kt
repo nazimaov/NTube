@@ -17,6 +17,10 @@ import tv.lumen.core.designsystem.theme.LumenTheme
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
 
+    override fun attachBaseContext(newBase: android.content.Context) {
+        super.attachBaseContext(AppLocale.wrap(newBase))
+    }
+
     /** Видео из внешней ссылки, ещё не открытое. */
     private val pendingVideo = mutableStateOf<String?>(null)
 

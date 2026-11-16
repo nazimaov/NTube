@@ -37,8 +37,11 @@
     <string name="settings_remove">Remove</string>
     <string name="settings_blocked_channels">Hidden channels</string>
     <string name="settings_unblock">Show again</string>
-    <string name="settings_content_language">Content language</string>
-    <string name="settings_content_country">Content country</string>
+    <string name="settings_content_language">Video language</string>
+    <string name="settings_section_language">Language and region</string>
+    <string name="settings_app_language">Interface language</string>
+    <string name="settings_region">Region</string>
+    <string name="settings_region_hint">Trending, charts and search follow the region, and every fourth recommendation is popular there. The rest of recommendations come from what you watch and like.</string>
     <string name="settings_history_enabled">Keep watch history</string>
     <string name="settings_clear_history">Clear watch history</string>
     <string name="settings_clear_confirm">Clear</string>

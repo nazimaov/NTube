@@ -33,6 +33,8 @@ data class Settings(
     /** null — из системной локали. */
     val contentCountry: String? = null,
     val contentLanguage: String? = null,
+    /** Язык интерфейса (BCP 47, например «az» или «pt-BR»); null — как в системе. */
+    val appLanguage: String? = null,
     val historyEnabled: Boolean = true,
     val menuItems: List<MenuItem> = MenuItem.entries,
     val hiddenMenuItems: Set<MenuItem> = emptySet(),
