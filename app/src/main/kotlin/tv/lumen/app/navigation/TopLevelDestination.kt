@@ -16,9 +16,7 @@ enum class TopLevelDestination(val route: Any, val icon: ImageVector, @StringRes
     SEARCH(Search, Icons.Filled.Search, R.string.menu_search),
     HOME(Home, Icons.Filled.Home, R.string.menu_home),
     MUSIC(Music, LumenIcons.MusicNote, R.string.menu_music),
-    MOVIES(Movies, LumenIcons.Movie, R.string.menu_movies),
-    SERIES(Series, LumenIcons.Tv, R.string.menu_series),
-    SUBSCRIPTIONS(Subscriptions, Icons.Filled.Favorite, R.string.menu_subscriptions),
-    HISTORY(History, Icons.Filled.DateRange, R.string.menu_history),
+    CINEMA(Cinema, LumenIcons.Movie, R.string.menu_cinema),
+    LIBRARY(Library, Icons.Filled.Favorite, R.string.menu_library),
     SETTINGS(Settings, Icons.Filled.Settings, R.string.menu_settings),
 }

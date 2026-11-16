@@ -25,6 +25,7 @@ import androidx.tv.material3.Button
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import tv.lumen.core.designsystem.component.ChannelCard
+import tv.lumen.core.designsystem.component.ErrorState
 import tv.lumen.core.designsystem.component.LoadingState
 import tv.lumen.core.designsystem.component.PagedGrid
 import tv.lumen.core.designsystem.component.VideoCard
@@ -69,7 +70,6 @@ fun SubscriptionsRoute(
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                    Text(stringResource(R.string.subscriptions_title), style = MaterialTheme.typography.headlineMedium)
                     Button(
                         onClick = { viewModel.refresh(force = true) },
                         enabled = !refreshing,
@@ -124,9 +124,36 @@ fun HistoryRoute(
     viewModel: HistoryViewModel = hiltViewModel(),
 ) {
     val history by viewModel.history.collectAsStateWithLifecycle()
+    val remote by viewModel.accountHistory.collectAsStateWithLifecycle()
     val subscribed by viewModel.actions.subscribedIds.collectAsStateWithLifecycle()
     var menuFor by remember { mutableStateOf<Video?>(null) }
     FocusMemoryScope(viewModel.focusMemory)
+
+    // Со входом — история аккаунта Google (без полосы прогресса); пока в ней пусто — локальная
+    if (remote.items.isNotEmpty()) {
+        PagedGrid(
+            items = remote.items,
+            key = { it.id },
+            focusMemory = viewModel.focusMemory,
+            modifier = modifier,
+            canLoadMore = remote.canLoadMore,
+            onLoadMore = viewModel::loadMoreAccount,
+        ) { video, itemModifier ->
+            VideoCard(video = video, onClick = { onOpenVideo(video.id) }, onLongClick = { menuFor = video }, modifier = itemModifier)
+        }
+        menuFor?.let { video ->
+            VideoMenu(
+                video = video,
+                isSubscribed = video.channelId in subscribed,
+                onDismiss = { menuFor = null },
+                onOpenChannel = { video.channelId?.let(onOpenChannel) },
+                onToggleSubscribe = { viewModel.actions.toggleSubscribe(video) },
+                onHideChannel = { viewModel.actions.hideChannel(video) },
+                onRemoveFromHistory = null,
+            )
+        }
+        return
+    }
 
     val entries = history ?: return LoadingState(modifier)
     if (entries.isEmpty()) return Message(stringResource(R.string.history_empty), modifier)
@@ -136,7 +163,6 @@ fun HistoryRoute(
         key = { it.video.id },
         focusMemory = viewModel.focusMemory,
         modifier = modifier,
-        header = { Text(stringResource(R.string.history_title), style = MaterialTheme.typography.headlineMedium) },
     ) { entry, itemModifier ->
         VideoCard(
             video = entry.video,
@@ -164,5 +190,88 @@ fun HistoryRoute(
 private fun Message(text: String, modifier: Modifier) {
     Box(modifier.fillMaxSize().padding(horizontal = LumenDimens.SafeHorizontal), contentAlignment = Alignment.Center) {
         Text(text, style = MaterialTheme.typography.titleMedium)
+    }
+}
+/** «Понравившиеся»: плейлист аккаунта Google или свои лайки 👍 с устройства. */
+@Composable
+fun LikedRoute(
+    onOpenVideo: (String) -> Unit,
+    onOpenChannel: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: LikedViewModel = hiltViewModel(),
+) {
+    val state by viewModel.state.collectAsStateWithLifecycle()
+    val subscribed by viewModel.actions.subscribedIds.collectAsStateWithLifecycle()
+    val progress by viewModel.actions.progress.collectAsStateWithLifecycle()
+    var menuFor by remember { mutableStateOf<Video?>(null) }
+    FocusMemoryScope(viewModel.focusMemory)
+
+    when {
+        state.isLoading -> LoadingState(modifier)
+        state.error != null -> ErrorState(state.error!!, onRetry = viewModel::retry, modifier = modifier)
+        state.items.isEmpty() -> Message(stringResource(R.string.liked_empty), modifier)
+        else -> PagedGrid(
+            items = state.items,
+            key = { it.id },
+            focusMemory = viewModel.focusMemory,
+            modifier = modifier,
+            canLoadMore = state.canLoadMore,
+            onLoadMore = viewModel::loadMore,
+        ) { video, itemModifier ->
+            VideoCard(
+                video = video,
+                onClick = { onOpenVideo(video.id) },
+                onLongClick = { menuFor = video },
+                progress = progress[video.id],
+                modifier = itemModifier,
+            )
+        }
+    }
+
+    menuFor?.let { video ->
+        VideoMenu(
+            video = video,
+            isSubscribed = video.channelId in subscribed,
+            onDismiss = { menuFor = null },
+            onOpenChannel = { video.channelId?.let(onOpenChannel) },
+            onToggleSubscribe = { viewModel.actions.toggleSubscribe(video) },
+            onHideChannel = { viewModel.actions.hideChannel(video) },
+            onRemoveFromHistory = null,
+        )
+    }
+}
+
+private enum class LibraryTab(@androidx.annotation.StringRes val label: Int) {
+    Subscriptions(R.string.subscriptions_title),
+    History(R.string.history_title),
+    Liked(R.string.liked_title),
+}
+
+/** «Библиотека»: подписки, история и понравившиеся — как вкладка «Вы» в YouTube. */
+@Composable
+fun LibraryRoute(
+    onOpenVideo: (String) -> Unit,
+    onOpenChannel: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var tab by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(LibraryTab.Subscriptions) }
+    Column(modifier = modifier.fillMaxSize()) {
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            modifier = Modifier.padding(start = LumenDimens.ContentStart, top = LumenDimens.SafeVertical, bottom = 4.dp),
+        ) {
+            LibraryTab.entries.forEach { t ->
+                tv.lumen.core.designsystem.component.LumenChip(
+                    text = stringResource(t.label),
+                    selected = t == tab,
+                    onClick = { tab = t },
+                )
+            }
+        }
+        when (tab) {
+            LibraryTab.Subscriptions -> SubscriptionsRoute(onOpenVideo, onOpenChannel)
+            LibraryTab.History -> HistoryRoute(onOpenVideo, onOpenChannel)
+            LibraryTab.Liked -> LikedRoute(onOpenVideo, onOpenChannel)
+        }
     }
 }

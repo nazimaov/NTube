@@ -51,8 +51,6 @@
     <string name="settings_menu_up">Move up</string>
     <string name="settings_menu_search">Search</string>
     <string name="settings_menu_home">Home</string>
-    <string name="settings_menu_subscriptions">Subscriptions</string>
-    <string name="settings_menu_history">History</string>
     <string name="settings_version">Version %1$s</string>
     <string name="settings_licenses">%1$s is free software under GPLv3. YouTube data: NewPipeExtractor (GPLv3). Player: AndroidX Media3 (Apache 2.0). Sponsored segments: SponsorBlock by Ajay Ramachandran, sponsor.ajay.app, data licensed under CC BY-NC-SA 4.0. Account sign-in follows SmartTube / MediaServiceCore by Yuriy Liskov (GPLv3). Not affiliated with YouTube or Google.</string>
 <string name="settings_check_updates">Check for updates</string>
@@ -93,8 +91,6 @@
     <string name="settings_desc_menu">Which items the side menu shows and in what order.</string>
     <string name="settings_desc_general">Watch history, import of subscriptions and backup.</string>
     <string name="settings_desc_about">Version, updates and licenses.</string>
-    <string name="settings_menu_movies">Movies</string>
-    <string name="settings_menu_series">Series</string>
     <string name="settings_catalog_dub">Language of movies and series</string>
     <string name="settings_catalog_dub_hint">Original: Turkish series are searched in Turkish, Russian ones in Russian. Or pick a dub language: Turkish series dubbed into Russian, and so on.</string>
     <string name="settings_dub_original">Original</string>
@@ -118,4 +114,6 @@
     <string name="settings_account_err_unavailable">YouTube changed its sign-in page and the app cannot sign in right now. Check for an app update.</string>
     <string name="settings_account_err_denied">Sign-in was declined.</string>
     <string name="settings_account_err_expired">The code expired. Start again.</string>
+    <string name="settings_menu_cinema">Cinema</string>
+    <string name="settings_menu_library">Library</string>
 </resources>

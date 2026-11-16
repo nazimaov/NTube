@@ -5,4 +5,6 @@
     <string name="subscriptions_empty">Подписок пока нет. Нажмите «Подписаться» на канале или в плеере.</string>
     <string name="history_empty">Вы ещё ничего не смотрели.</string>
     <string name="subscriptions_feed_failed">Не удалось обновить ленту. Показаны сохранённые видео.</string>
+    <string name="liked_title">Понравившиеся</string>
+    <string name="liked_empty">Пока нет понравившихся видео. Нажмите 👍 в плеере или войдите в аккаунт Google.</string>
 </resources>

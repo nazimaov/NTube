@@ -45,21 +45,25 @@ import tv.lumen.core.designsystem.theme.LumenDimens
 import tv.lumen.core.model.Video
 import java.time.Year
 
+/** «Кино»: чипы «Фильмы / Сериалы» сверху, под ними подборки, жанр и год выбранного вида. */
 @Composable
-fun MoviesRoute(
+fun CinemaRoute(
     onOpenVideo: (String) -> Unit,
     onOpenChannel: (String) -> Unit,
     modifier: Modifier = Modifier,
-    viewModel: MoviesViewModel = hiltViewModel(),
-) = CatalogScreen(CatalogKind.MOVIES, viewModel, onOpenVideo, onOpenChannel, modifier)
-
-@Composable
-fun SeriesRoute(
-    onOpenVideo: (String) -> Unit,
-    onOpenChannel: (String) -> Unit,
-    modifier: Modifier = Modifier,
-    viewModel: SeriesViewModel = hiltViewModel(),
-) = CatalogScreen(CatalogKind.SERIES, viewModel, onOpenVideo, onOpenChannel, modifier)
+    movies: MoviesViewModel = hiltViewModel(),
+    series: SeriesViewModel = hiltViewModel(),
+) {
+    var kind by androidx.compose.runtime.saveable.rememberSaveable { mutableStateOf(CatalogKind.MOVIES) }
+    CatalogScreen(
+        kind = kind,
+        onKindChange = { kind = it },
+        viewModel = if (kind == CatalogKind.MOVIES) movies else series,
+        onOpenVideo = onOpenVideo,
+        onOpenChannel = onOpenChannel,
+        modifier = modifier,
+    )
+}
 
 /** Открытый диалог выбора: жанр или год. */
 private enum class FilterDialog { GENRE, YEAR }
@@ -67,6 +71,7 @@ private enum class FilterDialog { GENRE, YEAR }
 @Composable
 private fun CatalogScreen(
     kind: CatalogKind,
+    onKindChange: (CatalogKind) -> Unit,
     viewModel: CatalogViewModel,
     onOpenVideo: (String) -> Unit,
     onOpenChannel: (String) -> Unit,
@@ -82,7 +87,7 @@ private fun CatalogScreen(
     var menuFor by remember { mutableStateOf<Video?>(null) }
     var dialog by remember { mutableStateOf<FilterDialog?>(null) }
     // Выбранная подборка; пока ничего не выбирали — первая
-    var chosen by remember { mutableStateOf(categories.firstOrNull { it.id == selectedId } ?: categories.first()) }
+    var chosen by remember(kind) { mutableStateOf(categories.firstOrNull { it.id == selectedId } ?: categories.first()) }
     FocusMemoryScope(viewModel.focusMemory)
 
     val uiLang = when (LocalConfiguration.current.locales[0].language) {
@@ -95,11 +100,13 @@ private fun CatalogScreen(
     LaunchedEffect(chosen.id, filters, dub, uiLang) { viewModel.show(chosen, filters, dub, uiLang) }
 
     Column(modifier = modifier.fillMaxSize()) {
-        Text(
-            text = stringResource(if (kind == CatalogKind.MOVIES) R.string.catalog_movies_title else R.string.catalog_series_title),
-            style = MaterialTheme.typography.headlineMedium,
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(start = LumenDimens.ContentStart, top = LumenDimens.SafeVertical),
-        )
+        ) {
+            LumenChip(text = stringResource(R.string.catalog_movies_title), selected = kind == CatalogKind.MOVIES, onClick = { onKindChange(CatalogKind.MOVIES) })
+            LumenChip(text = stringResource(R.string.catalog_series_title), selected = kind == CatalogKind.SERIES, onClick = { onKindChange(CatalogKind.SERIES) })
+        }
         LazyRow(
             contentPadding = PaddingValues(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal, top = 12.dp, bottom = 4.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),

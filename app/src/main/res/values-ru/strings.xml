@@ -2,8 +2,6 @@
 <resources>
     <string name="menu_search">Поиск</string>
     <string name="menu_home">Главная</string>
-    <string name="menu_subscriptions">Подписки</string>
-    <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
 <string name="exit_title">Выйти из %1$s?</string>
     <string name="exit_confirm">Выйти</string>
@@ -21,6 +19,6 @@
     <string name="update_install_failed">Не удалось установить обновление.</string>
     <string name="update_not_configured">Обновления не настроены: укажите lumen.updateRepoOwner в gradle.properties.</string>
     <string name="menu_music">Музыка</string>
-    <string name="menu_movies">Фильмы</string>
-    <string name="menu_series">Сериалы</string>
+    <string name="menu_cinema">Кино</string>
+    <string name="menu_library">Библиотека</string>
 </resources>

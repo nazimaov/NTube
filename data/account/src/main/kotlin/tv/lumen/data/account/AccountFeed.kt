@@ -44,6 +44,9 @@ class AccountFeed @Inject internal constructor(
 
     suspend fun history(page: PageToken?) = browse("\"browseId\":\"FEhistory\"", page)
 
+    /** Плейлист «Понравившиеся» аккаунта. */
+    suspend fun liked(page: PageToken?) = browse("\"browseId\":\"VLLL\"", page)
+
     private suspend fun browse(target: String, page: PageToken?): AppResult<Page<Video>> = withContext(io) {
         try {
             val auth = account.authorizationHeader() ?: return@withContext AppResult.Failure(AppError.Unknown("not signed in"))

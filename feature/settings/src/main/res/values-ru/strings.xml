@@ -51,8 +51,6 @@
     <string name="settings_menu_up">Переместить выше</string>
     <string name="settings_menu_search">Поиск</string>
     <string name="settings_menu_home">Главная</string>
-    <string name="settings_menu_subscriptions">Подписки</string>
-    <string name="settings_menu_history">История</string>
     <string name="settings_version">Версия %1$s</string>
     <string name="settings_licenses">%1$s — свободное приложение под лицензией GPLv3. Данные YouTube: NewPipeExtractor (GPLv3). Плеер: AndroidX Media3 (Apache 2.0). Спонсорские сегменты: SponsorBlock, автор Ajay Ramachandran, sponsor.ajay.app, данные по лицензии CC BY-NC-SA 4.0. Вход в аккаунт повторяет SmartTube / MediaServiceCore, автор Yuriy Liskov (GPLv3). Приложение не связано с YouTube и Google.</string>
 <string name="settings_check_updates">Проверить обновления</string>
@@ -93,8 +91,6 @@
     <string name="settings_desc_menu">Какие пункты показывать в боковом меню и в каком порядке.</string>
     <string name="settings_desc_general">История просмотра, импорт подписок и резервная копия.</string>
     <string name="settings_desc_about">Версия, обновления и лицензии.</string>
-    <string name="settings_menu_movies">Фильмы</string>
-    <string name="settings_menu_series">Сериалы</string>
     <string name="settings_catalog_dub">Язык фильмов и сериалов</string>
     <string name="settings_catalog_dub_hint">Оригинал: турецкие сериалы ищутся на турецком, русские — на русском. Либо выберите язык дубляжа: например, турецкие сериалы с русской озвучкой.</string>
     <string name="settings_dub_original">Оригинал</string>
@@ -118,4 +114,6 @@
     <string name="settings_account_err_unavailable">YouTube изменил страницу входа, и сейчас войти нельзя. Проверьте обновления приложения.</string>
     <string name="settings_account_err_denied">Вход отклонён.</string>
     <string name="settings_account_err_expired">Код устарел. Начните заново.</string>
+    <string name="settings_menu_cinema">Кино</string>
+    <string name="settings_menu_library">Библиотека</string>
 </resources>

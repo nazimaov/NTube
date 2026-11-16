@@ -5,4 +5,6 @@
     <string name="subscriptions_empty">No subscriptions yet. Press Subscribe on a channel or in the player.</string>
     <string name="history_empty">Nothing watched yet.</string>
     <string name="subscriptions_feed_failed">Couldn\'t refresh the feed. Showing saved videos.</string>
+    <string name="liked_title">Liked</string>
+    <string name="liked_empty">No liked videos yet. Press 👍 in the player or sign in to your Google account.</string>
 </resources>
