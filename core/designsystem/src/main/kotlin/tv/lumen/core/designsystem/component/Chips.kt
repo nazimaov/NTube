@@ -1,7 +1,12 @@
 package tv.lumen.core.designsystem.component
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.tv.material3.Icon
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -29,6 +34,7 @@ fun LumenChip(
     selected: Boolean,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
+    icon: ImageVector? = null,
 ) {
     Surface(
         onClick = onClick,
@@ -47,17 +53,19 @@ fun LumenChip(
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.04f),
         modifier = modifier,
     ) {
-        Text(
-            text = text,
-            style = MaterialTheme.typography.titleSmall,
-            color = Color.Unspecified,
-            modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        )
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(6.dp),
+            modifier = Modifier.padding(start = if (icon != null) 12.dp else 16.dp, end = 16.dp, top = 8.dp, bottom = 8.dp),
+        ) {
+            if (icon != null) Icon(icon, contentDescription = null, modifier = Modifier.size(22.dp))
+            Text(text = text, style = MaterialTheme.typography.titleSmall, color = Color.Unspecified)
+        }
     }
 }
 
 /** Ряд чипов с одинаковым зазором. */
 @Composable
 fun ChipRow(modifier: Modifier = Modifier, content: @Composable () -> Unit) {
-    Row(modifier = modifier, horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(8.dp)) { content() }
+    Row(modifier = modifier, horizontalArrangement = Arrangement.spacedBy(8.dp)) { content() }
 }

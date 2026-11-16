@@ -20,7 +20,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
-import androidx.tv.material3.Button
+import tv.lumen.core.designsystem.component.LumenChip
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -52,8 +52,8 @@ internal fun NextUpOverlay(title: String, onPlay: () -> Unit, onCancel: () -> Un
         Text(stringResource(R.string.watch_next_in, left), style = MaterialTheme.typography.labelLarge, color = Color.White.copy(alpha = 0.8f))
         Text(title, style = MaterialTheme.typography.titleMedium, color = Color.White, maxLines = 2, overflow = TextOverflow.Ellipsis)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(onClick = onPlay) { Text(stringResource(R.string.watch_play)) }
-            Button(onClick = onCancel, modifier = Modifier.focusRequester(cancelFocus)) { Text(stringResource(R.string.watch_cancel)) }
+            LumenChip(text = stringResource(R.string.watch_play), selected = true, onClick = onPlay)
+            LumenChip(text = stringResource(R.string.watch_cancel), selected = false, onClick = onCancel, modifier = Modifier.focusRequester(cancelFocus))
         }
     }
 }

@@ -56,7 +56,10 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
-import androidx.tv.material3.Button
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.PlayArrow
+import tv.lumen.core.designsystem.component.LumenChip
+import tv.lumen.core.designsystem.component.LumenIcons
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
 import kotlinx.coroutines.delay
@@ -390,42 +393,53 @@ private fun ControlPanel(
             )
         }
 
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.onFocusChanged { onButtonsFocusChanged(it.hasFocus) }) {
-            Button(onClick = controller::togglePlayPause, modifier = Modifier.focusRequester(playFocus)) {
-                Text(stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play))
-            }
+        Row(
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.onFocusChanged { onButtonsFocusChanged(it.hasFocus) },
+        ) {
+            LumenChip(
+                text = stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play),
+                icon = if (state.playWhenReady) LumenIcons.Pause else Icons.Filled.PlayArrow,
+                selected = false,
+                onClick = controller::togglePlayPause,
+                modifier = Modifier.focusRequester(playFocus),
+            )
             if (state.qualities.isNotEmpty()) {
-                Button(onClick = { onOpenDialog(WatchDialog.QUALITY) }) {
-                    Text("${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}")
-                }
+                LumenChip(
+                    text = "${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}",
+                    selected = false,
+                    onClick = { onOpenDialog(WatchDialog.QUALITY) },
+                )
             }
             if (!state.isLive) {
-                Button(onClick = { onOpenDialog(WatchDialog.SPEED) }) {
-                    Text("${stringResource(R.string.watch_speed)}: ${formatSpeed(state.speed)}")
-                }
+                LumenChip(
+                    text = "${stringResource(R.string.watch_speed)}: ${formatSpeed(state.speed)}",
+                    selected = false,
+                    onClick = { onOpenDialog(WatchDialog.SPEED) },
+                )
             }
             if (state.subtitles.isNotEmpty()) {
-                Button(onClick = { onOpenDialog(WatchDialog.SUBTITLES) }) {
-                    val current = state.subtitles.firstOrNull { it.languageTag == state.subtitle }?.name
-                        ?: stringResource(R.string.watch_subtitles_off)
-                    Text("${stringResource(R.string.watch_subtitles)}: $current")
-                }
+                val current = state.subtitles.firstOrNull { it.languageTag == state.subtitle }?.name
+                    ?: stringResource(R.string.watch_subtitles_off)
+                LumenChip(
+                    text = "${stringResource(R.string.watch_subtitles)}: $current",
+                    selected = false,
+                    onClick = { onOpenDialog(WatchDialog.SUBTITLES) },
+                )
             }
             if (state.audioTracks.size > 1) {
-                Button(onClick = { onOpenDialog(WatchDialog.AUDIO) }) {
-                    Text(stringResource(R.string.watch_audio))
-                }
+                LumenChip(text = stringResource(R.string.watch_audio), selected = false, onClick = { onOpenDialog(WatchDialog.AUDIO) })
             }
             state.details?.video?.channelId?.let { channelId ->
-                Button(onClick = { onOpenChannel(channelId) }) {
-                    Text(stringResource(R.string.watch_channel))
-                }
-                Button(onClick = { onOpenDialog(WatchDialog.COMMENTS) }) {
-                    Text(stringResource(R.string.watch_comments))
-                }
-                Button(onClick = controller::toggleSubscribe) {
-                    Text(stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe))
-                }
+                LumenChip(text = stringResource(R.string.watch_channel), selected = false, onClick = { onOpenChannel(channelId) })
+                LumenChip(text = stringResource(R.string.watch_comments), selected = false, onClick = { onOpenDialog(WatchDialog.COMMENTS) })
+                // Как у YouTube: «Подписаться» — светлая кнопка, «Вы подписаны» — серая
+                LumenChip(
+                    text = stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe),
+                    selected = !state.isSubscribed,
+                    onClick = controller::toggleSubscribe,
+                )
             }
         }
 

@@ -94,6 +94,7 @@ fun VideoCard(
     modifier: Modifier = Modifier,
     onLongClick: (() -> Unit)? = null,
     progress: Float? = null,
+    showAvatar: Boolean = true,
 ) {
     // DeArrow: сначала оригинал, подмена после ответа — без мигания (SPEC 6.2)
     val decorator = LocalVideoDecorator.current
@@ -143,7 +144,7 @@ fun VideoCard(
                 }
             }
             Row(Modifier.padding(horizontal = 4.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                ChannelAvatar(video.channelAvatarUrl, video.channelName)
+                if (showAvatar) ChannelAvatar(video.channelAvatarUrl, video.channelName)
                 Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
                     Text(
                         text = decoration?.title ?: video.title,

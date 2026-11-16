@@ -20,7 +20,10 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.tv.material3.Button
+import androidx.compose.foundation.shape.RoundedCornerShape
+import tv.lumen.core.designsystem.component.ChannelAvatar
+import tv.lumen.core.designsystem.component.LumenChip
+import tv.lumen.core.designsystem.theme.LumenColors
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Tab
 import androidx.tv.material3.TabRow
@@ -62,23 +65,31 @@ fun ChannelRoute(
             onLoadMore = viewModel::loadMore,
             modifier = modifier,
             header = {
-                Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                    Row(horizontalArrangement = Arrangement.spacedBy(24.dp), verticalAlignment = Alignment.CenterVertically) {
+                Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                    h.details.bannerUrl?.let { banner ->
                         AsyncImage(
-                            model = h.details.channel.avatarUrl,
+                            model = banner,
                             contentDescription = null,
                             contentScale = ContentScale.Crop,
-                            modifier = Modifier.size(96.dp).clip(CircleShape).background(MaterialTheme.colorScheme.surfaceVariant),
+                            modifier = Modifier.fillMaxWidth().height(120.dp).clip(RoundedCornerShape(12.dp))
+                                .background(LumenColors.Surface),
                         )
-                        Column {
-                            Text(h.details.channel.name, style = MaterialTheme.typography.headlineMedium)
+                    }
+                    Row(horizontalArrangement = Arrangement.spacedBy(20.dp), verticalAlignment = Alignment.CenterVertically) {
+                        ChannelAvatar(h.details.channel.avatarUrl, h.details.channel.name, size = 72.dp)
+                        Column(Modifier.weight(1f, fill = false), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                            Text(h.details.channel.name, style = MaterialTheme.typography.headlineMedium, maxLines = 1)
                             subscribersText(h.details.channel.subscriberCount)?.let {
-                                Text(it, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text(it, style = MaterialTheme.typography.bodyMedium, color = LumenColors.TextSecondary)
                             }
                         }
-                        Button(onClick = viewModel::toggleSubscribe, modifier = Modifier.rememberFocus(viewModel.focusMemory, "subscribe")) {
-                            Text(stringResource(if (isSubscribed) R.string.channel_subscribed else R.string.channel_subscribe))
-                        }
+                        // Как у YouTube: «Подписаться» — светлая кнопка, «Вы подписаны» — серая
+                        LumenChip(
+                            text = stringResource(if (isSubscribed) R.string.channel_subscribed else R.string.channel_subscribe),
+                            selected = !isSubscribed,
+                            onClick = viewModel::toggleSubscribe,
+                            modifier = Modifier.rememberFocus(viewModel.focusMemory, "subscribe"),
+                        )
                     }
                     if (h.tabs.size > 1) {
                         TabRow(selectedTabIndex = h.tabs.indexOf(tab).coerceAtLeast(0)) {
@@ -102,7 +113,7 @@ fun ChannelRoute(
             },
         ) { item, itemModifier ->
             when (item) {
-                is SearchItem.VideoItem -> VideoCard(item.video, onClick = { onOpenVideo(item.video.id) }, modifier = itemModifier)
+                is SearchItem.VideoItem -> VideoCard(item.video, onClick = { onOpenVideo(item.video.id) }, modifier = itemModifier, showAvatar = false)
                 is SearchItem.PlaylistItem -> PlaylistCard(
                     item.playlist,
                     onClick = { onOpenPlaylist(item.playlist.id, item.playlist.title) },
