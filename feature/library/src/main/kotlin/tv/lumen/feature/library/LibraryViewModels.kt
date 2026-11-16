@@ -37,9 +37,6 @@ class SubscriptionsViewModel @Inject constructor(
     val focusMemory = FocusMemory()
     val actions = VideoActions(library, viewModelScope)
 
-    /** null — ещё не загружено из БД. */
-    val channels: StateFlow<List<ChannelSummary>?> = library.subscriptions
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
     // Подписки аккаунта Google (если вошли) — постранично; иначе локальная лента из RSS
     private val accountItems = MutableStateFlow(PagedState<Video>())
     private var accountPager: Pager<Video>? = null
@@ -61,6 +58,15 @@ class SubscriptionsViewModel @Inject constructor(
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
 
     fun loadMore() = accountPager?.loadMore()
+
+    /**
+     * Ряд каналов: со входом — каналы из ленты аккаунта (список подписок целиком YouTube на ТВ не отдаёт,
+     * поэтому видны каналы, у которых есть видео в загруженных страницах); иначе — локальные подписки.
+     * null — ещё не загружено из БД.
+     */
+    val channels: StateFlow<List<ChannelSummary>?> = combine(library.subscriptions, accountItems, signedIn) { local, remote, signed ->
+        if (signed && remote.items.isNotEmpty()) channelsOf(remote.items) else local
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
@@ -110,3 +116,9 @@ class HistoryViewModel @Inject constructor(
         .map<List<WatchEntry>, List<WatchEntry>?> { it }
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
 }
+
+/** Каналы из видео ленты, без повторов, в порядке появления. */
+internal fun channelsOf(videos: List<Video>): List<ChannelSummary> = videos
+    .filter { !it.channelId.isNullOrBlank() && !it.channelName.isNullOrBlank() }
+    .distinctBy { it.channelId }
+    .map { ChannelSummary(id = it.channelId!!, name = it.channelName!!, avatarUrl = null, subscriberCount = -1, isVerified = false) }
