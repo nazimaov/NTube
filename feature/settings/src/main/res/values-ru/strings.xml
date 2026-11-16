@@ -54,7 +54,7 @@
     <string name="settings_menu_subscriptions">Подписки</string>
     <string name="settings_menu_history">История</string>
     <string name="settings_version">Версия %1$s</string>
-    <string name="settings_licenses">%1$s — свободное приложение под лицензией GPLv3. Данные YouTube: NewPipeExtractor (GPLv3). Плеер: AndroidX Media3 (Apache 2.0). Спонсорские сегменты: SponsorBlock, автор Ajay Ramachandran, sponsor.ajay.app, данные по лицензии CC BY-NC-SA 4.0. Приложение не связано с YouTube и Google.</string>
+    <string name="settings_licenses">%1$s — свободное приложение под лицензией GPLv3. Данные YouTube: NewPipeExtractor (GPLv3). Плеер: AndroidX Media3 (Apache 2.0). Спонсорские сегменты: SponsorBlock, автор Ajay Ramachandran, sponsor.ajay.app, данные по лицензии CC BY-NC-SA 4.0. Вход в аккаунт повторяет SmartTube / MediaServiceCore, автор Yuriy Liskov (GPLv3). Приложение не связано с YouTube и Google.</string>
 <string name="settings_check_updates">Проверить обновления</string>
     <string name="settings_update_on_start">Проверять обновления при запуске</string>
 <string name="settings_match_fps">Подстраивать частоту кадров экрана</string>
@@ -102,4 +102,20 @@
     <string name="settings_dub_tr">Турецкий</string>
     <string name="settings_dub_az">Азербайджанский</string>
     <string name="settings_dub_en">Английский</string>
+    <string name="settings_section_account">Аккаунт Google</string>
+    <string name="settings_account_desc">Необязательный вход по коду: вы вводите его на телефоне, пароль приложению не передаётся. Используйте отдельный аккаунт.</string>
+    <string name="settings_account_signed_in">Выполнен вход</string>
+    <string name="settings_account_signed_out">Не выполнен</string>
+    <string name="settings_account_sign_in">Войти по коду</string>
+    <string name="settings_account_sign_out">Выйти</string>
+    <string name="settings_account_starting">Подключаемся…</string>
+    <string name="settings_account_open_page">На телефоне откройте %1$s и введите код:</string>
+    <string name="settings_account_enter_code">Выберите на телефоне аккаунт Google и подтвердите вход. Этот экран обновится сам.</string>
+    <string name="settings_account_signed_in_text">Вы вошли в аккаунт Google.</string>
+    <string name="settings_account_revoke_hint">При выходе токен удаляется с устройства, а доступ отзывается у Google. Его также можно отозвать на myaccount.google.com/permissions.</string>
+    <string name="settings_account_warning">Такой вход работает так же, как приложение YouTube на телевизоре, но это не официальный API. Google может ограничить аккаунт, который так входит, поэтому используйте отдельный, а не основной аккаунт.</string>
+    <string name="settings_account_err_network">Не удалось подключиться. Проверьте сеть и попробуйте снова.</string>
+    <string name="settings_account_err_unavailable">YouTube изменил страницу входа, и сейчас войти нельзя. Проверьте обновления приложения.</string>
+    <string name="settings_account_err_denied">Вход отклонён.</string>
+    <string name="settings_account_err_expired">Код устарел. Начните заново.</string>
 </resources>

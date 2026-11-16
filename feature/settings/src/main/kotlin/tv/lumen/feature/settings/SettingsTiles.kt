@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Place
 import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -51,6 +52,7 @@ import java.util.Locale
 /** Разделы настроек — плитки главного экрана настроек (как в SmartTube). */
 enum class SettingsPage(@StringRes val title: Int, @StringRes val description: Int, val icon: ImageVector) {
     PROFILES(R.string.settings_section_profiles, R.string.settings_profile_hint, Icons.Filled.AccountCircle),
+    ACCOUNT(R.string.settings_section_account, R.string.settings_account_desc, Icons.Filled.Person),
     PLAYER(R.string.settings_section_player, R.string.settings_desc_player, Icons.Filled.PlayArrow),
     LANGUAGE(R.string.settings_section_language, R.string.settings_desc_language, Icons.Filled.Place),
     FEED(R.string.settings_section_feed, R.string.settings_desc_feed, Icons.AutoMirrored.Filled.List),
@@ -73,6 +75,7 @@ fun SettingsRoute(
 ) {
     val s by viewModel.settings.collectAsStateWithLifecycle()
     val profile by viewModel.currentProfile.collectAsStateWithLifecycle()
+    val account by viewModel.account.collectAsStateWithLifecycle()
     FocusMemoryScope(viewModel.focusMemory)
 
     val on = stringResource(R.string.settings_on)
@@ -80,6 +83,9 @@ fun SettingsRoute(
     val system = stringResource(R.string.settings_system)
     val summaries = mapOf(
         SettingsPage.PROFILES to (profile?.name?.ifBlank { null } ?: stringResource(R.string.settings_profile_default)),
+        SettingsPage.ACCOUNT to stringResource(
+            if (account == tv.lumen.data.account.AccountState.SignedIn) R.string.settings_account_signed_in else R.string.settings_account_signed_out,
+        ),
         SettingsPage.PLAYER to listOf(
             if (s.maxResolution == 0) stringResource(R.string.settings_res_screen) else "${s.maxResolution}p",
             speedLabel(s.defaultSpeed),

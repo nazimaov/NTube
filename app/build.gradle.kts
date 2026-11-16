@@ -71,6 +71,7 @@ dependencies {
     implementation(project(":data:library"))
     implementation(project(":data:updater"))
     implementation(project(":data:dearrow"))
+    implementation(project(":data:account"))
 
     implementation(project(":feature:home"))
     implementation(project(":feature:search"))

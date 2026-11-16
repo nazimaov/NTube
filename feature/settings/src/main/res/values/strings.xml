@@ -54,7 +54,7 @@
     <string name="settings_menu_subscriptions">Subscriptions</string>
     <string name="settings_menu_history">History</string>
     <string name="settings_version">Version %1$s</string>
-    <string name="settings_licenses">%1$s is free software under GPLv3. YouTube data: NewPipeExtractor (GPLv3). Player: AndroidX Media3 (Apache 2.0). Sponsored segments: SponsorBlock by Ajay Ramachandran, sponsor.ajay.app, data licensed under CC BY-NC-SA 4.0. Not affiliated with YouTube or Google.</string>
+    <string name="settings_licenses">%1$s is free software under GPLv3. YouTube data: NewPipeExtractor (GPLv3). Player: AndroidX Media3 (Apache 2.0). Sponsored segments: SponsorBlock by Ajay Ramachandran, sponsor.ajay.app, data licensed under CC BY-NC-SA 4.0. Account sign-in follows SmartTube / MediaServiceCore by Yuriy Liskov (GPLv3). Not affiliated with YouTube or Google.</string>
 <string name="settings_check_updates">Check for updates</string>
     <string name="settings_update_on_start">Check for updates on start</string>
 <string name="settings_match_fps">Match display frame rate</string>
@@ -102,4 +102,20 @@
     <string name="settings_dub_tr">Turkish</string>
     <string name="settings_dub_az">Azerbaijani</string>
     <string name="settings_dub_en">English</string>
+    <string name="settings_section_account">Google account</string>
+    <string name="settings_account_desc">Optional sign-in with a code: you enter it on your phone, the app never sees your password. Use a separate account.</string>
+    <string name="settings_account_signed_in">Signed in</string>
+    <string name="settings_account_signed_out">Not signed in</string>
+    <string name="settings_account_sign_in">Sign in with a code</string>
+    <string name="settings_account_sign_out">Sign out</string>
+    <string name="settings_account_starting">Connecting…</string>
+    <string name="settings_account_open_page">On your phone open %1$s and enter the code:</string>
+    <string name="settings_account_enter_code">Choose your Google account on the phone and confirm. This screen updates by itself.</string>
+    <string name="settings_account_signed_in_text">You are signed in to your Google account.</string>
+    <string name="settings_account_revoke_hint">Signing out removes the token from this device and revokes access at Google. You can also revoke it at myaccount.google.com/permissions.</string>
+    <string name="settings_account_warning">This sign-in works the way the YouTube app on a TV does, but it is not an official API. Google may restrict an account that signs in this way, so use a separate account, not your main one.</string>
+    <string name="settings_account_err_network">Could not connect. Check the network and try again.</string>
+    <string name="settings_account_err_unavailable">YouTube changed its sign-in page and the app cannot sign in right now. Check for an app update.</string>
+    <string name="settings_account_err_denied">Sign-in was declined.</string>
+    <string name="settings_account_err_expired">The code expired. Start again.</string>
 </resources>

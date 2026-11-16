@@ -8,6 +8,8 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import tv.lumen.core.model.Profile
+import tv.lumen.data.account.AccountState
+import tv.lumen.data.account.GoogleAccount
 import tv.lumen.data.library.ProfileRepository
 import tv.lumen.core.datastore.MenuItem
 import tv.lumen.core.datastore.Settings
@@ -33,7 +35,14 @@ class SettingsViewModel @Inject constructor(
     private val updates: UpdateManager,
     private val backupServer: BackupServer,
     private val profileRepository: ProfileRepository,
+    private val googleAccount: GoogleAccount,
 ) : ViewModel() {
+
+    /** Вход в аккаунт Google (необязательный). */
+    val account: StateFlow<AccountState> = googleAccount.state
+    fun signIn() = googleAccount.startSignIn()
+    fun cancelSignIn() = googleAccount.cancelSignIn()
+    fun signOut() = googleAccount.signOut()
 
     /** Локальные профили: отметки «нравится» хранятся отдельно для каждого. */
     val profiles: StateFlow<List<Profile>> = profileRepository.profiles

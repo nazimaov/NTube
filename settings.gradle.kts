@@ -33,6 +33,7 @@ include(":data:youtube")
 include(":data:sponsorblock")
 include(":data:dearrow")
 include(":data:ryd")
+include(":data:account")
 include(":data:library")
 include(":data:updater")
 

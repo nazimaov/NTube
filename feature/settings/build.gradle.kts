@@ -5,6 +5,7 @@ plugins {
 dependencies {
     implementation(project(":core:datastore"))
     implementation(project(":data:library"))
+    implementation(project(":data:account"))
     implementation(project(":data:updater"))
     implementation(libs.zxing.core)
 }

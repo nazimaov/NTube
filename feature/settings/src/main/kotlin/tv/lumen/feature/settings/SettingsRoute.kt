@@ -69,6 +69,7 @@ fun SettingsPageRoute(
     var choice by remember { mutableStateOf<ChoiceRequest?>(null) }
     var addingWord by remember { mutableStateOf(false) }
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val account by viewModel.account.collectAsStateWithLifecycle()
     val currentProfile by viewModel.currentProfile.collectAsStateWithLifecycle()
     // Ввод имени профиля: null — диалог закрыт; id = null — новый профиль
     var naming by remember { mutableStateOf<ProfileNaming?>(null) }
@@ -171,6 +172,18 @@ fun SettingsPageRoute(
         }
 
         }
+        if (page == SettingsPage.ACCOUNT) {
+            item {
+                AccountSection(
+                    state = account,
+                    onSignIn = viewModel::signIn,
+                    onCancel = viewModel::cancelSignIn,
+                    onSignOut = viewModel::signOut,
+                    focusMemory = memory,
+                )
+            }
+        }
+
         if (page == SettingsPage.PLAYER) {
         item {
             val title = stringResource(R.string.settings_max_quality)
@@ -421,7 +434,7 @@ private val SettingShape = RoundedCornerShape(14.dp)
 
 /** Пункт настроек — карточка: название, текущее значение под ним, справа переключатель или стрелка. */
 @Composable
-private fun SettingCard(
+internal fun SettingCard(
     title: String,
     value: String?,
     onClick: () -> Unit,
