@@ -61,6 +61,7 @@ import androidx.compose.material.icons.filled.PlayArrow
 import tv.lumen.core.designsystem.component.PlayerIconButton
 import tv.lumen.core.designsystem.format.formatCompact
 import tv.lumen.core.model.Reaction
+import tv.lumen.core.model.PlaybackOrder
 import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
@@ -444,6 +445,26 @@ private fun ControlPanel(
                 onClick = { onReact(Reaction.DISLIKE) },
                 active = reaction == Reaction.DISLIKE,
             )
+            if (!state.isLive) {
+                // Одна кнопка: по очереди → повтор → вперемешку
+                val order = state.playbackOrder
+                PlayerIconButton(
+                    icon = when (order) {
+                        PlaybackOrder.SEQUENTIAL -> LumenIcons.PlaylistPlay
+                        PlaybackOrder.REPEAT_ONE -> LumenIcons.RepeatOne
+                        PlaybackOrder.SHUFFLE -> LumenIcons.Shuffle
+                    },
+                    label = stringResource(
+                        when (order) {
+                            PlaybackOrder.SEQUENTIAL -> R.string.watch_order_sequential
+                            PlaybackOrder.REPEAT_ONE -> R.string.watch_order_repeat
+                            PlaybackOrder.SHUFFLE -> R.string.watch_order_shuffle
+                        },
+                    ),
+                    onClick = controller::cycleOrder,
+                    active = order != PlaybackOrder.SEQUENTIAL,
+                )
+            }
             if (state.qualities.isNotEmpty()) {
                 PlayerIconButton(
                     icon = Icons.Filled.Settings,

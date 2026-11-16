@@ -50,6 +50,20 @@ object LumenIcons {
         )
     }
 
+    val PlaylistPlay: ImageVector by lazy { icon("PlaylistPlay", "M19 9H2v2h17V9zm0-4H2v2h17V5zM2 15h13v-2H2v2zm15-2v6l5-3-5-3z") }
+
+    val RepeatOne: ImageVector by lazy {
+        icon("RepeatOne", "M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4zm-4-2V9h-1l-2 1v1h1.5v4H13z")
+    }
+
+    val Shuffle: ImageVector by lazy {
+        icon(
+            "Shuffle",
+            "M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5z" +
+                "m.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z",
+        )
+    }
+
     private fun icon(name: String, pathData: String): ImageVector =
         ImageVector.Builder(name, 24.dp, 24.dp, 24f, 24f)
             .addPath(pathData = addPathNodes(pathData), fill = SolidColor(Color.Black))

@@ -20,6 +20,7 @@ data class PlayerPreferences(
     val subtitleLanguage: String? = null,
     val defaultSpeed: Float = 1f,
     val autoplayNext: Boolean = true,
+    val playbackOrder: tv.lumen.core.model.PlaybackOrder = tv.lumen.core.model.PlaybackOrder.SEQUENTIAL,
     val sponsorBlockEnabled: Boolean = true,
     val sponsorModes: Map<SponsorCategory, SegmentMode> = emptyMap(),
 )
@@ -71,6 +72,8 @@ data class PlayerState(
     val isSubscribed: Boolean = false,
     /** Следующее видео после окончания: экран показывает отсчёт 10 с (SPEC 5.6). */
     val nextUp: Video? = null,
+    /** По очереди, повтор или вперемешку — кнопка в панели плеера. */
+    val playbackOrder: tv.lumen.core.model.PlaybackOrder = tv.lumen.core.model.PlaybackOrder.SEQUENTIAL,
     /** Сегменты SponsorBlock — рисуются на полосе прогресса. */
     val segments: List<Segment> = emptyList(),
     /** Только что пропущенный сегмент: плашка с «Вернуть» на 3 с. */

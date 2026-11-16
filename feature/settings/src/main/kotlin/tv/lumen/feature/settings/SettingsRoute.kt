@@ -41,6 +41,10 @@ import tv.lumen.core.datastore.PreferredCodec
 import tv.lumen.core.designsystem.focus.FocusMemoryScope
 import tv.lumen.core.designsystem.focus.rememberFocus
 import tv.lumen.core.designsystem.theme.LumenDimens
+import tv.lumen.core.designsystem.theme.LumenColors
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
+import androidx.compose.ui.draw.alpha
 import tv.lumen.core.model.SegmentMode
 import tv.lumen.core.model.SponsorCategory
 import java.util.Locale
@@ -103,22 +107,26 @@ fun SettingsPageRoute(
         choice = ChoiceRequest(title, options, selected) { onSelect(it as T) }
     }
 
-    LazyColumn(
-        modifier = modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
-        verticalArrangement = Arrangement.spacedBy(4.dp),
+    // Слева — раздел: иконка, название, пояснение; справа — пункты-карточки
+    androidx.compose.foundation.layout.Row(
+        modifier = modifier.fillMaxSize().padding(start = LumenDimens.SafeHorizontal),
+        horizontalArrangement = Arrangement.spacedBy(48.dp),
     ) {
-        item { Text(stringResource(page.title), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp)) }
+        Column(
+            modifier = Modifier.weight(0.34f).padding(top = 96.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            androidx.tv.material3.Icon(page.icon, contentDescription = null, modifier = Modifier.size(72.dp), tint = LumenColors.TextPrimary)
+            Text(stringResource(page.title), style = MaterialTheme.typography.headlineMedium)
+            Text(stringResource(page.description), style = MaterialTheme.typography.bodyMedium, color = LumenColors.TextSecondary)
+        }
+    LazyColumn(
+        modifier = Modifier.weight(0.66f).fillMaxHeight(),
+        contentPadding = PaddingValues(top = 64.dp, bottom = 64.dp, end = LumenDimens.SafeHorizontal),
+        verticalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
 
         if (page == SettingsPage.PROFILES) {
-        item {
-            Text(
-                stringResource(R.string.settings_profile_hint),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.padding(bottom = 8.dp),
-            )
-        }
         profiles.forEach { profile ->
             item(key = "profile:${profile.id}") {
                 val name = profile.name.ifBlank { defaultName }
@@ -345,6 +353,7 @@ fun SettingsPageRoute(
         }
     }
 
+    }
     backup?.let { BackupDialog(it, onClose = viewModel::closeBackup) }
 
     choice?.let { req ->
@@ -375,26 +384,58 @@ private fun LazyListScope.section(title: Int) {
 }
 
 @Composable
-private fun Row(title: String, value: String?, modifier: Modifier = Modifier, onClick: () -> Unit) {
-    ListItem(
-        selected = false,
-        onClick = onClick,
-        headlineContent = { Text(title) },
-        // Цвет не задаём: ListItem сам подбирает контрастный для фокуса
-        trailingContent = value?.let { { Text(it, style = MaterialTheme.typography.bodyLarge) } },
-        modifier = modifier.fillMaxWidth(0.8f),
-    )
-}
+private fun Row(title: String, value: String?, modifier: Modifier = Modifier, onClick: () -> Unit) =
+    SettingCard(title = title, value = value, onClick = onClick, modifier = modifier)
 
 @Composable
-private fun Toggle(title: String, checked: Boolean, modifier: Modifier = Modifier, onToggle: () -> Unit) {
-    ListItem(
-        selected = false,
-        onClick = onToggle,
-        headlineContent = { Text(title) },
-        trailingContent = { Switch(checked = checked, onCheckedChange = null) },
-        modifier = modifier.fillMaxWidth(0.8f),
-    )
+private fun Toggle(title: String, checked: Boolean, modifier: Modifier = Modifier, onToggle: () -> Unit) =
+    SettingCard(title = title, value = null, onClick = onToggle, modifier = modifier) {
+        Switch(checked = checked, onCheckedChange = null)
+    }
+
+private val SettingShape = RoundedCornerShape(14.dp)
+
+/** Пункт настроек — карточка: название, текущее значение под ним, справа переключатель или стрелка. */
+@Composable
+private fun SettingCard(
+    title: String,
+    value: String?,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    trailing: (@Composable () -> Unit)? = null,
+) {
+    androidx.tv.material3.Surface(
+        onClick = onClick,
+        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(SettingShape),
+        colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
+            containerColor = LumenColors.Surface,
+            contentColor = LumenColors.TextPrimary,
+            focusedContainerColor = LumenColors.TextPrimary,
+            focusedContentColor = LumenColors.Background,
+            pressedContainerColor = LumenColors.SurfaceFocused,
+            pressedContentColor = LumenColors.TextPrimary,
+        ),
+        scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(focusedScale = 1.02f),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        androidx.compose.foundation.layout.Row(
+            modifier = Modifier.padding(horizontal = 24.dp, vertical = 16.dp),
+            verticalAlignment = androidx.compose.ui.Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                Text(title, style = MaterialTheme.typography.titleMedium, color = androidx.compose.ui.graphics.Color.Unspecified)
+                if (value != null) {
+                    Text(
+                        value,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = androidx.compose.ui.graphics.Color.Unspecified,
+                        modifier = Modifier.alpha(0.7f),
+                    )
+                }
+            }
+            if (trailing != null) trailing() else Text("›", style = MaterialTheme.typography.headlineMedium, color = androidx.compose.ui.graphics.Color.Unspecified, modifier = Modifier.alpha(0.5f))
+        }
+    }
 }
 
 @Composable

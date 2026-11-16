@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.ui.draw.clip
@@ -35,7 +36,7 @@ import tv.lumen.core.designsystem.theme.LumenColors
 /**
  * Круглая кнопка-иконка панели плеера, как у YouTube на ТВ: в покое — полупрозрачная,
  * в фокусе — белая с тёмной иконкой, а под ней появляется подпись [label].
- * [caption] (например, число лайков) виден всегда, в фокусе его сменяет подпись.
+ * [caption] (например, число лайков) показывается внутри вытянутой кнопки рядом с иконкой.
  * [active] подсвечивает включённое состояние (например, субтитры) красной точкой.
  */
 @Composable
@@ -52,7 +53,7 @@ fun PlayerIconButton(
     Column(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
-        modifier = Modifier.width(size),
+        modifier = if (caption == null) Modifier.width(size) else Modifier,
     ) {
         Surface(
             onClick = onClick,
@@ -66,10 +67,22 @@ fun PlayerIconButton(
                 pressedContentColor = LumenColors.Background,
             ),
             scale = ClickableSurfaceDefaults.scale(focusedScale = 1.1f),
-            modifier = modifier.size(size).onFocusChanged { focused = it.hasFocus },
+            modifier = (if (caption == null) modifier.size(size) else modifier.height(size)).onFocusChanged { focused = it.hasFocus },
         ) {
-            Box(Modifier.size(size), contentAlignment = Alignment.Center) {
-                Icon(icon, contentDescription = label, modifier = Modifier.size(size * 0.5f))
+            Box(if (caption == null) Modifier.size(size) else Modifier.height(size), contentAlignment = Alignment.Center) {
+                if (caption == null) {
+                    Icon(icon, contentDescription = label, modifier = Modifier.size(size * 0.5f))
+                } else {
+                    // Вытянутая кнопка как у YouTube: иконка и число внутри
+                    androidx.compose.foundation.layout.Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        modifier = Modifier.padding(horizontal = 18.dp),
+                    ) {
+                        Icon(icon, contentDescription = label, modifier = Modifier.size(size * 0.45f))
+                        Text(caption, style = MaterialTheme.typography.titleSmall, color = Color.Unspecified, maxLines = 1)
+                    }
+                }
                 if (active) {
                     Box(
                         Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp).size(6.dp)
@@ -80,14 +93,14 @@ fun PlayerIconButton(
         }
         // Подпись видна только в фокусе; место под неё зарезервировано, чтобы ряд не прыгал
         Text(
-            text = if (focused || caption == null) label else caption,
+            text = label,
             style = MaterialTheme.typography.labelMedium,
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Visible,
             softWrap = false,
             textAlign = TextAlign.Center,
-            modifier = Modifier.wrapContentWidth(unbounded = true).alpha(if (focused || caption != null) 1f else 0f),
+            modifier = Modifier.wrapContentWidth(unbounded = true).alpha(if (focused) 1f else 0f),
         )
     }
 }

@@ -55,6 +55,7 @@ class SettingsRepository @Inject constructor(
         defaultSpeed = p[SPEED] ?: 1f,
         preferredCodec = p[CODEC]?.let { runCatching { PreferredCodec.valueOf(it) }.getOrNull() } ?: PreferredCodec.AUTO,
         autoplayNext = p[AUTOPLAY] ?: true,
+        playbackOrder = p[ORDER]?.let { runCatching { tv.lumen.core.model.PlaybackOrder.valueOf(it) }.getOrNull() } ?: tv.lumen.core.model.PlaybackOrder.SEQUENTIAL,
         subtitlesLang = p[SUBS],
         audioLang = p[AUDIO],
         matchFrameRate = p[MATCH_FPS] ?: false,
@@ -84,6 +85,7 @@ class SettingsRepository @Inject constructor(
         p[SPEED] = s.defaultSpeed
         p[CODEC] = s.preferredCodec.name
         p[AUTOPLAY] = s.autoplayNext
+        p[ORDER] = s.playbackOrder.name
         if (s.subtitlesLang != null) p[SUBS] = s.subtitlesLang else p.remove(SUBS)
         if (s.audioLang != null) p[AUDIO] = s.audioLang else p.remove(AUDIO)
         p[MATCH_FPS] = s.matchFrameRate
@@ -119,6 +121,7 @@ class SettingsRepository @Inject constructor(
         val SPEED = floatPreferencesKey("player.default_speed")
         val CODEC = stringPreferencesKey("player.preferred_codec")
         val AUTOPLAY = booleanPreferencesKey("player.autoplay_next")
+        val ORDER = stringPreferencesKey("player.playback_order")
         val SUBS = stringPreferencesKey("player.subtitles_lang")
         val AUDIO = stringPreferencesKey("player.audio_lang")
         val MATCH_FPS = booleanPreferencesKey("player.match_frame_rate")

@@ -15,6 +15,8 @@ data class Settings(
     val defaultSpeed: Float = 1.0f,
     val preferredCodec: PreferredCodec = PreferredCodec.AUTO,
     val autoplayNext: Boolean = true,
+    /** Порядок воспроизведения — кнопка в плеере. */
+    val playbackOrder: tv.lumen.core.model.PlaybackOrder = tv.lumen.core.model.PlaybackOrder.SEQUENTIAL,
     val subtitlesLang: String? = null,
     val audioLang: String? = null,
     val matchFrameRate: Boolean = false,

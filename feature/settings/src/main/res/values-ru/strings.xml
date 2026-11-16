@@ -85,4 +85,12 @@
     <string name="settings_summary_menu">Пунктов в меню: %1$d</string>
     <string name="settings_summary_history_on">История ведётся</string>
     <string name="settings_summary_history_off">История выключена</string>
+    <string name="settings_desc_player">Качество, скорость, кодек, субтитры и звук по умолчанию. Изменения действуют со следующего видео.</string>
+    <string name="settings_desc_language">Язык интерфейса, регион и язык видео.</string>
+    <string name="settings_desc_feed">Что скрывать в ленте, поиске и рекомендациях.</string>
+    <string name="settings_desc_sponsorblock">Пропуск спонсорских вставок, заставок и других частей, размеченных сообществом SponsorBlock.</string>
+    <string name="settings_desc_mods">Нейтральные заголовки и обложки (DeArrow) и счётчик дизлайков.</string>
+    <string name="settings_desc_menu">Какие пункты показывать в боковом меню и в каком порядке.</string>
+    <string name="settings_desc_general">История просмотра, импорт подписок и резервная копия.</string>
+    <string name="settings_desc_about">Версия, обновления и лицензии.</string>
 </resources>

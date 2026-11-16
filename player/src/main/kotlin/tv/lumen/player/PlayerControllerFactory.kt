@@ -3,6 +3,7 @@ package tv.lumen.player
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import tv.lumen.core.common.ApplicationScope
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.core.datastore.PreferredCodec
@@ -29,7 +30,9 @@ class PlayerControllerFactory @Inject internal constructor(
 ) {
     /** [scope] — scope главного потока (viewModelScope). */
     fun create(scope: CoroutineScope, prefs: PlayerPreferences = fromSettings(settings.current.value)): PlayerController =
-        ExoPlayerController(context, scope, repository, sources, StreamSelector(capabilities), prefs, library, appScope, sponsorBlock)
+        ExoPlayerController(context, scope, repository, sources, StreamSelector(capabilities), prefs, library, appScope, sponsorBlock) { order ->
+            appScope.launch { settings.set { it.copy(playbackOrder = order) } }
+        }
 
     /** Настройки читаются при каждом открытии плеера — изменения действуют без перезапуска (SPEC 9.2). */
     private fun fromSettings(s: Settings) = PlayerPreferences(
@@ -44,6 +47,7 @@ class PlayerControllerFactory @Inject internal constructor(
         subtitleLanguage = s.subtitlesLang,
         defaultSpeed = s.defaultSpeed,
         autoplayNext = s.autoplayNext,
+        playbackOrder = s.playbackOrder,
         sponsorBlockEnabled = s.sponsorBlockEnabled,
         sponsorModes = s.sponsorCategories,
     )

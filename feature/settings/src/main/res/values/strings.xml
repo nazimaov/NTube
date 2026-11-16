@@ -85,4 +85,12 @@
     <string name="settings_summary_menu">Items in menu: %1$d</string>
     <string name="settings_summary_history_on">History is kept</string>
     <string name="settings_summary_history_off">History is off</string>
+    <string name="settings_desc_player">Default quality, speed, codec, subtitles and audio. Changes apply from the next video.</string>
+    <string name="settings_desc_language">Interface language, region and the language of videos.</string>
+    <string name="settings_desc_feed">What to hide in the feed, search and recommendations.</string>
+    <string name="settings_desc_sponsorblock">Skip sponsored segments, intros and other parts marked by the SponsorBlock community.</string>
+    <string name="settings_desc_mods">Neutral titles and thumbnails (DeArrow) and the dislike count.</string>
+    <string name="settings_desc_menu">Which items the side menu shows and in what order.</string>
+    <string name="settings_desc_general">Watch history, import of subscriptions and backup.</string>
+    <string name="settings_desc_about">Version, updates and licenses.</string>
 </resources>

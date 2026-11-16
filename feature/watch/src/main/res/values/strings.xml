@@ -45,4 +45,7 @@
     <string name="watch_like">Like</string>
     <string name="watch_dislike">Dislike</string>
     <string name="watch_time_left">%1$s left</string>
+    <string name="watch_order_sequential">In order</string>
+    <string name="watch_order_repeat">Repeat</string>
+    <string name="watch_order_shuffle">Shuffle</string>
 </resources>

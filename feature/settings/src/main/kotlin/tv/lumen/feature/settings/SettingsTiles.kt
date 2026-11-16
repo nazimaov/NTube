@@ -49,16 +49,16 @@ import tv.lumen.core.designsystem.theme.LumenDimens
 import java.util.Locale
 
 /** Разделы настроек — плитки главного экрана настроек (как в SmartTube). */
-enum class SettingsPage(@StringRes val title: Int, val icon: ImageVector) {
-    PROFILES(R.string.settings_section_profiles, Icons.Filled.AccountCircle),
-    PLAYER(R.string.settings_section_player, Icons.Filled.PlayArrow),
-    LANGUAGE(R.string.settings_section_language, Icons.Filled.Place),
-    FEED(R.string.settings_section_feed, Icons.AutoMirrored.Filled.List),
-    SPONSORBLOCK(R.string.settings_section_sponsorblock, Icons.Filled.CheckCircle),
-    MODS(R.string.settings_section_mods, Icons.Filled.Build),
-    MENU(R.string.settings_section_menu, Icons.Filled.Menu),
-    GENERAL(R.string.settings_section_general, Icons.Filled.Settings),
-    ABOUT(R.string.settings_section_about, Icons.Filled.Info),
+enum class SettingsPage(@StringRes val title: Int, @StringRes val description: Int, val icon: ImageVector) {
+    PROFILES(R.string.settings_section_profiles, R.string.settings_profile_hint, Icons.Filled.AccountCircle),
+    PLAYER(R.string.settings_section_player, R.string.settings_desc_player, Icons.Filled.PlayArrow),
+    LANGUAGE(R.string.settings_section_language, R.string.settings_desc_language, Icons.Filled.Place),
+    FEED(R.string.settings_section_feed, R.string.settings_desc_feed, Icons.AutoMirrored.Filled.List),
+    SPONSORBLOCK(R.string.settings_section_sponsorblock, R.string.settings_desc_sponsorblock, Icons.Filled.CheckCircle),
+    MODS(R.string.settings_section_mods, R.string.settings_desc_mods, Icons.Filled.Build),
+    MENU(R.string.settings_section_menu, R.string.settings_desc_menu, Icons.Filled.Menu),
+    GENERAL(R.string.settings_section_general, R.string.settings_desc_general, Icons.Filled.Settings),
+    ABOUT(R.string.settings_section_about, R.string.settings_desc_about, Icons.Filled.Info),
 }
 
 private val TileShape = RoundedCornerShape(16.dp)

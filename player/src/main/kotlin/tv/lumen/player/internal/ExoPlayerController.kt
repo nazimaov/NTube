@@ -20,6 +20,7 @@ import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import tv.lumen.core.model.AppError
 import tv.lumen.core.model.AppResult
+import tv.lumen.core.model.PlaybackOrder
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.VideoDetails
 import tv.lumen.data.library.LibraryRepository
@@ -54,6 +55,8 @@ internal class ExoPlayerController(
     /** Переживает экран: последнее сохранение позиции после release(). */
     private val appScope: CoroutineScope,
     private val sponsorBlock: SponsorBlockRepository,
+    /** Сохранить выбранный порядок в настройках. */
+    private val saveOrder: (PlaybackOrder) -> Unit = {},
 ) : PlayerController {
 
     private val exo: ExoPlayer = ExoPlayer.Builder(context)
@@ -66,7 +69,7 @@ internal class ExoPlayerController(
         .setId("lumen-" + UUID.randomUUID())
         .build()
 
-    private val _state = MutableStateFlow(PlayerState(speed = prefs.defaultSpeed))
+    private val _state = MutableStateFlow(PlayerState(speed = prefs.defaultSpeed, playbackOrder = prefs.playbackOrder))
     override val state: StateFlow<PlayerState> = _state.asStateFlow()
     override val player: Player get() = exo
 
@@ -90,6 +93,7 @@ internal class ExoPlayerController(
 
     init {
         exo.setPlaybackSpeed(prefs.defaultSpeed)
+        applyOrder(prefs.playbackOrder)
         exo.addListener(object : Player.Listener {
             override fun onIsPlayingChanged(isPlaying: Boolean) {
                 _state.update { it.copy(isPlaying = isPlaying) }
@@ -266,15 +270,50 @@ internal class ExoPlayerController(
         appScope.launch { library.savePosition(video, position, duration) }
     }
 
-    /** Конец видео: следующее из плейлиста или первое похожее (SPEC 5.6). */
+    /**
+     * Конец видео: по очереди — следующее из плейлиста или первое похожее (SPEC 5.6),
+     * вперемешку — случайное из плейлиста или похожих. Повтор сюда не доходит: его делает ExoPlayer.
+     */
     private fun onEnded() {
         savePosition()
         if (!prefs.autoplayNext) return
         val current = details ?: return
+        val order = _state.value.playbackOrder
         scope.launch {
-            val next = playlistId?.let { nextInPlaylist(it, current.video.id) } ?: current.related.firstOrNull()
+            val next = when (order) {
+                PlaybackOrder.SHUFFLE -> PlaybackQueue.shuffleNext(
+                    playlist = playlistId?.let { playlistItems(it) }.orEmpty(),
+                    related = current.related,
+                    currentId = current.video.id,
+                )
+                else -> playlistId?.let { nextInPlaylist(it, current.video.id) } ?: current.related.firstOrNull()
+            }
             _state.update { it.copy(nextUp = next) }
         }
+    }
+
+    override fun cycleOrder() {
+        val order = _state.value.playbackOrder.next()
+        applyOrder(order)
+        _state.update { it.copy(playbackOrder = order) }
+        saveOrder(order)
+    }
+
+    /** Повтор одного видео — средствами ExoPlayer, без паузы между кругами. */
+    private fun applyOrder(order: PlaybackOrder) {
+        exo.repeatMode = if (order == PlaybackOrder.REPEAT_ONE) Player.REPEAT_MODE_ONE else Player.REPEAT_MODE_OFF
+    }
+
+    /** Все видео плейлиста (до [MAX_PLAYLIST_PAGES] страниц) — для случайного выбора. */
+    private suspend fun playlistItems(playlistId: String): List<Video> {
+        val result = ArrayList<Video>()
+        var token: tv.lumen.core.model.PageToken? = null
+        repeat(MAX_PLAYLIST_PAGES) {
+            val page = (repository.playlist(playlistId, token) as? AppResult.Success)?.value ?: return result
+            result += page.items
+            token = page.next ?: return result
+        }
+        return result
     }
 
     private suspend fun nextInPlaylist(playlistId: String, currentId: String): Video? {

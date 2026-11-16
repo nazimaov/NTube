@@ -45,4 +45,7 @@
     <string name="watch_like">Нравится</string>
     <string name="watch_dislike">Не нравится</string>
     <string name="watch_time_left">осталось %1$s</string>
+    <string name="watch_order_sequential">По очереди</string>
+    <string name="watch_order_repeat">Повтор</string>
+    <string name="watch_order_shuffle">Вперемешку</string>
 </resources>

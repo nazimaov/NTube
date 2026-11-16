@@ -37,6 +37,9 @@ interface PlayerController {
     /** Отменить автопереход к следующему видео. */
     fun cancelNextUp()
 
+    /** Сменить порядок по кругу: по очереди → повтор → вперемешку; выбор запоминается. */
+    fun cycleOrder()
+
     /** «Вернуть» пропущенный сегмент SponsorBlock. */
     fun undoSkip()
 

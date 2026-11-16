@@ -37,3 +37,11 @@ enum class Reaction { LIKE, DISLIKE }
 
 /** Локальный профиль («виртуальный аккаунт») на устройстве; пустое [name] — профиль по умолчанию. */
 data class Profile(val id: Long, val name: String)
+
+/** Что играет после видео: по очереди, повтор текущего или случайное. */
+enum class PlaybackOrder {
+    SEQUENTIAL, REPEAT_ONE, SHUFFLE;
+
+    /** Следующий режим для кнопки, меняющейся по кругу. */
+    fun next(): PlaybackOrder = entries[(ordinal + 1) % entries.size]
+}
