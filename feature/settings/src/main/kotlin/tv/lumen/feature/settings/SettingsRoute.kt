@@ -58,6 +58,7 @@ private class ChoiceRequest(val title: String, val options: List<Choice<*>>, val
 fun SettingsPageRoute(
     page: SettingsPage,
     versionName: String,
+    appName: String,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
 ) {
@@ -344,7 +345,7 @@ fun SettingsPageRoute(
         item { Text(stringResource(R.string.settings_version, versionName), style = MaterialTheme.typography.bodyLarge) }
         item {
             Text(
-                stringResource(R.string.settings_licenses),
+                stringResource(R.string.settings_licenses, appName),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(0.8f),

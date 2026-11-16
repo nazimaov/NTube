@@ -180,6 +180,7 @@ fun LumenApp(
                     SettingsPageRoute(
                         page = SettingsPage.valueOf(entry.toRoute<SettingsSection>().page),
                         versionName = tv.lumen.app.BuildConfig.VERSION_NAME,
+                        appName = stringResource(tv.lumen.app.R.string.app_name),
                     )
                 }
                 composable<Channel> {

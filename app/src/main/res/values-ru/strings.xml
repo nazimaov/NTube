@@ -5,7 +5,7 @@
     <string name="menu_subscriptions">Подписки</string>
     <string name="menu_history">История</string>
     <string name="menu_settings">Настройки</string>
-<string name="exit_title">Выйти из Lumen?</string>
+<string name="exit_title">Выйти из %1$s?</string>
     <string name="exit_confirm">Выйти</string>
     <string name="exit_cancel">Отмена</string>
 <string name="update_available">Доступна версия %1$s</string>

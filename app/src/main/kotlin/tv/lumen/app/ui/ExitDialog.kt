@@ -34,7 +34,7 @@ fun ExitDialog(onConfirm: () -> Unit, onDismiss: () -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(24.dp),
         ) {
-            Text(stringResource(R.string.exit_title), style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.exit_title, stringResource(R.string.app_name)), style = MaterialTheme.typography.titleLarge)
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 Button(onClick = onConfirm) { Text(stringResource(R.string.exit_confirm)) }
                 Button(onClick = onDismiss, modifier = Modifier.focusRequester(cancelFocus)) {
