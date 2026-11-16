@@ -11,6 +11,8 @@ internal object TvClient {
             "v8/8.8.278.8-jit gles Starboard/13, Amazon_ATV_mediatek8695_2019/NS6294 (Amazon, AFTMM, Wireless) " +
             "com.amazon.firetv.youtube/22.3.r2.v66.0"
     const val REFERER = "https://www.youtube.com/tv"
+    const val CLIENT_NAME = "TVHTML5"
+    const val CLIENT_VERSION = "7.20260901.15.00"
     const val SCRIPTS_BASE = "https://www.youtube.com"
 
     /** Права, которые запрашивает телевизионное приложение YouTube. */

@@ -51,14 +51,21 @@ fun SubscriptionsRoute(
     var menuFor by remember { mutableStateOf<Video?>(null) }
     FocusMemoryScope(viewModel.focusMemory)
 
+    val signedIn by viewModel.signedIn.collectAsStateWithLifecycle()
+    val canLoadMore by viewModel.canLoadMore.collectAsStateWithLifecycle()
+    val accountLoading by viewModel.accountLoading.collectAsStateWithLifecycle()
+
     val list = channels ?: return LoadingState(modifier)
-    if (list.isEmpty()) return Message(stringResource(R.string.subscriptions_empty), modifier)
+    if (signedIn && accountLoading && feed.isEmpty()) return LoadingState(modifier)
+    if (list.isEmpty() && feed.isEmpty()) return Message(stringResource(R.string.subscriptions_empty), modifier)
 
     PagedGrid(
         items = feed,
         key = { it.id },
         focusMemory = viewModel.focusMemory,
         modifier = modifier,
+        canLoadMore = canLoadMore,
+        onLoadMore = viewModel::loadMore,
         header = {
             Column(verticalArrangement = Arrangement.spacedBy(16.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(24.dp)) {
@@ -74,7 +81,7 @@ fun SubscriptionsRoute(
                 if (refreshFailed) {
                     Text(stringResource(R.string.subscriptions_feed_failed), color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
-                LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.focusRestorer()) {
+                if (list.isNotEmpty()) LazyRow(horizontalArrangement = Arrangement.spacedBy(16.dp), modifier = Modifier.focusRestorer()) {
                     items(list, key = { it.id }) { channel ->
                         ChannelCard(
                             channel = channel,

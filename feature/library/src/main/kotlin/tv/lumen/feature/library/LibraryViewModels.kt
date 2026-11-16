@@ -16,6 +16,11 @@ import tv.lumen.core.model.ChannelSummary
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.WatchEntry
 import kotlinx.coroutines.flow.combine
+import tv.lumen.core.common.PagedState
+import tv.lumen.core.common.Pager
+import tv.lumen.data.account.AccountFeed
+import tv.lumen.data.account.AccountState
+import tv.lumen.data.account.GoogleAccount
 import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.library.VideoActions
@@ -25,6 +30,8 @@ import javax.inject.Inject
 class SubscriptionsViewModel @Inject constructor(
     private val library: LibraryRepository,
     filter: ContentFilter,
+    private val account: GoogleAccount,
+    private val accountFeed: AccountFeed,
 ) : ViewModel() {
 
     val focusMemory = FocusMemory()
@@ -33,13 +40,48 @@ class SubscriptionsViewModel @Inject constructor(
     /** null — ещё не загружено из БД. */
     val channels: StateFlow<List<ChannelSummary>?> = library.subscriptions
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
-    val feed: StateFlow<List<Video>> = combine(library.feed, filter.rules) { feed, rules -> rules.videos(feed) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    // Подписки аккаунта Google (если вошли) — постранично; иначе локальная лента из RSS
+    private val accountItems = MutableStateFlow(PagedState<Video>())
+    private var accountPager: Pager<Video>? = null
+
+    /** Вход выполнен: лента и список подписок берутся из аккаунта. */
+    val signedIn: StateFlow<Boolean> = account.state.map { it == AccountState.SignedIn }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, account.state.value == AccountState.SignedIn)
+
+    val feed: StateFlow<List<Video>> = combine(library.feed, accountItems, signedIn, filter.rules) { local, remote, signed, rules ->
+        rules.videos(if (signed && remote.items.isNotEmpty()) remote.items else local)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+
+    /** Ещё есть страницы ленты аккаунта. */
+    val canLoadMore: StateFlow<Boolean> = combine(accountItems, signedIn) { s, signed -> signed && s.canLoadMore }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    /** Лента аккаунта ещё не загрузилась. */
+    val accountLoading: StateFlow<Boolean> = combine(accountItems, signedIn) { s, signed -> signed && s.isLoading }
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), false)
+
+    fun loadMore() = accountPager?.loadMore()
 
     private val _refreshing = MutableStateFlow(false)
     val refreshing: StateFlow<Boolean> = _refreshing.asStateFlow()
     private val _refreshFailed = MutableStateFlow(false)
     val refreshFailed: StateFlow<Boolean> = _refreshFailed.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            account.state.collect { state ->
+                if (state == AccountState.SignedIn && accountPager == null) startAccountFeed()
+                if (state != AccountState.SignedIn) { accountPager = null; accountItems.value = PagedState() }
+            }
+        }
+    }
+
+    private fun startAccountFeed() {
+        val p = Pager<Video>(viewModelScope, { it.id }) { token -> accountFeed.subscriptions(token) }
+        accountPager = p
+        viewModelScope.launch { p.state.collect { accountItems.value = it } }
+        p.refresh()
+    }
 
     init {
         // При открытии раздела — если прошло больше 30 минут; старая лента показывается сразу (SPEC 7.1)

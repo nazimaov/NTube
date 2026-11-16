@@ -89,6 +89,7 @@ class GoogleAccount @Inject internal constructor(
     private var signInJob: Job? = null
     private val tokenLock = Mutex()
     private var clientData: ClientData? = null
+    private var visitor: String? = null
     private var accessToken: String? = null
     private var accessType: String = "Bearer"
     private var accessExpiresAt = 0L
@@ -209,9 +210,16 @@ class GoogleAccount @Inject internal constructor(
     }
 
     /** Идентификатор и секрет клиента ищутся в скрипте страницы YouTube TV; запоминаются на время работы. */
+    /** Идентификатор посетителя со страницы YouTube TV: без него лента пустая или нерелевантная. */
+    internal suspend fun visitorData(): String? = withContext(io) {
+        loadClientData()
+        visitor
+    }
+
     private fun loadClientData(): ClientData? {
         clientData?.let { return it }
         val page = getText(tvPageUrl) ?: return null
+        visitor = Regex("\"visitorData\":\"(.*?)\"").find(page)?.groupValues?.get(1)
         val origin = tvPageUrl.toHttpUrl().newBuilder().encodedPath("/").query(null).build().toString().trimEnd('/')
         val url = ClientDataParser.scriptUrl(page, origin) ?: return null
         val data = getText(url)?.let(ClientDataParser::clientData)

@@ -31,6 +31,9 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
     lateinit var settings: SettingsRepository
 
     @Inject
+    lateinit var accountFeed: tv.lumen.data.account.AccountFeed
+
+    @Inject
     @ApplicationScope
     lateinit var appScope: CoroutineScope
 
@@ -42,6 +45,8 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
         appScope.launch {
             settings.flow { it.contentLanguage to it.contentCountry }.collect { (language, country) ->
                 youTubeInitializer.applyContentLocale(language, country)
+                // Лента аккаунта запрашивается на том же языке и в том же регионе
+                accountFeed.locale = java.util.Locale(language ?: java.util.Locale.getDefault().language, country ?: java.util.Locale.getDefault().country)
             }
         }
     }

@@ -8,6 +8,9 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.emitAll
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.first
@@ -26,6 +29,9 @@ import tv.lumen.core.model.AppError
 import tv.lumen.core.model.AppResult
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.WatchEntry
+import tv.lumen.data.account.AccountFeed
+import tv.lumen.data.account.AccountState
+import tv.lumen.data.account.GoogleAccount
 import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.library.ProfileRepository
@@ -59,6 +65,8 @@ class HomeViewModel @Inject constructor(
     private val profiles: ProfileRepository,
     settings: SettingsRepository,
     youTubeInitializer: YouTubeInitializer,
+    private val account: GoogleAccount,
+    private val accountFeed: AccountFeed,
     filter: ContentFilter,
 ) : ViewModel() {
 
@@ -93,14 +101,27 @@ class HomeViewModel @Inject constructor(
         }
         .onStart { emit(emptyList()) }
 
-    // Личные рекомендации; каждое четвёртое место — региональное
-    private val recommendations: Flow<List<Video>> =
+    // Расчётные рекомендации (по лайкам и истории); каждое четвёртое место — региональное
+    private val localRecommendations: Flow<List<Video>> =
         combine(related, regional, library.progress, profiles.dislikedVideoIds) { (sources, lists), reg, progress, disliked ->
             val exclude = progress.keys + disliked + sources
             Recommendations.withRegional(Recommendations.mix(lists, exclude), reg, exclude)
         }.onStart { emit(emptyList()) }
 
     // Фильтры 6.4 применяются ко всем рядам, кроме «Продолжить просмотр»
+    // С входом в аккаунт — настоящие рекомендации вашей главной YouTube; если аккаунт ничего не вернул, остаются расчётные
+    private val recommendations: Flow<List<Video>> = account.state.flatMapLatest { signIn ->
+        if (signIn != AccountState.SignedIn) {
+            localRecommendations
+        } else {
+            flow {
+                emit(emptyList())
+                val videos = (accountFeed.home(null) as? AppResult.Success)?.value?.items.orEmpty()
+                if (videos.isNotEmpty()) emit(videos) else emitAll(localRecommendations)
+            }
+        }
+    }
+
     val state: StateFlow<HomeUiState> = combine(library.continueWatching, library.feed, recommendations, trending, filter.rules) { cont, feed, recs, tr, rules ->
         HomeUiState(
             continueWatching = cont.filter { it.video.channelId == null || it.video.channelId !in rules.blockedChannels },

@@ -4,4 +4,5 @@ plugins {
 
 dependencies {
     implementation(project(":data:library"))
+    implementation(project(":data:account"))
 }
