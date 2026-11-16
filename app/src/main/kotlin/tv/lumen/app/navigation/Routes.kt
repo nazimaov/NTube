@@ -10,6 +10,9 @@ import kotlinx.serialization.Serializable
 @Serializable data object History
 @Serializable data object Settings
 
+/** Раздел настроек (плитка); [page] — имя SettingsPage. */
+@Serializable data class SettingsSection(val page: String)
+
 /** Имена полей читает WatchViewModel из SavedStateHandle — не переименовывать без него. */
 @Serializable data class Watch(val videoId: String, val playlistId: String? = null, val startMs: Long = 0)
 

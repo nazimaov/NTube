@@ -49,8 +49,10 @@ private data class Choice<T>(val label: String, val value: T)
 
 private class ChoiceRequest(val title: String, val options: List<Choice<*>>, val selected: Any?, val onSelect: (Any?) -> Unit)
 
+/** Экран одного раздела настроек; плитки разделов — [SettingsRoute]. */
 @Composable
-fun SettingsRoute(
+fun SettingsPageRoute(
+    page: SettingsPage,
     versionName: String,
     modifier: Modifier = Modifier,
     viewModel: SettingsViewModel = hiltViewModel(),
@@ -106,9 +108,9 @@ fun SettingsRoute(
         contentPadding = PaddingValues(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
         verticalArrangement = Arrangement.spacedBy(4.dp),
     ) {
-        item { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp)) }
+        item { Text(stringResource(page.title), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp)) }
 
-        section(R.string.settings_section_profiles)
+        if (page == SettingsPage.PROFILES) {
         item {
             Text(
                 stringResource(R.string.settings_profile_hint),
@@ -150,10 +152,11 @@ fun SettingsRoute(
             }
         }
 
-        section(R.string.settings_section_player)
+        }
+        if (page == SettingsPage.PLAYER) {
         item {
             val title = stringResource(R.string.settings_max_quality)
-            Row(title, qualities.label(s.maxResolution), Modifier.rememberFocus(memory, "quality")) {
+            Row(title, qualities.label(s.maxResolution), Modifier.rememberFocus(memory, "quality", isFirst = true)) {
                 ask(title, qualities, s.maxResolution) { v -> viewModel.update { it.copy(maxResolution = v) } }
             }
         }
@@ -193,9 +196,10 @@ fun SettingsRoute(
             }
         }
 
-        section(R.string.settings_section_sponsorblock)
+        }
+        if (page == SettingsPage.SPONSORBLOCK) {
         item {
-            Toggle(stringResource(R.string.settings_sb_enabled), s.sponsorBlockEnabled, Modifier.rememberFocus(memory, "sb")) {
+            Toggle(stringResource(R.string.settings_sb_enabled), s.sponsorBlockEnabled, Modifier.rememberFocus(memory, "sb", isFirst = true)) {
                 viewModel.update { it.copy(sponsorBlockEnabled = !it.sponsorBlockEnabled) }
             }
         }
@@ -210,9 +214,10 @@ fun SettingsRoute(
             }
         }
 
-        section(R.string.settings_section_mods)
+        }
+        if (page == SettingsPage.MODS) {
         item {
-            Toggle(stringResource(R.string.settings_dearrow_titles), s.deArrowTitles, Modifier.rememberFocus(memory, "daTitles")) {
+            Toggle(stringResource(R.string.settings_dearrow_titles), s.deArrowTitles, Modifier.rememberFocus(memory, "daTitles", isFirst = true)) {
                 viewModel.update { it.copy(deArrowTitles = !it.deArrowTitles) }
             }
         }
@@ -227,9 +232,10 @@ fun SettingsRoute(
             }
         }
 
-        section(R.string.settings_section_feed)
+        }
+        if (page == SettingsPage.FEED) {
         item {
-            Toggle(stringResource(R.string.settings_hide_shorts), s.hideShorts, Modifier.rememberFocus(memory, "shorts")) {
+            Toggle(stringResource(R.string.settings_hide_shorts), s.hideShorts, Modifier.rememberFocus(memory, "shorts", isFirst = true)) {
                 viewModel.update { it.copy(hideShorts = !it.hideShorts) }
             }
         }
@@ -253,10 +259,11 @@ fun SettingsRoute(
             }
         }
 
-        section(R.string.settings_section_language)
+        }
+        if (page == SettingsPage.LANGUAGE) {
         item {
             val title = stringResource(R.string.settings_app_language)
-            Row(title, appLangs.label(s.appLanguage), Modifier.rememberFocus(memory, "app_lang")) {
+            Row(title, appLangs.label(s.appLanguage), Modifier.rememberFocus(memory, "app_lang", isFirst = true)) {
                 ask(title, appLangs, s.appLanguage) { v -> viewModel.update { it.copy(appLanguage = v) } }
             }
         }
@@ -281,9 +288,10 @@ fun SettingsRoute(
             }
         }
 
-        section(R.string.settings_section_general)
+        }
+        if (page == SettingsPage.GENERAL) {
         item {
-            Toggle(stringResource(R.string.settings_history_enabled), s.historyEnabled, Modifier.rememberFocus(memory, "history")) {
+            Toggle(stringResource(R.string.settings_history_enabled), s.historyEnabled, Modifier.rememberFocus(memory, "history", isFirst = true)) {
                 viewModel.update { it.copy(historyEnabled = !it.historyEnabled) }
             }
         }
@@ -300,23 +308,25 @@ fun SettingsRoute(
             Row(stringResource(R.string.settings_backup), null, Modifier.rememberFocus(memory, "backup")) { viewModel.openBackup() }
         }
 
-        section(R.string.settings_section_menu)
+        }
+        if (page == SettingsPage.MENU) {
         items(s.menuItems, key = { "menu:${it.name}" }) { item ->
             val title = menuLabel(item)
             val shown = item !in s.hiddenMenuItems
             val show = stringResource(R.string.settings_menu_show)
             val hide = stringResource(R.string.settings_menu_hide)
             val up = stringResource(R.string.settings_menu_up)
-            Row(title, if (shown) show else hide, Modifier.rememberFocus(memory, "menu:${item.name}")) {
+            Row(title, if (shown) show else hide, Modifier.rememberFocus(memory, "menu:${item.name}", isFirst = item == s.menuItems.first())) {
                 ask(title, listOf(Choice(if (shown) hide else show, 0), Choice(up, 1)), -1) { action ->
                     if (action == 0) viewModel.toggleMenuItem(item) else viewModel.moveMenuItemUp(item)
                 }
             }
         }
 
-        section(R.string.settings_section_about)
+        }
+        if (page == SettingsPage.ABOUT) {
         item {
-            Row(stringResource(R.string.settings_check_updates), null, Modifier.rememberFocus(memory, "update")) { viewModel.checkForUpdates() }
+            Row(stringResource(R.string.settings_check_updates), null, Modifier.rememberFocus(memory, "update", isFirst = true)) { viewModel.checkForUpdates() }
         }
         item {
             Toggle(stringResource(R.string.settings_update_on_start), s.updateCheckOnStart, Modifier.rememberFocus(memory, "updateOnStart")) {
@@ -331,6 +341,7 @@ fun SettingsRoute(
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.fillMaxWidth(0.8f),
             )
+        }
         }
     }
 

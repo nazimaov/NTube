@@ -55,6 +55,10 @@ import tv.lumen.app.navigation.Music
 import tv.lumen.app.navigation.Playlist
 import tv.lumen.app.navigation.Search
 import tv.lumen.app.navigation.Settings
+import tv.lumen.app.navigation.SettingsSection
+import androidx.navigation.toRoute
+import tv.lumen.feature.settings.SettingsPage
+import tv.lumen.feature.settings.SettingsPageRoute
 import tv.lumen.app.navigation.Subscriptions
 import tv.lumen.app.navigation.TopLevelDestination
 import tv.lumen.app.navigation.Watch
@@ -136,7 +140,7 @@ fun LumenApp(
                 ) {
                     menu.forEach { item ->
                         NavigationDrawerItem(
-                            selected = currentDestination.isOn(item),
+                            selected = currentDestination.isOn(item) || (item == TopLevelDestination.SETTINGS && currentDestination?.hasRoute(SettingsSection::class) == true),
                             onClick = { navController.navigateToTopLevel(item) },
                             leadingContent = { Icon(imageVector = item.icon, contentDescription = null) },
                             shape = NavigationDrawerItemDefaults.shape(shape = RoundedCornerShape(12.dp)),
@@ -166,7 +170,18 @@ fun LumenApp(
                 }
                 composable<Subscriptions> { SubscriptionsRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<History> { HistoryRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
-                composable<Settings> { SettingsRoute(versionName = tv.lumen.app.BuildConfig.VERSION_NAME) }
+                composable<Settings> {
+                    SettingsRoute(
+                        versionName = tv.lumen.app.BuildConfig.VERSION_NAME,
+                        onOpenPage = { navController.navigate(SettingsSection(it.name)) },
+                    )
+                }
+                composable<SettingsSection> { entry ->
+                    SettingsPageRoute(
+                        page = SettingsPage.valueOf(entry.toRoute<SettingsSection>().page),
+                        versionName = tv.lumen.app.BuildConfig.VERSION_NAME,
+                    )
+                }
                 composable<Channel> {
                     ChannelRoute(onOpenVideo = { openVideo(it) }, onOpenPlaylist = ::openPlaylist)
                 }

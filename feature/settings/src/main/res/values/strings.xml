@@ -79,4 +79,10 @@
     <string name="settings_profile_rename">Rename</string>
     <string name="settings_profile_delete">Delete with its subscriptions and history</string>
     <string name="settings_menu_music">Music</string>
+    <string name="settings_on">On</string>
+    <string name="settings_summary_shorts_hidden">Shorts hidden</string>
+    <string name="settings_summary_shorts_shown">Shorts shown</string>
+    <string name="settings_summary_menu">Items in menu: %1$d</string>
+    <string name="settings_summary_history_on">History is kept</string>
+    <string name="settings_summary_history_off">History is off</string>
 </resources>

@@ -79,4 +79,10 @@
     <string name="settings_profile_rename">Переименовать</string>
     <string name="settings_profile_delete">Удалить вместе с подписками и историей</string>
     <string name="settings_menu_music">Музыка</string>
+    <string name="settings_on">Вкл.</string>
+    <string name="settings_summary_shorts_hidden">Shorts скрыты</string>
+    <string name="settings_summary_shorts_shown">Shorts показываются</string>
+    <string name="settings_summary_menu">Пунктов в меню: %1$d</string>
+    <string name="settings_summary_history_on">История ведётся</string>
+    <string name="settings_summary_history_off">История выключена</string>
 </resources>
