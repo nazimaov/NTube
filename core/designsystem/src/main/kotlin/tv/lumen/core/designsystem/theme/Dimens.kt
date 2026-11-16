@@ -6,4 +6,10 @@ import androidx.compose.ui.unit.dp
 object LumenDimens {
     val SafeHorizontal = 48.dp
     val SafeVertical = 27.dp
+
+    /**
+     * Отступ контента от бокового меню. Меню уже стоит в безопасной зоне, поэтому слева
+     * достаточно небольшого зазора; справа остаётся [SafeHorizontal].
+     */
+    val ContentStart = 12.dp
 }

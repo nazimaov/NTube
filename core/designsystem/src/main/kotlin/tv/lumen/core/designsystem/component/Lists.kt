@@ -54,11 +54,11 @@ fun <T> ContentRow(
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
-            modifier = Modifier.padding(start = LumenDimens.SafeHorizontal),
+            modifier = Modifier.padding(start = LumenDimens.ContentStart),
         )
         LazyRow(
             state = state,
-            contentPadding = PaddingValues(horizontal = LumenDimens.SafeHorizontal, vertical = 8.dp),
+            contentPadding = PaddingValues(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal, top = 8.dp, bottom = 8.dp),
             horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.focusRestorer(),
         ) {
@@ -96,7 +96,7 @@ fun <T> PagedGrid(
     LazyVerticalGrid(
         columns = GridCells.Fixed(columns),
         state = state,
-        contentPadding = PaddingValues(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
+        contentPadding = PaddingValues(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal, top = LumenDimens.SafeVertical, bottom = LumenDimens.SafeVertical),
         horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier.focusRestorer(),

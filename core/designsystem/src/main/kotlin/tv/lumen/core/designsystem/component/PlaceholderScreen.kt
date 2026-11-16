@@ -17,7 +17,7 @@ fun PlaceholderScreen(title: String, note: String, modifier: Modifier = Modifier
     Column(
         modifier = modifier
             .fillMaxSize()
-            .padding(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
+            .padding(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal, top = LumenDimens.SafeVertical, bottom = LumenDimens.SafeVertical),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Text(text = title, style = MaterialTheme.typography.headlineMedium)

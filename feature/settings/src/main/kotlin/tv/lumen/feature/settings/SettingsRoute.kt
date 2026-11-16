@@ -110,7 +110,7 @@ fun SettingsPageRoute(
 
     // Слева — раздел: иконка, название, пояснение; справа — пункты-карточки
     androidx.compose.foundation.layout.Row(
-        modifier = modifier.fillMaxSize().padding(start = LumenDimens.SafeHorizontal),
+        modifier = modifier.fillMaxSize().padding(start = LumenDimens.ContentStart),
         horizontalArrangement = Arrangement.spacedBy(48.dp),
     ) {
         Column(

@@ -124,7 +124,7 @@ private fun SearchScreen(
 
     Column(modifier = modifier.fillMaxSize().padding(top = LumenDimens.SafeVertical)) {
         Row(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = LumenDimens.SafeHorizontal),
+            modifier = Modifier.fillMaxWidth().padding(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal),
             horizontalArrangement = Arrangement.spacedBy(16.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -139,7 +139,7 @@ private fun SearchScreen(
         }
 
         Row(
-            modifier = Modifier.padding(horizontal = LumenDimens.SafeHorizontal, vertical = 16.dp),
+            modifier = Modifier.padding(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal, top = 16.dp, bottom = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             filters.forEach { f ->
@@ -150,7 +150,7 @@ private fun SearchScreen(
         val showSuggestions = suggestions.isNotEmpty() && query != submitted
         when {
             showSuggestions -> LazyColumn(
-                modifier = Modifier.padding(horizontal = LumenDimens.SafeHorizontal),
+                modifier = Modifier.padding(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal),
                 verticalArrangement = Arrangement.spacedBy(4.dp),
             ) {
                 items(suggestions) { text ->

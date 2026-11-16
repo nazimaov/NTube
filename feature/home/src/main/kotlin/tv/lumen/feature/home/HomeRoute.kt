@@ -71,7 +71,7 @@ fun HomeRoute(
     )
 
     Column(modifier = modifier.fillMaxSize()) {
-        ChipRow(Modifier.padding(start = LumenDimens.SafeHorizontal, top = LumenDimens.SafeVertical, bottom = 4.dp)) {
+        ChipRow(Modifier.padding(start = LumenDimens.ContentStart, top = LumenDimens.SafeVertical, bottom = 4.dp)) {
             HomeChip.entries.forEach { chip ->
                 LumenChip(text = stringResource(chip.label), selected = chip == selected, onClick = { selected = chip })
             }
