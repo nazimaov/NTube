@@ -8,6 +8,9 @@ enum class PreferredCodec { AUTO, AV1, VP9, AVC }
 /** Пункты бокового меню, которые можно скрыть и переставить (SPEC 6.4). «Настройки» всегда видны. */
 enum class MenuItem { SEARCH, HOME, MUSIC, MOVIES, SERIES, SUBSCRIPTIONS, HISTORY }
 
+/** На каком языке искать фильмы и сериалы: оригинал (по стране подборки) или дубляж на выбранный язык. */
+enum class DubLanguage { ORIGINAL, RU, TR, AZ, EN }
+
 /** Снимок всех настроек (SPEC 9.2). */
 data class Settings(
     // Плеер
@@ -37,6 +40,8 @@ data class Settings(
     val contentLanguage: String? = null,
     /** Язык интерфейса (BCP 47, например «az» или «pt-BR»); null — как в системе. */
     val appLanguage: String? = null,
+    /** Язык фильмов и сериалов (разделы «Фильмы» и «Сериалы»). */
+    val catalogDub: DubLanguage = DubLanguage.ORIGINAL,
     val historyEnabled: Boolean = true,
     val menuItems: List<MenuItem> = MenuItem.entries,
     val hiddenMenuItems: Set<MenuItem> = emptySet(),

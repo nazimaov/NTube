@@ -95,4 +95,11 @@
     <string name="settings_desc_about">Версия, обновления и лицензии.</string>
     <string name="settings_menu_movies">Фильмы</string>
     <string name="settings_menu_series">Сериалы</string>
+    <string name="settings_catalog_dub">Язык фильмов и сериалов</string>
+    <string name="settings_catalog_dub_hint">Оригинал: турецкие сериалы ищутся на турецком, русские — на русском. Либо выберите язык дубляжа: например, турецкие сериалы с русской озвучкой.</string>
+    <string name="settings_dub_original">Оригинал</string>
+    <string name="settings_dub_ru">Русский дубляж</string>
+    <string name="settings_dub_tr">Турецкий</string>
+    <string name="settings_dub_az">Азербайджанский</string>
+    <string name="settings_dub_en">Английский</string>
 </resources>

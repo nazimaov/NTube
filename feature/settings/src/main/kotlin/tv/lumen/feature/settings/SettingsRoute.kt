@@ -36,6 +36,7 @@ import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Switch
 import androidx.tv.material3.Text
+import tv.lumen.core.datastore.DubLanguage
 import tv.lumen.core.datastore.MenuItem
 import tv.lumen.core.datastore.PreferredCodec
 import tv.lumen.core.designsystem.focus.FocusMemoryScope
@@ -97,6 +98,14 @@ fun SettingsPageRoute(
     val countries = listOf(Choice<String?>(system, null)) + COUNTRIES.map { Choice<String?>(countryName(it), it) }
     // Языки, на которые переведён интерфейс; название — на самом языке
     val appLangs = listOf(Choice<String?>(system, null)) + UI_LANGUAGES.map { Choice<String?>(nativeLanguageName(it), it) }
+    // Язык фильмов и сериалов: оригинал или дубляж на выбранный язык
+    val dubs = listOf(
+        Choice(stringResource(R.string.settings_dub_original), DubLanguage.ORIGINAL),
+        Choice(stringResource(R.string.settings_dub_ru), DubLanguage.RU),
+        Choice(stringResource(R.string.settings_dub_tr), DubLanguage.TR),
+        Choice(stringResource(R.string.settings_dub_az), DubLanguage.AZ),
+        Choice(stringResource(R.string.settings_dub_en), DubLanguage.EN),
+    )
     val modes = listOf(
         Choice(stringResource(R.string.settings_sb_skip), SegmentMode.SKIP),
         Choice(stringResource(R.string.settings_sb_button), SegmentMode.BUTTON),
@@ -295,6 +304,20 @@ fun SettingsPageRoute(
             Row(title, contentLangs.label(s.contentLanguage), Modifier.rememberFocus(memory, "lang")) {
                 ask(title, contentLangs, s.contentLanguage) { v -> viewModel.update { it.copy(contentLanguage = v) } }
             }
+        }
+        item {
+            val title = stringResource(R.string.settings_catalog_dub)
+            Row(title, dubs.label(s.catalogDub), Modifier.rememberFocus(memory, "catalog_dub")) {
+                ask(title, dubs, s.catalogDub) { v -> viewModel.update { it.copy(catalogDub = v) } }
+            }
+        }
+        item {
+            Text(
+                stringResource(R.string.settings_catalog_dub_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp).fillMaxWidth(0.8f),
+            )
         }
 
         }

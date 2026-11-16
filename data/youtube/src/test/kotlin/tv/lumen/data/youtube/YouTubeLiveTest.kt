@@ -78,6 +78,15 @@ class YouTubeLiveTest {
     }
 
     @Test
+    fun catalogOriginalTurkishSeries() = runBlocking {
+        for (q in listOf("Türk dizi tüm bölümler", "турецкий сериал все серии")) {
+            val videos = repo.search(q, SearchFilter.VIDEOS, null).ok(q).items.filterIsInstance<SearchItem.VideoItem>().map { it.video }
+            println("[$q] " + videos.take(5).joinToString(" | ") { it.title })
+            assertTrue(videos.isNotEmpty())
+        }
+    }
+
+    @Test
     fun catalogSearchFullMovies() = runBlocking {
         val page = repo.search("боевик фильм полностью", SearchFilter.VIDEOS, null).ok("catalog").items
         val videos = page.filterIsInstance<SearchItem.VideoItem>().map { it.video }

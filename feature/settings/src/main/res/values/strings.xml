@@ -95,4 +95,11 @@
     <string name="settings_desc_about">Version, updates and licenses.</string>
     <string name="settings_menu_movies">Movies</string>
     <string name="settings_menu_series">Series</string>
+    <string name="settings_catalog_dub">Language of movies and series</string>
+    <string name="settings_catalog_dub_hint">Original: Turkish series are searched in Turkish, Russian ones in Russian. Or pick a dub language: Turkish series dubbed into Russian, and so on.</string>
+    <string name="settings_dub_original">Original</string>
+    <string name="settings_dub_ru">Russian dub</string>
+    <string name="settings_dub_tr">Turkish</string>
+    <string name="settings_dub_az">Azerbaijani</string>
+    <string name="settings_dub_en">English</string>
 </resources>

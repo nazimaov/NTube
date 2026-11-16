@@ -5,4 +5,5 @@ plugins {
 dependencies {
     implementation(project(":data:youtube"))
     implementation(project(":data:library"))
+    implementation(project(":core:datastore"))
 }
