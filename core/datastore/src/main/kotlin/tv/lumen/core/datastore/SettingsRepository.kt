@@ -72,7 +72,7 @@ class SettingsRepository @Inject constructor(
         contentLanguage = p[LANGUAGE],
         historyEnabled = p[HISTORY] ?: true,
         menuItems = p[MENU_ORDER]?.split(',')?.mapNotNull { runCatching { MenuItem.valueOf(it) }.getOrNull() }
-            ?.let { saved -> saved + MenuItem.entries.filter { it !in saved } } ?: MenuItem.entries,
+            ?.let(::withNewMenuItems) ?: MenuItem.entries,
         hiddenMenuItems = p[MENU_HIDDEN]?.mapNotNull { runCatching { MenuItem.valueOf(it) }.getOrNull() }?.toSet() ?: emptySet(),
         updateCheckOnStart = p[UPDATE_CHECK] ?: true,
         currentProfileId = p[PROFILE] ?: 0L,
@@ -102,6 +102,14 @@ class SettingsRepository @Inject constructor(
         p[UPDATE_CHECK] = s.updateCheckOnStart
         p[PROFILE] = s.currentProfileId
     }
+
+    /** Пункты, появившиеся в новой версии, встают на своё место по умолчанию, а не в конец. */
+    private fun withNewMenuItems(saved: List<MenuItem>): List<MenuItem> =
+        MenuItem.entries.filter { it !in saved }.fold(saved.toMutableList()) { acc, item ->
+            val before = MenuItem.entries.subList(0, item.ordinal).lastOrNull { it in acc }
+            acc.add(if (before == null) 0 else acc.indexOf(before) + 1, item)
+            acc
+        }
 
     private companion object {
         // Имена ключей — как в SPEC 9.2

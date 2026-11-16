@@ -75,4 +75,5 @@
     <string name="settings_profile_select">Переключиться на этот профиль</string>
     <string name="settings_profile_rename">Переименовать</string>
     <string name="settings_profile_delete">Удалить вместе с подписками и историей</string>
+    <string name="settings_menu_music">Музыка</string>
 </resources>

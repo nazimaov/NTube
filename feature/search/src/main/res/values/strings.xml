@@ -7,4 +7,11 @@
     <string name="search_filter_videos">Videos</string>
     <string name="search_filter_channels">Channels</string>
     <string name="search_filter_playlists">Playlists</string>
+    <string name="music_hint">Search YouTube Music</string>
+    <string name="music_charts">Trending music</string>
+    <string name="music_filter_songs">Songs</string>
+    <string name="music_filter_videos">Music videos</string>
+    <string name="music_filter_albums">Albums</string>
+    <string name="music_filter_artists">Artists</string>
+    <string name="music_filter_playlists">Playlists</string>
 </resources>

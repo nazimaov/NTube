@@ -52,6 +52,24 @@ class YouTubeLiveTest {
     }
 
     @Test
+    fun musicTrending() = runBlocking {
+        val videos = repo.musicTrending().ok("musicTrending")
+        println("musicTrending: ${videos.size} видео, первое «${videos.firstOrNull()?.title}»")
+        assertTrue("музыкальные чарты пусты", videos.isNotEmpty())
+    }
+
+    @Test
+    fun musicSearch() = runBlocking {
+        val songs = repo.search("daft punk", SearchFilter.MUSIC_SONGS, null).ok("music songs").items
+        val albums = repo.search("daft punk", SearchFilter.MUSIC_ALBUMS, null).ok("music albums").items
+        val artists = repo.search("daft punk", SearchFilter.MUSIC_ARTISTS, null).ok("music artists").items
+        println("music: песни ${songs.size}, альбомы ${albums.size}, исполнители ${artists.size}; первая песня «${(songs.firstOrNull() as? SearchItem.VideoItem)?.video?.title}»")
+        assertTrue("нет песен", songs.any { it is SearchItem.VideoItem })
+        assertTrue("нет альбомов", albums.any { it is SearchItem.PlaylistItem })
+        assertTrue("нет исполнителей", artists.any { it is SearchItem.ChannelItem })
+    }
+
+    @Test
     fun searchWithPagination() = runBlocking {
         val first = repo.search("blender open movie", SearchFilter.ALL, null).ok("search")
         println("search: ${first.items.size} результатов, next=${first.next != null}")

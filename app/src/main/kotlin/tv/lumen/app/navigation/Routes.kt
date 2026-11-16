@@ -5,6 +5,7 @@ import kotlinx.serialization.Serializable
 // Типобезопасные маршруты (SPEC, раздел 8). Имена полей читают ViewModel экранов из SavedStateHandle.
 @Serializable data object Home
 @Serializable data object Search
+@Serializable data object Music
 @Serializable data object Subscriptions
 @Serializable data object History
 @Serializable data object Settings

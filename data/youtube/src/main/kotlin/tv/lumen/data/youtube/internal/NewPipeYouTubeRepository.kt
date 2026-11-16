@@ -80,6 +80,13 @@ internal class NewPipeYouTubeRepository @Inject constructor(
         emptyList()
     }
 
+    /** Чарты YouTube «Музыка в тренде» (киоск trending_music); не во всех странах. */
+    override suspend fun musicTrending(): AppResult<List<Video>> = call {
+        val kiosks = youtube.kioskList
+        val url = kiosks.getListLinkHandlerFactoryByType(MUSIC_KIOSK_ID).fromId(MUSIC_KIOSK_ID).url
+        Mappers.videos(KioskInfo.getInfo(youtube, url).relatedItems)
+    }
+
     override suspend fun search(query: String, filter: SearchFilter, page: PageToken?) = call {
         val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(filter)), "")
         if (page == null) {
@@ -190,5 +197,15 @@ internal class NewPipeYouTubeRepository @Inject constructor(
         SearchFilter.VIDEOS -> YoutubeSearchQueryHandlerFactory.VIDEOS
         SearchFilter.CHANNELS -> YoutubeSearchQueryHandlerFactory.CHANNELS
         SearchFilter.PLAYLISTS -> YoutubeSearchQueryHandlerFactory.PLAYLISTS
+        SearchFilter.MUSIC_SONGS -> YoutubeSearchQueryHandlerFactory.MUSIC_SONGS
+        SearchFilter.MUSIC_VIDEOS -> YoutubeSearchQueryHandlerFactory.MUSIC_VIDEOS
+        SearchFilter.MUSIC_ALBUMS -> YoutubeSearchQueryHandlerFactory.MUSIC_ALBUMS
+        SearchFilter.MUSIC_ARTISTS -> YoutubeSearchQueryHandlerFactory.MUSIC_ARTISTS
+        SearchFilter.MUSIC_PLAYLISTS -> YoutubeSearchQueryHandlerFactory.MUSIC_PLAYLISTS
+    }
+
+    private companion object {
+        // Идентификатор киоска из YoutubeTrendingMusicLinkHandlerFactory (NewPipeExtractor v0.27.1)
+        const val MUSIC_KIOSK_ID = "trending_music"
     }
 }

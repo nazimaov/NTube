@@ -1,5 +1,6 @@
 package tv.lumen.feature.search
 
+import androidx.annotation.StringRes
 import android.content.Intent
 import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -65,6 +66,45 @@ fun SearchRoute(
     onOpenPlaylist: (id: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: SearchViewModel = hiltViewModel(),
+) = SearchScreen(viewModel, SearchFilter.general, R.string.search_hint, onOpenVideo, onOpenChannel, onOpenPlaylist, modifier)
+
+/** «Музыка»: поиск YouTube Music; пока ничего не искали — чарты «Музыка в тренде». */
+@Composable
+fun MusicRoute(
+    onOpenVideo: (String) -> Unit,
+    onOpenChannel: (String) -> Unit,
+    onOpenPlaylist: (id: String, title: String) -> Unit,
+    modifier: Modifier = Modifier,
+    viewModel: MusicViewModel = hiltViewModel(),
+) {
+    val charts by viewModel.charts.collectAsStateWithLifecycle()
+    val progress by viewModel.actions.progress.collectAsStateWithLifecycle()
+    SearchScreen(viewModel, SearchFilter.music, R.string.music_hint, onOpenVideo, onOpenChannel, onOpenPlaylist, modifier) {
+        when (val c = charts) {
+            MusicChartsState.Loading -> LoadingState()
+            is MusicChartsState.Error -> ErrorState(c.error, onRetry = viewModel::loadCharts)
+            is MusicChartsState.Content -> PagedGrid(
+                items = c.videos,
+                key = { it.id },
+                focusMemory = viewModel.focusMemory,
+                header = { Text(stringResource(R.string.music_charts), style = MaterialTheme.typography.titleLarge) },
+            ) { video, itemModifier ->
+                VideoCard(video, onClick = { onOpenVideo(video.id) }, progress = progress[video.id], modifier = itemModifier)
+            }
+        }
+    }
+}
+
+@Composable
+private fun SearchScreen(
+    viewModel: BaseSearchViewModel,
+    filters: List<SearchFilter>,
+    @StringRes hint: Int,
+    onOpenVideo: (String) -> Unit,
+    onOpenChannel: (String) -> Unit,
+    onOpenPlaylist: (id: String, title: String) -> Unit,
+    modifier: Modifier = Modifier,
+    idleContent: @Composable () -> Unit = {},
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
     val submitted by viewModel.submitted.collectAsStateWithLifecycle()
@@ -89,6 +129,7 @@ fun SearchRoute(
             verticalAlignment = Alignment.CenterVertically,
         ) {
             SearchField(
+                hint = hint,
                 value = query,
                 onValueChange = viewModel::onQueryChange,
                 onSearch = { submit(query) },
@@ -101,7 +142,7 @@ fun SearchRoute(
             modifier = Modifier.padding(horizontal = LumenDimens.SafeHorizontal, vertical = 16.dp),
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            SearchFilter.entries.forEach { f ->
+            filters.forEach { f ->
                 LumenChip(text = stringResource(f.label()), selected = f == filter, onClick = { viewModel.setFilter(f) })
             }
         }
@@ -121,7 +162,7 @@ fun SearchRoute(
                     )
                 }
             }
-            results == null -> Unit
+            results == null -> idleContent()
             else -> {
                 val r = results!!
                 when {
@@ -130,7 +171,7 @@ fun SearchRoute(
                     r.items.isEmpty() -> EmptyState()
                     else -> PagedGrid(
                         items = r.items,
-                        key = SearchViewModel::itemKey,
+                        key = ::searchItemKey,
                         focusMemory = viewModel.focusMemory,
                         canLoadMore = r.canLoadMore,
                         onLoadMore = viewModel::loadMore,
@@ -166,7 +207,7 @@ private fun SearchMenu(
     video: Video,
     subscribed: Set<String>,
     progress: Map<String, Float>,
-    viewModel: SearchViewModel,
+    viewModel: BaseSearchViewModel,
     onOpenChannel: (String) -> Unit,
     onDismiss: () -> Unit,
 ) {
@@ -182,7 +223,7 @@ private fun SearchMenu(
 }
 
 @Composable
-private fun SearchField(value: String, onValueChange: (String) -> Unit, onSearch: () -> Unit, modifier: Modifier) {
+private fun SearchField(@StringRes hint: Int, value: String, onValueChange: (String) -> Unit, onSearch: () -> Unit, modifier: Modifier) {
     var focused by remember { mutableStateOf(false) }
     val border = if (focused) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.border.copy(alpha = 0.4f)
     Box(
@@ -191,7 +232,7 @@ private fun SearchField(value: String, onValueChange: (String) -> Unit, onSearch
             .padding(horizontal = 24.dp, vertical = 14.dp),
     ) {
         if (value.isEmpty()) {
-            Text(stringResource(R.string.search_hint), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(stringResource(hint), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         BasicTextField(
             value = value,
@@ -229,4 +270,9 @@ private fun SearchFilter.label(): Int = when (this) {
     SearchFilter.VIDEOS -> R.string.search_filter_videos
     SearchFilter.CHANNELS -> R.string.search_filter_channels
     SearchFilter.PLAYLISTS -> R.string.search_filter_playlists
+    SearchFilter.MUSIC_SONGS -> R.string.music_filter_songs
+    SearchFilter.MUSIC_VIDEOS -> R.string.music_filter_videos
+    SearchFilter.MUSIC_ALBUMS -> R.string.music_filter_albums
+    SearchFilter.MUSIC_ARTISTS -> R.string.music_filter_artists
+    SearchFilter.MUSIC_PLAYLISTS -> R.string.music_filter_playlists
 }

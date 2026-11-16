@@ -6,7 +6,7 @@ import tv.lumen.core.model.SponsorCategory
 enum class PreferredCodec { AUTO, AV1, VP9, AVC }
 
 /** Пункты бокового меню, которые можно скрыть и переставить (SPEC 6.4). «Настройки» всегда видны. */
-enum class MenuItem { SEARCH, HOME, SUBSCRIPTIONS, HISTORY }
+enum class MenuItem { SEARCH, HOME, MUSIC, SUBSCRIPTIONS, HISTORY }
 
 /** Снимок всех настроек (SPEC 9.2). */
 data class Settings(

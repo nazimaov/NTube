@@ -178,6 +178,10 @@ fun VideoCard(
 
 @Composable
 fun ChannelCard(channel: ChannelSummary, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val avatarResolver = LocalChannelAvatarResolver.current
+    val avatar by produceState(channel.avatarUrl, channel.avatarUrl, channel.id, avatarResolver) {
+        if (value == null && avatarResolver != null) value = runCatching { avatarResolver.avatarUrl(channel.id) }.getOrNull()
+    }
     Column(
         modifier = modifier,
         horizontalAlignment = Alignment.CenterHorizontally,
@@ -191,7 +195,7 @@ fun ChannelCard(channel: ChannelSummary, onClick: () -> Unit, modifier: Modifier
             modifier = Modifier.size(120.dp),
         ) {
             AsyncImage(
-                model = channel.avatarUrl,
+                model = avatar,
                 contentDescription = null,
                 contentScale = ContentScale.Crop,
                 modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),

@@ -56,6 +56,7 @@ class AppViewModel @Inject constructor(
     private fun MenuItem.toDestination() = when (this) {
         MenuItem.SEARCH -> TopLevelDestination.SEARCH
         MenuItem.HOME -> TopLevelDestination.HOME
+        MenuItem.MUSIC -> TopLevelDestination.MUSIC
         MenuItem.SUBSCRIPTIONS -> TopLevelDestination.SUBSCRIPTIONS
         MenuItem.HISTORY -> TopLevelDestination.HISTORY
     }

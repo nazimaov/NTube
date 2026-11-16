@@ -61,7 +61,16 @@ sealed interface SearchItem {
     data class PlaylistItem(val playlist: PlaylistSummary) : SearchItem
 }
 
-enum class SearchFilter { ALL, VIDEOS, CHANNELS, PLAYLISTS }
+/** Фильтры поиска; MUSIC_* — поиск YouTube Music (music.youtube.com). */
+enum class SearchFilter {
+    ALL, VIDEOS, CHANNELS, PLAYLISTS,
+    MUSIC_SONGS, MUSIC_VIDEOS, MUSIC_ALBUMS, MUSIC_ARTISTS, MUSIC_PLAYLISTS;
+
+    companion object {
+        val general = listOf(ALL, VIDEOS, CHANNELS, PLAYLISTS)
+        val music = listOf(MUSIC_SONGS, MUSIC_VIDEOS, MUSIC_ALBUMS, MUSIC_ARTISTS, MUSIC_PLAYLISTS)
+    }
+}
 
 enum class ChannelTab { VIDEOS, LIVE, SHORTS, PLAYLISTS }
 

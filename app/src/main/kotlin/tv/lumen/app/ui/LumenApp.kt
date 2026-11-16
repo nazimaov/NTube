@@ -51,6 +51,7 @@ import androidx.tv.material3.Text
 import tv.lumen.app.navigation.Channel
 import tv.lumen.app.navigation.History
 import tv.lumen.app.navigation.Home
+import tv.lumen.app.navigation.Music
 import tv.lumen.app.navigation.Playlist
 import tv.lumen.app.navigation.Search
 import tv.lumen.app.navigation.Settings
@@ -62,6 +63,7 @@ import tv.lumen.feature.home.HomeRoute
 import tv.lumen.feature.library.HistoryRoute
 import tv.lumen.feature.library.SubscriptionsRoute
 import tv.lumen.feature.playlist.PlaylistRoute
+import tv.lumen.feature.search.MusicRoute
 import tv.lumen.feature.search.SearchRoute
 import tv.lumen.feature.settings.SettingsRoute
 import tv.lumen.feature.watch.WatchRoute
@@ -158,6 +160,9 @@ fun LumenApp(
                 composable<Home> { HomeRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<Search> {
                     SearchRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel, onOpenPlaylist = ::openPlaylist)
+                }
+                composable<Music> {
+                    MusicRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel, onOpenPlaylist = ::openPlaylist)
                 }
                 composable<Subscriptions> { SubscriptionsRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<History> { HistoryRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }

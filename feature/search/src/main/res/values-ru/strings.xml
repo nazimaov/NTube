@@ -7,4 +7,11 @@
     <string name="search_filter_videos">Видео</string>
     <string name="search_filter_channels">Каналы</string>
     <string name="search_filter_playlists">Плейлисты</string>
+    <string name="music_hint">Поиск в YouTube Music</string>
+    <string name="music_charts">Музыка в тренде</string>
+    <string name="music_filter_songs">Песни</string>
+    <string name="music_filter_videos">Клипы</string>
+    <string name="music_filter_albums">Альбомы</string>
+    <string name="music_filter_artists">Исполнители</string>
+    <string name="music_filter_playlists">Плейлисты</string>
 </resources>

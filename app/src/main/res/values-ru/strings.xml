@@ -20,4 +20,5 @@
     <string name="update_no_apk">В новом релизе нет файла APK.</string>
     <string name="update_install_failed">Не удалось установить обновление.</string>
     <string name="update_not_configured">Обновления не настроены: укажите lumen.updateRepoOwner в gradle.properties.</string>
+    <string name="menu_music">Музыка</string>
 </resources>

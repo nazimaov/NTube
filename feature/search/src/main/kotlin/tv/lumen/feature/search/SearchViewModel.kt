@@ -17,7 +17,10 @@ import kotlinx.coroutines.launch
 import tv.lumen.core.common.PagedState
 import tv.lumen.core.common.Pager
 import tv.lumen.core.designsystem.focus.FocusMemory
+import tv.lumen.core.model.AppError
+import tv.lumen.core.model.AppResult
 import tv.lumen.core.model.SearchFilter
+import tv.lumen.core.model.Video
 import tv.lumen.core.model.SearchItem
 import tv.lumen.core.model.getOrNull
 import kotlinx.coroutines.flow.combine
@@ -27,11 +30,15 @@ import tv.lumen.data.library.VideoActions
 import tv.lumen.data.youtube.YouTubeRepository
 import javax.inject.Inject
 
-@HiltViewModel
-class SearchViewModel @Inject constructor(
-    private val youtube: YouTubeRepository,
+/**
+ * Общая логика поиска: строка, подсказки, фильтр, результаты с подгрузкой.
+ * [SearchViewModel] — обычный поиск YouTube, [MusicViewModel] — поиск YouTube Music.
+ */
+abstract class BaseSearchViewModel(
+    protected val youtube: YouTubeRepository,
     library: LibraryRepository,
     filter: ContentFilter,
+    initialFilter: SearchFilter,
 ) : ViewModel() {
 
     val focusMemory = FocusMemory()
@@ -43,7 +50,7 @@ class SearchViewModel @Inject constructor(
     private val _submitted = MutableStateFlow<String?>(null)
     val submitted: StateFlow<String?> = _submitted.asStateFlow()
 
-    private val _filter = MutableStateFlow(SearchFilter.ALL)
+    private val _filter = MutableStateFlow(initialFilter)
     val filter: StateFlow<SearchFilter> = _filter.asStateFlow()
 
     private val _results = MutableStateFlow<PagedState<SearchItem>?>(null)
@@ -89,17 +96,59 @@ class SearchViewModel @Inject constructor(
         val f = _filter.value
         focusMemory.reset()
         collectJob?.cancel()
-        val p = Pager(viewModelScope, ::itemKey) { token -> youtube.search(q, f, token) }
+        val p = Pager(viewModelScope, ::searchItemKey) { token -> youtube.search(q, f, token) }
         pager = p
         collectJob = viewModelScope.launch { p.state.collect { _results.value = it } }
         p.refresh()
     }
 
-    companion object {
-        fun itemKey(item: SearchItem): String = when (item) {
+}
+
+fun searchItemKey(item: SearchItem): String = when (item) {
             is SearchItem.VideoItem -> "v:" + item.video.id
             is SearchItem.ChannelItem -> "c:" + item.channel.id
             is SearchItem.PlaylistItem -> "p:" + item.playlist.id
+}
+
+@HiltViewModel
+class SearchViewModel @Inject constructor(
+    youtube: YouTubeRepository,
+    library: LibraryRepository,
+    filter: ContentFilter,
+) : BaseSearchViewModel(youtube, library, filter, SearchFilter.ALL)
+
+sealed interface MusicChartsState {
+    data object Loading : MusicChartsState
+    data class Content(val videos: List<Video>) : MusicChartsState
+    data class Error(val error: AppError) : MusicChartsState
+}
+
+/** «Музыка»: поиск YouTube Music и стартовый экран с чартами YouTube. */
+@HiltViewModel
+class MusicViewModel @Inject constructor(
+    youtube: YouTubeRepository,
+    library: LibraryRepository,
+    filter: ContentFilter,
+) : BaseSearchViewModel(youtube, library, filter, SearchFilter.MUSIC_SONGS) {
+
+    private val _charts = MutableStateFlow<MusicChartsState>(MusicChartsState.Loading)
+
+    /** Чарты после фильтров 6.4. */
+    val charts: StateFlow<MusicChartsState> = combine(_charts, filter.rules) { c, rules ->
+        if (c is MusicChartsState.Content) MusicChartsState.Content(rules.videos(c.videos)) else c
+    }.stateIn(viewModelScope, SharingStarted.Eagerly, MusicChartsState.Loading)
+
+    init {
+        loadCharts()
+    }
+
+    fun loadCharts() {
+        _charts.value = MusicChartsState.Loading
+        viewModelScope.launch {
+            _charts.value = when (val r = youtube.musicTrending()) {
+                is AppResult.Success -> MusicChartsState.Content(r.value)
+                is AppResult.Failure -> MusicChartsState.Error(r.error)
+            }
         }
     }
 }
