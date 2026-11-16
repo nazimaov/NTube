@@ -1,6 +1,23 @@
 package tv.lumen.feature.home
 
 import androidx.annotation.StringRes
+import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.graphics.Color
+import androidx.tv.material3.Border
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Icon
+import androidx.tv.material3.MaterialTheme
+import androidx.tv.material3.Surface
+import androidx.tv.material3.Text
+import tv.lumen.core.designsystem.theme.LumenColors
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -34,6 +51,7 @@ import tv.lumen.core.model.Video
 fun HomeRoute(
     onOpenVideo: (String) -> Unit,
     onOpenChannel: (String) -> Unit,
+    onOpenSearch: () -> Unit,
     modifier: Modifier = Modifier,
     viewModel: HomeViewModel = hiltViewModel(),
 ) {
@@ -71,7 +89,11 @@ fun HomeRoute(
     )
 
     Column(modifier = modifier.fillMaxSize()) {
-        ChipRow(Modifier.padding(start = LumenDimens.ContentStart, top = LumenDimens.SafeVertical, bottom = 4.dp)) {
+        SearchBar(
+            onClick = onOpenSearch,
+            modifier = Modifier.padding(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal, top = LumenDimens.SafeVertical),
+        )
+        ChipRow(Modifier.padding(start = LumenDimens.ContentStart, top = 12.dp, bottom = 4.dp)) {
             HomeChip.entries.forEach { chip ->
                 LumenChip(text = stringResource(chip.label), selected = chip == selected, onClick = { selected = chip })
             }
@@ -170,4 +192,36 @@ private enum class HomeChip(@StringRes val label: Int) {
     Recommendations(R.string.home_chip_recommendations),
     Subscriptions(R.string.home_chip_subscriptions),
     Trending(R.string.home_chip_trending),
+}
+
+private val SearchShape = RoundedCornerShape(28.dp)
+
+/** Строка поиска наверху главной: по нажатию открывается экран поиска с клавиатурой. */
+@Composable
+private fun SearchBar(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(SearchShape),
+        colors = ClickableSurfaceDefaults.colors(
+            containerColor = LumenColors.Surface,
+            contentColor = LumenColors.TextSecondary,
+            focusedContainerColor = LumenColors.SurfaceCard,
+            focusedContentColor = LumenColors.TextPrimary,
+        ),
+        border = ClickableSurfaceDefaults.border(
+            border = Border(BorderStroke(1.dp, LumenColors.Divider), shape = SearchShape),
+            focusedBorder = Border(BorderStroke(2.dp, LumenColors.FocusRing), shape = SearchShape),
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.01f),
+        modifier = modifier.fillMaxWidth().height(52.dp),
+    ) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            modifier = Modifier.fillMaxSize().padding(horizontal = 24.dp),
+        ) {
+            Icon(Icons.Filled.Search, contentDescription = null, modifier = Modifier.size(24.dp))
+            Text(stringResource(R.string.home_search_hint), style = MaterialTheme.typography.titleMedium, color = Color.Unspecified)
+        }
+    }
 }

@@ -178,7 +178,13 @@ fun LumenApp(
             },
         ) {
             NavHost(navController = navController, startDestination = Home) {
-                composable<Home> { HomeRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
+                composable<Home> {
+                    HomeRoute(
+                        onOpenVideo = { openVideo(it) },
+                        onOpenChannel = ::openChannel,
+                        onOpenSearch = { navController.navigateToTopLevel(TopLevelDestination.SEARCH) },
+                    )
+                }
                 composable<Search> {
                     SearchRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel, onOpenPlaylist = ::openPlaylist)
                 }

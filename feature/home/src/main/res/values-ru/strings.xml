@@ -9,4 +9,5 @@
     <string name="home_chip_trending">В тренде</string>
     <string name="home_recommendations">Рекомендации для вас</string>
     <string name="home_chip_recommendations">Рекомендации</string>
+    <string name="home_search_hint">Поиск в YouTube</string>
 </resources>
