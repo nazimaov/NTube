@@ -8,6 +8,9 @@ import kotlinx.coroutines.flow.StateFlow
 import tv.lumen.core.model.Video
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.core.model.Reaction
+import tv.lumen.core.common.ApplicationScope
+import tv.lumen.data.account.AccountActions
+import kotlinx.coroutines.CoroutineScope
 import tv.lumen.data.library.ProfileRepository
 import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOf
@@ -44,6 +47,8 @@ class WatchViewModel @Inject constructor(
     private val profiles: ProfileRepository,
     private val youtube: YouTubeRepository,
     private val library: LibraryRepository,
+    private val accountActions: AccountActions,
+    @ApplicationScope private val appScope: CoroutineScope,
     settings: SettingsRepository,
 ) : ViewModel() {
 
@@ -73,8 +78,12 @@ class WatchViewModel @Inject constructor(
     /** Повторное нажатие снимает отметку. */
     fun toggleReaction(value: Reaction) {
         val id = controller.state.value.details?.video?.id ?: return
-        val next = if (reaction.value == value) null else value
+        val before = reaction.value
+        val next = if (before == value) null else value
         viewModelScope.launch { profiles.setReaction(id, next) }
+        // Со входом отметка уходит и в аккаунт YouTube; не зависит от экрана, поэтому в общем scope.
+        // Если не удалось, локальная отметка остаётся: она нужна и без аккаунта.
+        appScope.launch { accountActions.react(id, before, next) }
     }
 
     private var commentsPager: Pager<Comment>? = null
