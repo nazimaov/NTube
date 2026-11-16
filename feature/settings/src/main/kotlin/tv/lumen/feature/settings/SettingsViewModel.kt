@@ -7,6 +7,8 @@ import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import tv.lumen.core.model.Profile
+import tv.lumen.data.library.ProfileRepository
 import tv.lumen.core.datastore.MenuItem
 import tv.lumen.core.datastore.Settings
 import tv.lumen.core.datastore.SettingsRepository
@@ -30,7 +32,19 @@ class SettingsViewModel @Inject constructor(
     private val library: LibraryRepository,
     private val updates: UpdateManager,
     private val backupServer: BackupServer,
+    private val profileRepository: ProfileRepository,
 ) : ViewModel() {
+
+    /** Локальные профили: отметки «нравится» хранятся отдельно для каждого. */
+    val profiles: StateFlow<List<Profile>> = profileRepository.profiles
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
+    val currentProfile: StateFlow<Profile?> = profileRepository.current
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), null)
+
+    fun createProfile(name: String) { viewModelScope.launch { profileRepository.create(name) } }
+    fun selectProfile(id: Long) { viewModelScope.launch { profileRepository.select(id) } }
+    fun renameProfile(id: Long, name: String) { viewModelScope.launch { profileRepository.rename(id, name) } }
+    fun deleteProfile(id: Long) { viewModelScope.launch { profileRepository.delete(id) } }
 
     private val _backup = MutableStateFlow<BackupUiState?>(null)
     val backup: StateFlow<BackupUiState?> = _backup.asStateFlow()

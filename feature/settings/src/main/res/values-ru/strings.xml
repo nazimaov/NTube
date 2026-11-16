@@ -65,4 +65,14 @@
     <string name="settings_backup_done">Импортировано подписок: %1$d, записей истории: %2$d</string>
     <string name="settings_backup_failed">Формат файла не распознан.</string>
     <string name="settings_close">Закрыть</string>
+    <string name="settings_section_profiles">Профили</string>
+    <string name="settings_profile_hint">Лайки и дизлайки хранятся отдельно для каждого профиля и только на этом устройстве. В YouTube они не отправляются.</string>
+    <string name="settings_profile_default">Основной</string>
+    <string name="settings_profile_current">Текущий</string>
+    <string name="settings_profile_add">Добавить профиль</string>
+    <string name="settings_profile_name">Имя профиля</string>
+    <string name="settings_profile_save">Сохранить</string>
+    <string name="settings_profile_select">Переключиться на этот профиль</string>
+    <string name="settings_profile_rename">Переименовать</string>
+    <string name="settings_profile_delete">Удалить вместе с лайками</string>
 </resources>

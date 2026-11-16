@@ -68,3 +68,33 @@ data class BrandingCacheEntity(
     @ColumnInfo(name = "thumbnail_time") val thumbnailTime: Double?,
     @ColumnInfo(name = "fetched_at") val fetchedAt: Long,
 )
+/** Локальный профиль («виртуальный аккаунт») на устройстве. Пустое имя — профиль по умолчанию. */
+@Entity(tableName = "profile")
+data class ProfileEntity(
+    @PrimaryKey(autoGenerate = true) @ColumnInfo(name = "id") val id: Long = 0,
+    @ColumnInfo(name = "name") val name: String,
+    @ColumnInfo(name = "created_at") val createdAt: Long,
+)
+
+/**
+ * Отметка профиля «нравится» (1) / «не нравится» (-1). Хранится только на устройстве:
+ * без входа в аккаунт Google YouTube её не получает.
+ */
+@Entity(
+    tableName = "video_reaction",
+    primaryKeys = ["profile_id", "video_id"],
+    foreignKeys = [
+        ForeignKey(
+            entity = ProfileEntity::class,
+            parentColumns = ["id"],
+            childColumns = ["profile_id"],
+            onDelete = ForeignKey.CASCADE,
+        ),
+    ],
+)
+data class VideoReactionEntity(
+    @ColumnInfo(name = "profile_id") val profileId: Long,
+    @ColumnInfo(name = "video_id") val videoId: String,
+    @ColumnInfo(name = "reaction") val reaction: Int,
+    @ColumnInfo(name = "updated_at") val updatedAt: Long,
+)

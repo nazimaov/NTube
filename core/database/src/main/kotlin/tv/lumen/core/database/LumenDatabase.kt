@@ -1,6 +1,7 @@
 package tv.lumen.core.database
 
 import android.content.Context
+import androidx.room.AutoMigration
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -18,9 +19,13 @@ import javax.inject.Singleton
         WatchHistoryEntity::class,
         BlockedChannelEntity::class,
         BrandingCacheEntity::class,
+        ProfileEntity::class,
+        VideoReactionEntity::class,
     ],
-    version = 1,
+    version = 2,
     exportSchema = true,
+    // 1 → 2: новые таблицы profile и video_reaction
+    autoMigrations = [AutoMigration(from = 1, to = 2)],
 )
 abstract class LumenDatabase : RoomDatabase() {
     abstract fun subscriptions(): SubscriptionDao
@@ -28,6 +33,8 @@ abstract class LumenDatabase : RoomDatabase() {
     abstract fun history(): WatchHistoryDao
     abstract fun blockedChannels(): BlockedChannelDao
     abstract fun branding(): BrandingCacheDao
+    abstract fun profiles(): ProfileDao
+    abstract fun reactions(): VideoReactionDao
 
     companion object {
         const val NAME = "lumen.db"
@@ -48,4 +55,6 @@ object DatabaseModule {
     @Provides fun historyDao(db: LumenDatabase) = db.history()
     @Provides fun blockedDao(db: LumenDatabase) = db.blockedChannels()
     @Provides fun brandingDao(db: LumenDatabase) = db.branding()
+    @Provides fun profileDao(db: LumenDatabase) = db.profiles()
+    @Provides fun reactionDao(db: LumenDatabase) = db.reactions()
 }

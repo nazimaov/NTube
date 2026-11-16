@@ -60,6 +60,10 @@ fun SettingsRoute(
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     var choice by remember { mutableStateOf<ChoiceRequest?>(null) }
     var addingWord by remember { mutableStateOf(false) }
+    val profiles by viewModel.profiles.collectAsStateWithLifecycle()
+    val currentProfile by viewModel.currentProfile.collectAsStateWithLifecycle()
+    // Ввод имени профиля: null — диалог закрыт; id = null — новый профиль
+    var naming by remember { mutableStateOf<ProfileNaming?>(null) }
     FocusMemoryScope(viewModel.focusMemory)
     val memory = viewModel.focusMemory
 
@@ -73,6 +77,11 @@ fun SettingsRoute(
         Choice("H.264 (AVC)", PreferredCodec.AVC),
     )
     val off = stringResource(R.string.settings_off)
+    val defaultName = stringResource(R.string.settings_profile_default)
+    val selectLabel = stringResource(R.string.settings_profile_select)
+    val renameLabel = stringResource(R.string.settings_profile_rename)
+    val deleteLabel = stringResource(R.string.settings_profile_delete)
+    val currentLabel = stringResource(R.string.settings_profile_current)
     val original = stringResource(R.string.settings_original)
     val system = stringResource(R.string.settings_system)
     val subtitleLangs = listOf(Choice<String?>(off, null)) + LANGUAGES.map { Choice<String?>(languageName(it), it) }
@@ -97,10 +106,52 @@ fun SettingsRoute(
     ) {
         item { Text(stringResource(R.string.settings_title), style = MaterialTheme.typography.headlineMedium, modifier = Modifier.padding(bottom = 16.dp)) }
 
+        section(R.string.settings_section_profiles)
+        item {
+            Text(
+                stringResource(R.string.settings_profile_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(bottom = 8.dp),
+            )
+        }
+        profiles.forEach { profile ->
+            item(key = "profile:${profile.id}") {
+                val name = profile.name.ifBlank { defaultName }
+                Row(
+                    name,
+                    currentLabel.takeIf { profile.id == currentProfile?.id },
+                    Modifier.rememberFocus(memory, "profile:${profile.id}", isFirst = profile == profiles.first()),
+                ) {
+                    // Действия с профилем: выбрать, переименовать, удалить (последний профиль не удаляется)
+                    val actions = buildList {
+                        if (profile.id != currentProfile?.id) add(Choice(selectLabel, 0))
+                        add(Choice(renameLabel, 1))
+                        if (profiles.size > 1) add(Choice(deleteLabel, 2))
+                    }
+                    ask(name, actions, -1) { action ->
+                        when (action) {
+                            0 -> viewModel.selectProfile(profile.id)
+                            1 -> naming = ProfileNaming(profile.id, profile.name)
+                            2 -> {
+                                viewModel.deleteProfile(profile.id)
+                                memory.restore(toKey = "profile:add")
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        item {
+            Row(stringResource(R.string.settings_profile_add), null, Modifier.rememberFocus(memory, "profile:add")) {
+                naming = ProfileNaming(null, "")
+            }
+        }
+
         section(R.string.settings_section_player)
         item {
             val title = stringResource(R.string.settings_max_quality)
-            Row(title, qualities.label(s.maxResolution), Modifier.rememberFocus(memory, "quality", isFirst = true)) {
+            Row(title, qualities.label(s.maxResolution), Modifier.rememberFocus(memory, "quality")) {
                 ask(title, qualities, s.maxResolution) { v -> viewModel.update { it.copy(maxResolution = v) } }
             }
         }
@@ -268,10 +319,25 @@ fun SettingsRoute(
     backup?.let { BackupDialog(it, onClose = viewModel::closeBackup) }
 
     choice?.let { req ->
-        ChoiceDialog(req) { choice = null }
+        ChoiceDialog(req) { choice = null; memory.restore() }
     }
     if (addingWord) {
-        WordDialog(onDone = { word -> word?.let(viewModel::addBlockedWord); addingWord = false })
+        WordDialog(onDone = { word -> word?.let(viewModel::addBlockedWord); addingWord = false; memory.restore() })
+    }
+    naming?.let { n ->
+        WordDialog(
+            title = stringResource(R.string.settings_profile_name),
+            initial = n.name,
+            confirm = stringResource(R.string.settings_profile_save),
+            onDone = { text ->
+                naming = null
+                memory.restore()
+                val name = text?.trim().orEmpty()
+                if (text != null) {
+                    if (n.id == null) viewModel.createProfile(name) else viewModel.renameProfile(n.id, name)
+                }
+            },
+        )
     }
 }
 
@@ -332,8 +398,13 @@ private fun ChoiceDialog(req: ChoiceRequest, onDismiss: () -> Unit) {
 }
 
 @Composable
-private fun WordDialog(onDone: (String?) -> Unit) {
-    var text by remember { mutableStateOf("") }
+private fun WordDialog(
+    onDone: (String?) -> Unit,
+    title: String = stringResource(R.string.settings_add_word),
+    initial: String = "",
+    confirm: String = stringResource(R.string.settings_add),
+) {
+    var text by remember { mutableStateOf(initial) }
     val focus = remember { FocusRequester() }
     LaunchedEffect(Unit) { runCatching { focus.requestFocus() } }
     Dialog(onDismissRequest = { onDone(null) }) {
@@ -341,7 +412,7 @@ private fun WordDialog(onDone: (String?) -> Unit) {
             modifier = Modifier.width(560.dp).background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp)).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            Text(stringResource(R.string.settings_add_word), style = MaterialTheme.typography.titleLarge)
+            Text(title, style = MaterialTheme.typography.titleLarge)
             BasicTextField(
                 value = text,
                 onValueChange = { text = it },
@@ -353,7 +424,7 @@ private fun WordDialog(onDone: (String?) -> Unit) {
                 modifier = Modifier.fillMaxWidth().focusRequester(focus)
                     .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(8.dp)).padding(12.dp),
             )
-            Button(onClick = { onDone(text) }) { Text(stringResource(R.string.settings_add)) }
+            Button(onClick = { onDone(text) }) { Text(confirm) }
         }
     }
 }
@@ -394,3 +465,5 @@ private fun menuLabel(item: MenuItem): String = stringResource(
         MenuItem.HISTORY -> R.string.settings_menu_history
     },
 )
+/** Ввод имени профиля: [id] = null — создание нового. */
+private data class ProfileNaming(val id: Long?, val name: String)

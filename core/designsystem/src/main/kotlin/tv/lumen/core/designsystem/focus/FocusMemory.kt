@@ -3,6 +3,9 @@ package tv.lumen.core.designsystem.focus
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
@@ -19,10 +22,23 @@ class FocusMemory {
     internal var key: String? = null
     internal var armed: Boolean = true
 
+    // Меняется при [restore], чтобы элементы заново попробовали взять фокус
+    internal var restoreTick by mutableIntStateOf(0)
+
     /** Забыть позицию: например, после нового поиска фокус снова на первую карточку. */
     fun reset() {
         key = null
         armed = true
+    }
+
+    /**
+     * Вернуть фокус на запомненный элемент (или на [toKey]) — например, после закрытия диалога,
+     * иначе фокус уходит в боковое меню.
+     */
+    fun restore(toKey: String? = null) {
+        if (toKey != null) key = toKey
+        armed = true
+        restoreTick++
     }
 
     internal fun consume(itemKey: String, isFirst: Boolean): Boolean {
@@ -43,7 +59,7 @@ fun FocusMemoryScope(memory: FocusMemory) {
 @Composable
 fun Modifier.rememberFocus(memory: FocusMemory, key: String, isFirst: Boolean = false): Modifier {
     val requester = remember { FocusRequester() }
-    LaunchedEffect(key) {
+    LaunchedEffect(key, memory.restoreTick) {
         if (memory.consume(key, isFirst)) runCatching { requester.requestFocus() }
     }
     return this

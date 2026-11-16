@@ -6,6 +6,7 @@ dependencies {
     implementation(project(":player"))
     implementation(project(":data:updater"))
     implementation(project(":data:ryd"))
+    implementation(project(":data:library"))
     implementation(project(":data:youtube"))
     implementation(project(":core:datastore"))
     implementation(libs.media3.ui)

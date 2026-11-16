@@ -70,4 +70,18 @@ class DaoTest {
         h.trim(3)
         assertEquals(listOf("v10", "v9", "v8"), h.observeRecent(100).first().map { it.videoId })
     }
+
+    @Test
+    fun отметки_у_каждого_профиля_свои_и_удаляются_с_профилем() = runTest {
+        val a = db.profiles().insert(ProfileEntity(name = "A", createdAt = 1))
+        val b = db.profiles().insert(ProfileEntity(name = "B", createdAt = 2))
+        db.reactions().upsert(VideoReactionEntity(a, "v1", 1, 1))
+        db.reactions().upsert(VideoReactionEntity(b, "v1", -1, 1))
+        assertEquals(1, db.reactions().observe(a, "v1").first())
+        assertEquals(-1, db.reactions().observe(b, "v1").first())
+
+        db.profiles().delete(a)
+        assertEquals(null, db.reactions().observe(a, "v1").first())
+        assertEquals(-1, db.reactions().observe(b, "v1").first())
+    }
 }

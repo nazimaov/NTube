@@ -5,6 +5,10 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import tv.lumen.core.model.Reaction
+import tv.lumen.data.library.ProfileRepository
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOf
 import tv.lumen.player.PlayerController
 import tv.lumen.player.PlayerControllerFactory
 import tv.lumen.player.PlayerState
@@ -35,6 +39,7 @@ class WatchViewModel @Inject constructor(
     factory: PlayerControllerFactory,
     private val updates: UpdateManager,
     private val dislikeRepository: DislikeRepository,
+    private val profiles: ProfileRepository,
     private val youtube: YouTubeRepository,
     settings: SettingsRepository,
 ) : ViewModel() {
@@ -49,6 +54,18 @@ class WatchViewModel @Inject constructor(
     val dislikes: StateFlow<Long?> = combine(controller.state.map { it.details?.video?.id }.distinctUntilChanged(), settings.flow { it.rydEnabled }) { id, on -> id to on }
         .mapLatest { (id, on) -> if (id != null && on) dislikeRepository.dislikes(id) else null }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Отметка текущего локального профиля; в YouTube не отправляется (нет входа в аккаунт). */
+    val reaction: StateFlow<Reaction?> = controller.state.map { it.details?.video?.id }.distinctUntilChanged()
+        .flatMapLatest { id -> if (id == null) flowOf(null) else profiles.reaction(id) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    /** Повторное нажатие снимает отметку. */
+    fun toggleReaction(value: Reaction) {
+        val id = controller.state.value.details?.video?.id ?: return
+        val next = if (reaction.value == value) null else value
+        viewModelScope.launch { profiles.setReaction(id, next) }
+    }
 
     private var commentsPager: Pager<Comment>? = null
     private val _comments = MutableStateFlow<PagedState<Comment>?>(null)

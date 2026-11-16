@@ -35,6 +35,7 @@ import tv.lumen.core.designsystem.theme.LumenColors
 /**
  * Круглая кнопка-иконка панели плеера, как у YouTube на ТВ: в покое — полупрозрачная,
  * в фокусе — белая с тёмной иконкой, а под ней появляется подпись [label].
+ * [caption] (например, число лайков) виден всегда, в фокусе его сменяет подпись.
  * [active] подсвечивает включённое состояние (например, субтитры) красной точкой.
  */
 @Composable
@@ -45,6 +46,7 @@ fun PlayerIconButton(
     modifier: Modifier = Modifier,
     size: Dp = 52.dp,
     active: Boolean = false,
+    caption: String? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     Column(
@@ -78,14 +80,14 @@ fun PlayerIconButton(
         }
         // Подпись видна только в фокусе; место под неё зарезервировано, чтобы ряд не прыгал
         Text(
-            text = label,
+            text = if (focused || caption == null) label else caption,
             style = MaterialTheme.typography.labelMedium,
             color = Color.White,
             maxLines = 1,
             overflow = TextOverflow.Visible,
             softWrap = false,
             textAlign = TextAlign.Center,
-            modifier = Modifier.wrapContentWidth(unbounded = true).alpha(if (focused) 1f else 0f),
+            modifier = Modifier.wrapContentWidth(unbounded = true).alpha(if (focused || caption != null) 1f else 0f),
         )
     }
 }

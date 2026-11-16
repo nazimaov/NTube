@@ -32,3 +32,8 @@ data class FeedRefreshResult(
     /** false — обновление пропущено: с прошлого раза прошло меньше 30 минут. */
     val refreshed: Boolean,
 )
+/** Своя отметка видео. Хранится локально: отправить её в YouTube можно только со входом в аккаунт. */
+enum class Reaction { LIKE, DISLIKE }
+
+/** Локальный профиль («виртуальный аккаунт») на устройстве; пустое [name] — профиль по умолчанию. */
+data class Profile(val id: Long, val name: String)

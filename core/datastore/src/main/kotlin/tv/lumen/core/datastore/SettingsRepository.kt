@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.booleanPreferencesKey
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.floatPreferencesKey
 import androidx.datastore.preferences.core.intPreferencesKey
+import androidx.datastore.preferences.core.longPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
@@ -74,6 +75,7 @@ class SettingsRepository @Inject constructor(
             ?.let { saved -> saved + MenuItem.entries.filter { it !in saved } } ?: MenuItem.entries,
         hiddenMenuItems = p[MENU_HIDDEN]?.mapNotNull { runCatching { MenuItem.valueOf(it) }.getOrNull() }?.toSet() ?: emptySet(),
         updateCheckOnStart = p[UPDATE_CHECK] ?: true,
+        currentProfileId = p[PROFILE] ?: 0L,
     )
 
     private fun write(p: MutablePreferences, s: Settings) {
@@ -98,6 +100,7 @@ class SettingsRepository @Inject constructor(
         p[MENU_ORDER] = s.menuItems.joinToString(",") { it.name }
         p[MENU_HIDDEN] = s.hiddenMenuItems.mapTo(HashSet()) { it.name }
         p[UPDATE_CHECK] = s.updateCheckOnStart
+        p[PROFILE] = s.currentProfileId
     }
 
     private companion object {
@@ -123,5 +126,6 @@ class SettingsRepository @Inject constructor(
         val MENU_ORDER = stringPreferencesKey("general.menu_order")
         val MENU_HIDDEN = stringSetPreferencesKey("general.menu_hidden")
         val UPDATE_CHECK = booleanPreferencesKey("update.check_on_start")
+        val PROFILE = longPreferencesKey("profile.current")
     }
 }

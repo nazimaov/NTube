@@ -38,6 +38,8 @@ data class Settings(
     val hiddenMenuItems: Set<MenuItem> = emptySet(),
     // Обновления
     val updateCheckOnStart: Boolean = true,
+    /** Текущий локальный профиль (таблица profile); 0 — ещё не выбран. */
+    val currentProfileId: Long = 0L,
 ) {
     fun modeOf(category: SponsorCategory): SegmentMode = sponsorCategories[category] ?: SegmentMode.OFF
 

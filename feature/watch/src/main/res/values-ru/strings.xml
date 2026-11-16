@@ -42,5 +42,6 @@
 <string name="watch_check_update">Проверить обновление</string>
 <string name="watch_comments">Комментарии</string>
     <string name="watch_comments_empty">Комментариев нет.</string>
-    <string name="watch_dislikes">≈ %1$s дизлайков</string>
+    <string name="watch_like">Нравится</string>
+    <string name="watch_dislike">Не нравится</string>
 </resources>

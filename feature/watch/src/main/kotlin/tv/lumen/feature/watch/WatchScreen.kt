@@ -59,6 +59,9 @@ import androidx.media3.ui.PlayerView
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
 import tv.lumen.core.designsystem.component.PlayerIconButton
+import tv.lumen.core.designsystem.format.formatCompact
+import tv.lumen.core.model.Reaction
+import androidx.compose.material.icons.filled.ThumbUp
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -90,11 +93,14 @@ fun WatchRoute(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val dislikes by viewModel.dislikes.collectAsStateWithLifecycle()
+    val reaction by viewModel.reaction.collectAsStateWithLifecycle()
     val comments by viewModel.comments.collectAsStateWithLifecycle()
     val matchFrameRate by viewModel.matchFrameRate.collectAsStateWithLifecycle()
     FrameRateMatcher(enabled = matchFrameRate, fps = state.quality?.fps?.takeIf { !state.isLive })
     WatchScreen(
         dislikes = dislikes,
+        reaction = reaction,
+        onReact = viewModel::toggleReaction,
         comments = comments,
         onOpenComments = viewModel::openComments,
         onLoadMoreComments = viewModel::loadMoreComments,
@@ -120,6 +126,8 @@ internal fun WatchScreen(
     onCheckUpdate: () -> Unit,
     modifier: Modifier = Modifier,
     dislikes: Long? = null,
+    reaction: Reaction? = null,
+    onReact: (Reaction) -> Unit = {},
     comments: tv.lumen.core.common.PagedState<tv.lumen.core.model.Comment>? = null,
     onOpenComments: () -> Unit = {},
     onLoadMoreComments: () -> Unit = {},
@@ -272,6 +280,8 @@ internal fun WatchScreen(
                 onOpenVideo = onOpenVideo,
                 onOpenChannel = onOpenChannel,
                 dislikes = dislikes,
+                reaction = reaction,
+                onReact = onReact,
             )
         }
 
@@ -342,6 +352,8 @@ private fun ControlPanel(
     onOpenVideo: (String) -> Unit,
     onOpenChannel: (String) -> Unit,
     dislikes: Long?,
+    reaction: Reaction?,
+    onReact: (Reaction) -> Unit,
 ) {
     val playFocus = remember { FocusRequester() }
     val seekFocus = remember { FocusRequester() }
@@ -374,8 +386,6 @@ private fun ControlPanel(
             )
             val meta = listOfNotNull(
                 details.video.channelName,
-                // Оценка RYD — со знаком «≈» (SPEC 6.3)
-                dislikes?.let { stringResource(R.string.watch_dislikes, tv.lumen.core.designsystem.format.formatCompact(it)) },
             )
             if (meta.isNotEmpty()) {
                 Text(meta.joinToString("  ·  "), style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
@@ -408,6 +418,22 @@ private fun ControlPanel(
                 onClick = controller::togglePlayPause,
                 size = 60.dp,
                 modifier = Modifier.focusRequester(playFocus),
+            )
+            val likes = state.details?.likeCount?.takeIf { it >= 0 }
+            PlayerIconButton(
+                icon = Icons.Filled.ThumbUp,
+                label = stringResource(R.string.watch_like),
+                caption = likes?.let { formatCompact(it + if (reaction == Reaction.LIKE) 1 else 0) },
+                onClick = { onReact(Reaction.LIKE) },
+                active = reaction == Reaction.LIKE,
+            )
+            PlayerIconButton(
+                icon = LumenIcons.ThumbDown,
+                label = stringResource(R.string.watch_dislike),
+                // Оценка RYD — со знаком «≈» (SPEC 6.3)
+                caption = dislikes?.let { "≈ " + formatCompact(it) },
+                onClick = { onReact(Reaction.DISLIKE) },
+                active = reaction == Reaction.DISLIKE,
             )
             if (state.qualities.isNotEmpty()) {
                 PlayerIconButton(

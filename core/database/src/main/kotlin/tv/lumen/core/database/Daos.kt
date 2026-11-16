@@ -1,6 +1,7 @@
 package tv.lumen.core.database
 
 import androidx.room.Dao
+import androidx.room.Insert
 import androidx.room.Query
 import androidx.room.Transaction
 import androidx.room.Upsert
@@ -115,4 +116,33 @@ interface BrandingCacheDao {
 
     @Query("DELETE FROM branding_cache WHERE fetched_at < :olderThan")
     suspend fun deleteOlderThan(olderThan: Long)
+}
+@Dao
+interface ProfileDao {
+    @Query("SELECT * FROM profile ORDER BY id")
+    fun observeAll(): Flow<List<ProfileEntity>>
+
+    @Query("SELECT * FROM profile ORDER BY id")
+    suspend fun getAll(): List<ProfileEntity>
+
+    @Insert
+    suspend fun insert(profile: ProfileEntity): Long
+
+    @Query("UPDATE profile SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
+    @Query("DELETE FROM profile WHERE id = :id")
+    suspend fun delete(id: Long)
+}
+
+@Dao
+interface VideoReactionDao {
+    @Query("SELECT reaction FROM video_reaction WHERE profile_id = :profileId AND video_id = :videoId")
+    fun observe(profileId: Long, videoId: String): Flow<Int?>
+
+    @Upsert
+    suspend fun upsert(entry: VideoReactionEntity)
+
+    @Query("DELETE FROM video_reaction WHERE profile_id = :profileId AND video_id = :videoId")
+    suspend fun delete(profileId: Long, videoId: String)
 }
