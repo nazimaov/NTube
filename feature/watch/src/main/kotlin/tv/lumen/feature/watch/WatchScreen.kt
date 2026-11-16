@@ -400,11 +400,20 @@ private fun ControlPanel(
             )
         } else {
             SeekBar(state, controller, onInteraction, Modifier.focusRequester(seekFocus))
-            Text(
-                text = "${formatTime(state.positionMs)} / ${formatTime(state.durationMs)}",
-                style = MaterialTheme.typography.bodyMedium,
-                color = Color.White.copy(alpha = 0.8f),
-            )
+            // Слева — прошло и осталось, справа — длительность видео
+            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                val remaining = (state.durationMs - state.positionMs).coerceAtLeast(0)
+                Text(
+                    text = "${formatTime(state.positionMs)}  ·  " + stringResource(R.string.watch_time_left, formatTime(remaining)),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f),
+                )
+                Text(
+                    text = formatTime(state.durationMs),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = Color.White.copy(alpha = 0.8f),
+                )
+            }
         }
 
         Row(

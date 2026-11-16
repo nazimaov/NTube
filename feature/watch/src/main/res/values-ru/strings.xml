@@ -44,4 +44,5 @@
     <string name="watch_comments_empty">Комментариев нет.</string>
     <string name="watch_like">Нравится</string>
     <string name="watch_dislike">Не нравится</string>
+    <string name="watch_time_left">осталось %1$s</string>
 </resources>
