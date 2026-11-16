@@ -33,6 +33,7 @@ import tv.lumen.core.model.FeedRefreshResult
 import tv.lumen.core.model.ResumePolicy
 import tv.lumen.core.model.Video
 import tv.lumen.core.model.WatchEntry
+import tv.lumen.data.library.AccountSync
 import tv.lumen.data.library.ChannelSource
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.data.library.PlayQueue
@@ -54,6 +55,7 @@ internal class RoomLibraryRepository @Inject constructor(
     private val blockedDao: BlockedChannelDao,
     private val profiles: ProfileRepository,
     private val source: ChannelSource,
+    private val accountSync: AccountSync,
     override val queue: PlayQueue,
     private val settings: SettingsRepository,
     @ApplicationContext context: Context,
@@ -86,11 +88,13 @@ internal class RoomLibraryRepository @Inject constructor(
         )
         subscriptionDao.upsert(entity)
         refreshChannel(entity.channelId)
+        accountSync.setSubscribed(entity.channelId, true)
         AppResult.Success(Unit)
     }
 
     override suspend fun unsubscribe(channelId: ChannelId) = withContext(io) {
         subscriptionDao.delete(profiles.currentId(), channelId)
+        accountSync.setSubscribed(channelId, false)
         feedDao.deleteOrphans() // кэш ленты удаляется, только если канал больше не нужен ни одному профилю
     }
 

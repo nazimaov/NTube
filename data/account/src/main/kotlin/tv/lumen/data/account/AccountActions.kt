@@ -29,6 +29,7 @@ class AccountActions @Inject internal constructor(
     @Named(BASE_URL) private val baseUrl: String,
 ) {
     private val http = client.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
+    private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
 
     /**
      * Приводит отметку видео в аккаунте к [now], если до этого она была [before]:
@@ -47,9 +48,26 @@ class AccountActions @Inject internal constructor(
         return post(path, "\"target\":{\"videoId\":\"$videoId\"}")
     }
 
-    private suspend fun post(path: String, data: String): Boolean = withContext(io) {
+    /** Подписка или отписка на канал в аккаунте; без входа или без канала вида UC… ничего не делает. */
+    suspend fun setSubscribed(channelId: String, subscribed: Boolean): Boolean {
+        if (!account.isSignedIn || !channelId.startsWith("UC")) return true
+        val path = if (subscribed) "subscription/subscribe" else "subscription/unsubscribe"
+        return post(path, "\"channelIds\":[\"$channelId\"],\"params\":\"\"")
+    }
+
+    /** Отметка видео и подписка на его канал в аккаунте; null — входа нет или запрос не удался. */
+    suspend fun videoState(videoId: String): AccountVideoState? {
+        if (!account.isSignedIn) return null
+        val text = request("next", "\"videoId\":\"$videoId\"") ?: return null
+        return runCatching { NextParser.parse(json.parseToJsonElement(text)) }.getOrNull()
+    }
+
+    private suspend fun post(path: String, data: String): Boolean = request(path, data) != null
+
+    /** Тело ответа при успехе, иначе null. */
+    private suspend fun request(path: String, data: String): String? = withContext(io) {
         try {
-            val auth = account.authorizationHeader() ?: return@withContext false
+            val auth = account.authorizationHeader() ?: return@withContext null
             val visitor = account.visitorData()
             val request = Request.Builder()
                 .url("$baseUrl/$path?prettyPrint=false")
@@ -59,12 +77,12 @@ class AccountActions @Inject internal constructor(
                 .apply { visitor?.let { header("X-Goog-Visitor-Id", it) } }
                 .post(BrowseBody.build(data, visitor, feed.locale).toRequestBody(JSON))
                 .build()
-            http.newCall(request).execute().use { it.isSuccessful }
+            http.newCall(request).execute().use { if (it.isSuccessful) it.body.string() else null }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
-            Log.w(TAG, "Не удалось отправить отметку: ${e.javaClass.simpleName}")
-            false
+            Log.w(TAG, "Запрос в аккаунт не удался: ${e.javaClass.simpleName}")
+            null
         }
     }
 

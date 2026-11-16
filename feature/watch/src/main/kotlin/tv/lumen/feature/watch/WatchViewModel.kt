@@ -13,6 +13,8 @@ import tv.lumen.data.account.AccountActions
 import kotlinx.coroutines.CoroutineScope
 import tv.lumen.data.library.ProfileRepository
 import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
 import tv.lumen.player.PlayerController
 import tv.lumen.player.PlayerControllerFactory
@@ -74,6 +76,21 @@ class WatchViewModel @Inject constructor(
     fun queueRemove(id: String) = library.queue.remove(id)
     fun queueMove(id: String, delta: Int) = library.queue.move(id, delta)
     fun queueClear() = library.queue.clear()
+
+    // Со входом отметка и подписка берутся из аккаунта: на телефоне видео могли лайкнуть или подписаться
+    init {
+        viewModelScope.launch {
+            controller.state.map { it.details?.video }.distinctUntilChangedBy { it?.id }.collect { video ->
+                if (video == null) return@collect
+                val state = accountActions.videoState(video.id) ?: return@collect
+                if (reaction.value != state.reaction) profiles.setReaction(video.id, state.reaction)
+                val channel = video.channelId
+                if (state.subscribed == true && channel != null && !library.isSubscribed(channel).first()) {
+                    library.subscribe(channel, video.channelName.orEmpty(), null)
+                }
+            }
+        }
+    }
 
     /** Повторное нажатие снимает отметку. */
     fun toggleReaction(value: Reaction) {

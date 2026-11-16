@@ -140,3 +140,39 @@ internal fun TileParser.shape(root: JsonElement): String {
     walk(root)
     return counts.entries.joinToString(", ") { "${it.key}×${it.value}" }
 }
+
+/** Отметка видео и подписка на канал, как их видит аккаунт. */
+data class AccountVideoState(
+    /** LIKE, DISLIKE или null — отметки нет. */
+    val reaction: tv.lumen.core.model.Reaction?,
+    /** null — на странице видео кнопки подписки не нашлось. */
+    val subscribed: Boolean?,
+)
+
+/** Разбор ответа `next` телевизионного клиента: поля те же, что у SmartTube (likeStatus, subscribeButtonRenderer.subscribed). */
+internal object NextParser {
+    fun parse(root: JsonElement): AccountVideoState {
+        var like: String? = null
+        var subscribed: Boolean? = null
+        fun walk(e: JsonElement) {
+            when (e) {
+                is JsonObject -> e.forEach { (k, v) ->
+                    if (k == "likeStatus" && v is JsonPrimitive && like == null) like = v.contentOrNull
+                    if (k == "subscribeButtonRenderer" && v is JsonObject && subscribed == null) {
+                        subscribed = (v["subscribed"] as? JsonPrimitive)?.contentOrNull?.toBooleanStrictOrNull()
+                    }
+                    walk(v)
+                }
+                is JsonArray -> e.forEach(::walk)
+                else -> Unit
+            }
+        }
+        walk(root)
+        val reaction = when (like?.uppercase()) {
+            "LIKE" -> tv.lumen.core.model.Reaction.LIKE
+            "DISLIKE" -> tv.lumen.core.model.Reaction.DISLIKE
+            else -> null
+        }
+        return AccountVideoState(reaction, subscribed)
+    }
+}

@@ -25,6 +25,8 @@ private class TokenStore(var token: String?) : AccountStore {
     override fun deviceId() = "dev"
 }
 
+private const val NEXT_RESPONSE = """{"contents":{"x":{"videoMetadataRenderer":{"likeButton":{"likeButtonRenderer":{"likeStatus":"LIKE"}},"owner":{"subscribeButton":{"subscribeButtonRenderer":{"subscribed":true,"channelId":"UCSMOQeBJ2RAnuFungnQOxLg"}}}}}}}"""
+
 class AccountActionsTest {
     private lateinit var server: MockWebServer
     private val requests = mutableListOf<RecordedRequest>()
@@ -42,7 +44,8 @@ class AccountActionsTest {
                     path == "/tv" -> MockResponse.Builder().body("""<script id="base-js" src="/s/_/k/m=base"></script> "visitorData":"VIS"""").build()
                     path.startsWith("/s/_/k") -> MockResponse.Builder().body("""x={clientId:"abc.apps.googleusercontent.com",s:"SEC"};""").build()
                     path == "/o/oauth2/token" -> MockResponse.Builder().body("""{"access_token":"ACC","expires_in":3600,"token_type":"Bearer"}""").build()
-                    path.startsWith("/yt/like/") -> MockResponse.Builder().code(likeCode).body("{}").build()
+                    path.startsWith("/yt/like/") || path.startsWith("/yt/subscription/") -> MockResponse.Builder().code(likeCode).body("{}").build()
+                    path == "/yt/next" -> MockResponse.Builder().body(NEXT_RESPONSE).build()
                     else -> MockResponse.Builder().code(404).build()
                 }
             }
@@ -70,6 +73,31 @@ class AccountActionsTest {
     }
 
     private fun likeRequests() = requests.filter { it.url.encodedPath.startsWith("/yt/like/") }
+
+    @Test
+    fun `подписка и отписка уходят с идентификатором канала`() = runBlocking {
+        val actions = actions("REF")
+        assertTrue(actions.setSubscribed("UCSMOQeBJ2RAnuFungnQOxLg", true))
+        assertTrue(actions.setSubscribed("UCSMOQeBJ2RAnuFungnQOxLg", false))
+        assertTrue(actions.setSubscribed("@blender", true)) // ручка без UC — не отправляется
+        val paths = requests.filter { it.url.encodedPath.startsWith("/yt/subscription/") }
+        assertEquals(listOf("/yt/subscription/subscribe", "/yt/subscription/unsubscribe"), paths.map { it.url.encodedPath })
+        assertTrue(paths.first().body!!.utf8().contains("\"channelIds\":[\"UCSMOQeBJ2RAnuFungnQOxLg\"]"))
+    }
+
+    @Test
+    fun `отметка и подписка читаются из ответа next`() = runBlocking {
+        val state = actions("REF").videoState("vid1")
+        assertEquals(Reaction.LIKE, state?.reaction)
+        assertEquals(true, state?.subscribed)
+        assertTrue(requests.last { it.url.encodedPath == "/yt/next" }.body!!.utf8().contains("\"videoId\":\"vid1\""))
+    }
+
+    @Test
+    fun `без входа состояние видео не запрашивается`() = runBlocking {
+        assertEquals(null, actions(null).videoState("vid1"))
+        assertTrue(requests.none { it.url.encodedPath == "/yt/next" })
+    }
 
     @Test
     fun `лайк и дизлайк уходят нужными запросами с токеном`() = runBlocking {
