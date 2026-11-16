@@ -43,6 +43,8 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.Icon
 import androidx.tv.material3.NavigationDrawer
+import androidx.tv.material3.DrawerValue
+import androidx.compose.foundation.layout.height
 import androidx.tv.material3.NavigationDrawerItem
 import androidx.tv.material3.NavigationDrawerItemDefaults
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -130,9 +132,19 @@ fun LumenApp(
         NavigationDrawer(
             drawerContent = {
                 if (isWatching) return@NavigationDrawer
+                val expanded = it == DrawerValue.Open
+                Column(Modifier.fillMaxHeight()) {
+                // Логотип: в свёрнутом меню — эмблема, в раскрытом — полностью
+                androidx.compose.foundation.Image(
+                    painter = androidx.compose.ui.res.painterResource(
+                        if (expanded) tv.lumen.app.R.drawable.logo_full else tv.lumen.app.R.drawable.logo_emblem,
+                    ),
+                    contentDescription = stringResource(tv.lumen.app.R.string.app_name),
+                    modifier = Modifier.padding(start = 24.dp, top = 32.dp).height(32.dp),
+                )
                 Column(
                     modifier = Modifier
-                        .fillMaxHeight()
+                        .weight(1f)
                         .padding(12.dp)
                         .selectableGroup()
                         .onFocusChanged { drawerHasFocus = it.hasFocus },
@@ -157,6 +169,7 @@ fun LumenApp(
                             Text(text = stringResource(item.label))
                         }
                     }
+                }
                 }
             },
         ) {
