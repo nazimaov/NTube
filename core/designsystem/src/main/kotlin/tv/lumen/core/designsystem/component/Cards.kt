@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -19,6 +20,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -35,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
 import tv.lumen.core.designsystem.R
 import tv.lumen.core.designsystem.format.formatDuration
+import tv.lumen.core.designsystem.theme.LumenColors
 import tv.lumen.core.designsystem.format.subscribersText
 import tv.lumen.core.designsystem.format.videoCountText
 import tv.lumen.core.designsystem.format.videoMeta
@@ -43,21 +46,46 @@ import tv.lumen.core.model.PlaylistSummary
 import tv.lumen.core.model.Video
 
 /** Ширина карточки в рядах; в сетке карточка занимает ячейку. */
-val CardWidth: Dp = 296.dp
+val CardWidth: Dp = 240.dp
 
 private val CardShape = RoundedCornerShape(12.dp)
+private val ThumbShape = RoundedCornerShape(10.dp)
 
 @Composable
-private fun focusBorder() = CardDefaults.border(
-    focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface), shape = CardShape),
+private fun focusBorder(shape: Shape = CardShape) = CardDefaults.border(
+    focusedBorder = Border(BorderStroke(2.dp, LumenColors.FocusRing), shape = shape),
 )
 
-/** В фокусе — увеличение 1,05 и рамка (SPEC 8). */
-private val FocusScale = CardDefaults.scale(focusedScale = 1.05f)
+/** В фокусе — увеличение 1,03 и светлая рамка, как у YouTube на ТВ. */
+private val FocusScale = CardDefaults.scale(focusedScale = 1.03f)
+
+@Composable
+private fun cardColors() = CardDefaults.colors(
+    containerColor = Color.Transparent,
+    focusedContainerColor = LumenColors.SurfaceCard,
+    pressedContainerColor = LumenColors.SurfaceCard,
+)
+
+/** Круглый аватар канала; пока нет картинки или её нет совсем — первая буква названия. */
+@Composable
+fun ChannelAvatar(url: String?, name: String?, modifier: Modifier = Modifier, size: Dp = 32.dp) {
+    val letter = name?.trim()?.firstOrNull()?.uppercaseChar()?.toString().orEmpty()
+    val hue = ((name?.hashCode() ?: 0) and 0x7FFFFFFF) % 360
+    Box(
+        contentAlignment = Alignment.Center,
+        modifier = modifier.size(size).clip(CircleShape).background(Color.hsv(hue.toFloat(), 0.45f, 0.45f)),
+    ) {
+        Text(letter, style = MaterialTheme.typography.labelMedium, color = Color.White)
+        if (url != null) {
+            AsyncImage(model = url, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+    }
+}
 
 /**
- * Карточка видео: обложка 16:9, длительность, заголовок в 2 строки, канал, просмотры и дата,
- * полоса прогресса [progress] (0..1, null — не смотрели).
+ * Карточка видео в стиле YouTube: обложка 16:9, длительность в углу, красная полоса прогресса [progress]
+ * (0..1, null — не смотрели); ниже аватар канала, заголовок в 2 строки, канал, просмотры и дата.
+ * Фокус охватывает всю карточку.
  */
 @Composable
 fun VideoCard(
@@ -73,23 +101,24 @@ fun VideoCard(
         value = decorator?.let { runCatching { it.decorate(video) }.getOrNull() }
     }
     val originalThumb = rememberAsyncImagePainter(video.thumbnailUrl)
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Card(
-            onClick = onClick,
-            onLongClick = onLongClick,
-            shape = CardDefaults.shape(CardShape),
-            scale = FocusScale,
-            border = focusBorder(),
-            modifier = Modifier.fillMaxWidth().aspectRatio(16f / 9f),
-        ) {
-            Box(Modifier.fillMaxSize()) {
+    Card(
+        onClick = onClick,
+        onLongClick = onLongClick,
+        shape = CardDefaults.shape(CardShape),
+        colors = cardColors(),
+        scale = FocusScale,
+        border = focusBorder(),
+        modifier = modifier,
+    ) {
+        Column(Modifier.padding(6.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.fillMaxWidth().aspectRatio(16f / 9f).clip(ThumbShape)) {
                 AsyncImage(
                     model = decoration?.thumbnailUrl ?: video.thumbnailUrl,
                     contentDescription = null,
                     contentScale = ContentScale.Crop,
                     placeholder = originalThumb,
                     error = originalThumb, // 204 у DeArrow — показать оригинал
-                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceVariant),
+                    modifier = Modifier.fillMaxSize().background(LumenColors.Surface),
                 )
                 val badge = if (video.isLive) stringResource(R.string.ds_live) else formatDuration(video.durationSec)
                 if (badge.isNotEmpty()) {
@@ -99,36 +128,41 @@ fun VideoCard(
                         color = Color.White,
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
-                            .padding(8.dp)
+                            .padding(6.dp)
                             .clip(RoundedCornerShape(4.dp))
-                            .background(if (video.isLive) Color(0xFFCC0000) else Color.Black.copy(alpha = 0.8f))
-                            .padding(horizontal = 6.dp, vertical = 2.dp),
+                            .background(if (video.isLive) LumenColors.Red else Color.Black.copy(alpha = 0.8f))
+                            .padding(horizontal = 5.dp, vertical = 1.dp),
                     )
                 }
                 if (progress != null && progress > 0f) {
-                    Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(4.dp).background(Color.White.copy(alpha = 0.3f)))
+                    Box(Modifier.align(Alignment.BottomStart).fillMaxWidth().height(3.dp).background(Color.White.copy(alpha = 0.3f)))
                     Box(
-                        Modifier.align(Alignment.BottomStart).fillMaxWidth(progress.coerceIn(0f, 1f)).height(4.dp)
-                            .background(MaterialTheme.colorScheme.primary),
+                        Modifier.align(Alignment.BottomStart).fillMaxWidth(progress.coerceIn(0f, 1f)).height(3.dp)
+                            .background(LumenColors.Red),
                     )
                 }
             }
-        }
-        Text(
-            text = decoration?.title ?: video.title,
-            style = MaterialTheme.typography.titleSmall,
-            maxLines = 2,
-            overflow = TextOverflow.Ellipsis,
-        )
-        val secondary = listOfNotNull(video.channelName, videoMeta(video).takeIf { it.isNotEmpty() })
-        if (secondary.isNotEmpty()) {
-            Text(
-                text = secondary.joinToString("\n"),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
+            Row(Modifier.padding(horizontal = 4.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                ChannelAvatar(video.channelAvatarUrl, video.channelName)
+                Column(verticalArrangement = Arrangement.spacedBy(2.dp)) {
+                    Text(
+                        text = decoration?.title ?: video.title,
+                        style = MaterialTheme.typography.titleSmall,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                    val secondary = listOfNotNull(video.channelName, videoMeta(video).takeIf { it.isNotEmpty() })
+                    if (secondary.isNotEmpty()) {
+                        Text(
+                            text = secondary.joinToString("\n"),
+                            style = MaterialTheme.typography.bodySmall,
+                            color = LumenColors.TextSecondary,
+                            maxLines = 2,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -144,8 +178,8 @@ fun ChannelCard(channel: ChannelSummary, onClick: () -> Unit, modifier: Modifier
             onClick = onClick,
             shape = CardDefaults.shape(CircleShape),
             scale = FocusScale,
-            border = CardDefaults.border(focusedBorder = Border(BorderStroke(3.dp, MaterialTheme.colorScheme.onSurface), shape = CircleShape)),
-            modifier = Modifier.size(140.dp),
+            border = CardDefaults.border(focusedBorder = Border(BorderStroke(2.dp, LumenColors.FocusRing), shape = CircleShape)),
+            modifier = Modifier.size(120.dp),
         ) {
             AsyncImage(
                 model = channel.avatarUrl,

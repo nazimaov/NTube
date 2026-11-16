@@ -50,7 +50,7 @@ fun <T> ContentRow(
         }
         LaunchedEffect(nearEnd, items.size) { if (nearEnd && items.isNotEmpty()) onLoadMore() }
     }
-    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+    Column(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         Text(
             text = title,
             style = MaterialTheme.typography.titleLarge,
@@ -59,7 +59,7 @@ fun <T> ContentRow(
         LazyRow(
             state = state,
             contentPadding = PaddingValues(horizontal = LumenDimens.SafeHorizontal, vertical = 8.dp),
-            horizontalArrangement = Arrangement.spacedBy(20.dp),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
             modifier = Modifier.focusRestorer(),
         ) {
             itemsIndexed(items, key = { _, item -> key(item) }) { index, item ->
@@ -81,7 +81,7 @@ fun <T> PagedGrid(
     key: (T) -> String,
     focusMemory: FocusMemory,
     modifier: Modifier = Modifier,
-    columns: Int = 4,
+    columns: Int = 3,
     canLoadMore: Boolean = false,
     onLoadMore: () -> Unit = {},
     header: (@Composable () -> Unit)? = null,
@@ -97,8 +97,8 @@ fun <T> PagedGrid(
         columns = GridCells.Fixed(columns),
         state = state,
         contentPadding = PaddingValues(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
-        horizontalArrangement = Arrangement.spacedBy(24.dp),
-        verticalArrangement = Arrangement.spacedBy(28.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
         modifier = modifier.focusRestorer(),
     ) {
         if (header != null) {

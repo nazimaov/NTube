@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.ui.focus.focusRestorer
+import tv.lumen.core.designsystem.theme.LumenColors
 import tv.lumen.core.designsystem.component.CardWidth
 import tv.lumen.core.designsystem.component.VideoCard
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -486,7 +487,7 @@ private fun SeekBar(state: PlayerState, controller: PlayerController, onInteract
         }
         Box(
             Modifier.fillMaxWidth(played).height(height).clip(shape)
-                .background(if (focused) MaterialTheme.colorScheme.primary else Color.White),
+                .background(LumenColors.Red),
         )
     }
 }

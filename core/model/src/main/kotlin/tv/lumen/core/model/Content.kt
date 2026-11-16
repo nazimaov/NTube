@@ -33,6 +33,8 @@ data class Video(
     val publishedText: String?,
     val isLive: Boolean,
     val isShort: Boolean,
+    /** Аватар канала для карточки; null — показывается буква. */
+    val channelAvatarUrl: String? = null,
 )
 
 data class ChannelSummary(

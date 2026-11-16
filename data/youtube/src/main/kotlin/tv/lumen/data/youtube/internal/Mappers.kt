@@ -101,6 +101,7 @@ internal object Mappers {
             publishedText = item.textualUploadDate,
             isLive = item.streamType.isLive(),
             isShort = item.isShortFormContent,
+            channelAvatarUrl = bestImageUrl(item.uploaderAvatars, maxHeight = 120),
         )
     }
 

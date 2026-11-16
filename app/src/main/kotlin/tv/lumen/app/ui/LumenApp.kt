@@ -43,6 +43,9 @@ import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.Icon
 import androidx.tv.material3.NavigationDrawer
 import androidx.tv.material3.NavigationDrawerItem
+import androidx.tv.material3.NavigationDrawerItemDefaults
+import androidx.compose.foundation.shape.RoundedCornerShape
+import tv.lumen.core.designsystem.theme.LumenColors
 import androidx.tv.material3.Text
 import tv.lumen.app.navigation.Channel
 import tv.lumen.app.navigation.History
@@ -130,6 +133,15 @@ fun LumenApp(
                             selected = currentDestination.isOn(item),
                             onClick = { navController.navigateToTopLevel(item) },
                             leadingContent = { Icon(imageVector = item.icon, contentDescription = null) },
+                            shape = NavigationDrawerItemDefaults.shape(shape = RoundedCornerShape(12.dp)),
+                            colors = NavigationDrawerItemDefaults.colors(
+                                selectedContainerColor = LumenColors.SurfaceFocused,
+                                selectedContentColor = LumenColors.TextPrimary,
+                                focusedContainerColor = LumenColors.TextPrimary,
+                                focusedContentColor = LumenColors.Background,
+                                focusedSelectedContainerColor = LumenColors.TextPrimary,
+                                focusedSelectedContentColor = LumenColors.Background,
+                            ),
                             modifier = Modifier.focusRequester(drawerFocus.getValue(item)),
                         ) {
                             Text(text = stringResource(item.label))

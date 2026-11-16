@@ -36,8 +36,6 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.tv.material3.Button
-import androidx.tv.material3.ExperimentalTvMaterial3Api
-import androidx.tv.material3.FilterChip
 import androidx.tv.material3.Icon
 import androidx.tv.material3.ListItem
 import androidx.tv.material3.MaterialTheme
@@ -48,6 +46,7 @@ import tv.lumen.core.designsystem.component.ChannelCard
 import tv.lumen.core.designsystem.component.EmptyState
 import tv.lumen.core.designsystem.component.ErrorState
 import tv.lumen.core.designsystem.component.LoadingState
+import tv.lumen.core.designsystem.component.LumenChip
 import tv.lumen.core.designsystem.component.PagedGrid
 import tv.lumen.core.designsystem.component.PlaylistCard
 import tv.lumen.core.designsystem.component.VideoCard
@@ -59,8 +58,6 @@ import tv.lumen.core.model.SearchItem
 import tv.lumen.core.model.Video
 import tv.lumen.core.designsystem.component.VideoMenu
 
-// FilterChip в tv-material 1.1.0 помечен как экспериментальный
-@OptIn(ExperimentalTvMaterial3Api::class)
 @Composable
 fun SearchRoute(
     onOpenVideo: (String) -> Unit,
@@ -102,12 +99,10 @@ fun SearchRoute(
 
         Row(
             modifier = Modifier.padding(horizontal = LumenDimens.SafeHorizontal, vertical = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             SearchFilter.entries.forEach { f ->
-                FilterChip(selected = f == filter, onClick = { viewModel.setFilter(f) }) {
-                    Text(stringResource(f.label()))
-                }
+                LumenChip(text = stringResource(f.label()), selected = f == filter, onClick = { viewModel.setFilter(f) })
             }
         }
 

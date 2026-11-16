@@ -4,4 +4,7 @@
     <string name="home_trending">Trending</string>
     <string name="home_continue">Continue watching</string>
     <string name="home_subscriptions">New from subscriptions</string>
+    <string name="home_chip_all">All</string>
+    <string name="home_chip_subscriptions">Subscriptions</string>
+    <string name="home_chip_trending">Trending</string>
 </resources>
