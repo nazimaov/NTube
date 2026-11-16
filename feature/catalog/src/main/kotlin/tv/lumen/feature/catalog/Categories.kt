@@ -24,7 +24,7 @@ object Categories {
     private const val EPISODE = 20 * 60L
 
     val movies = listOf(
-        Category("trailers", R.string.cat_trailers, R.string.q_trailers, 0, trailers = true),
+        Category("trailers", R.string.cat_trailers, R.string.q_trailers, -1, trailers = true), // длительность у чарта может быть неизвестна (-1)
         Category("new", R.string.cat_movies_new, R.string.q_movies_new, MOVIE),
         Category("action", R.string.cat_action, R.string.q_action, MOVIE),
         Category("comedy", R.string.cat_comedy, R.string.q_comedy, MOVIE),

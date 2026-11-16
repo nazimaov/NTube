@@ -144,7 +144,7 @@ fun LumenApp(
                         if (expanded) tv.lumen.app.R.drawable.logo_full else tv.lumen.app.R.drawable.logo_emblem,
                     ),
                     contentDescription = stringResource(tv.lumen.app.R.string.app_name),
-                    modifier = Modifier.padding(start = 24.dp, top = 32.dp).height(32.dp),
+                    modifier = Modifier.padding(start = 16.dp, top = 24.dp).height(if (expanded) 52.dp else 40.dp),
                 )
                 Column(
                     modifier = Modifier
