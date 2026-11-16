@@ -40,6 +40,7 @@ include(":player")
 
 include(":feature:home")
 include(":feature:search")
+include(":feature:catalog")
 include(":feature:channel")
 include(":feature:playlist")
 include(":feature:watch")

@@ -93,4 +93,6 @@
     <string name="settings_desc_menu">Какие пункты показывать в боковом меню и в каком порядке.</string>
     <string name="settings_desc_general">История просмотра, импорт подписок и резервная копия.</string>
     <string name="settings_desc_about">Версия, обновления и лицензии.</string>
+    <string name="settings_menu_movies">Фильмы</string>
+    <string name="settings_menu_series">Сериалы</string>
 </resources>

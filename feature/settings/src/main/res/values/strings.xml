@@ -93,4 +93,6 @@
     <string name="settings_desc_menu">Which items the side menu shows and in what order.</string>
     <string name="settings_desc_general">Watch history, import of subscriptions and backup.</string>
     <string name="settings_desc_about">Version, updates and licenses.</string>
+    <string name="settings_menu_movies">Movies</string>
+    <string name="settings_menu_series">Series</string>
 </resources>

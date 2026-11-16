@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="catalog_movies_title">Movies</string>
+    <string name="catalog_series_title">Series</string>
+    <string name="catalog_empty">Nothing found in this category.</string>
+
+    <!-- Movie categories -->
+    <string name="cat_trailers">Trailers</string>
+    <string name="cat_movies_new">New</string>
+    <string name="cat_action">Action</string>
+    <string name="cat_comedy">Comedy</string>
+    <string name="cat_drama">Drama</string>
+    <string name="cat_melodrama">Romance</string>
+    <string name="cat_horror">Horror</string>
+    <string name="cat_scifi">Sci-fi</string>
+    <string name="cat_thriller">Mystery and thriller</string>
+    <string name="cat_cartoons">Animation</string>
+    <string name="cat_documentary">Documentary</string>
+    <string name="cat_movies_russian">Russian</string>
+    <string name="cat_movies_soviet">Soviet</string>
+    <string name="cat_movies_turkish">Turkish</string>
+    <string name="cat_movies_azerbaijani">Azerbaijani</string>
+
+    <!-- Series categories -->
+    <string name="cat_series_new">New</string>
+    <string name="cat_series_turkish">Turkish</string>
+    <string name="cat_series_russian">Russian</string>
+    <string name="cat_series_azerbaijani">Azerbaijani</string>
+    <string name="cat_series_korean">Korean dramas</string>
+    <string name="cat_series_detective">Detective</string>
+    <string name="cat_series_melodrama">Romance</string>
+    <string name="cat_series_comedy">Comedy</string>
+    <string name="cat_series_historical">Historical</string>
+    <string name="cat_series_cartoons">Animated series</string>
+    <string name="cat_series_anime">Anime</string>
+    <string name="cat_series_documentary">Documentary</string>
+
+    <!-- Search queries (not shown to the user) -->
+    <string name="q_trailers" translatable="false"></string>
+    <string name="q_movies_new">new full movie</string>
+    <string name="q_action">action full movie</string>
+    <string name="q_comedy">comedy full movie</string>
+    <string name="q_drama">drama full movie</string>
+    <string name="q_melodrama">romance full movie</string>
+    <string name="q_horror">horror full movie</string>
+    <string name="q_scifi">sci-fi full movie</string>
+    <string name="q_thriller">mystery thriller full movie</string>
+    <string name="q_cartoons">animated full movie</string>
+    <string name="q_documentary">documentary full movie</string>
+    <string name="q_movies_russian">Russian full movie English subtitles</string>
+    <string name="q_movies_soviet">Soviet full movie</string>
+    <string name="q_movies_turkish">Turkish full movie</string>
+    <string name="q_movies_azerbaijani">Azərbaycan filmi tam</string>
+    <string name="q_series_new">new series full episodes</string>
+    <string name="q_series_turkish">Turkish series full episodes</string>
+    <string name="q_series_russian">Russian series full episodes</string>
+    <string name="q_series_azerbaijani">Azərbaycan serialı bütün seriyalar</string>
+    <string name="q_series_korean">Korean drama full episodes</string>
+    <string name="q_series_detective">detective series full episodes</string>
+    <string name="q_series_melodrama">romance series full episodes</string>
+    <string name="q_series_comedy">comedy series full episodes</string>
+    <string name="q_series_historical">historical series full episodes</string>
+    <string name="q_series_cartoons">animated series full episodes</string>
+    <string name="q_series_anime">anime full episodes</string>
+    <string name="q_series_documentary">documentary series full episodes</string>
+</resources>

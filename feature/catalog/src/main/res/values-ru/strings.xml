@@ -1,0 +1,66 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="catalog_movies_title">Фильмы</string>
+    <string name="catalog_series_title">Сериалы</string>
+    <string name="catalog_empty">Ничего не найдено в этом подразделе.</string>
+
+    <!-- Подразделы фильмов -->
+    <string name="cat_trailers">Трейлеры</string>
+    <string name="cat_movies_new">Новинки</string>
+    <string name="cat_action">Боевики</string>
+    <string name="cat_comedy">Комедии</string>
+    <string name="cat_drama">Драмы</string>
+    <string name="cat_melodrama">Мелодрамы</string>
+    <string name="cat_horror">Ужасы</string>
+    <string name="cat_scifi">Фантастика</string>
+    <string name="cat_thriller">Детективы и триллеры</string>
+    <string name="cat_cartoons">Мультфильмы</string>
+    <string name="cat_documentary">Документальные</string>
+    <string name="cat_movies_russian">Русские</string>
+    <string name="cat_movies_soviet">Советские</string>
+    <string name="cat_movies_turkish">Турецкие</string>
+    <string name="cat_movies_azerbaijani">Азербайджанские</string>
+
+    <!-- Подразделы сериалов -->
+    <string name="cat_series_new">Новые</string>
+    <string name="cat_series_turkish">Турецкие</string>
+    <string name="cat_series_russian">Русские</string>
+    <string name="cat_series_azerbaijani">Азербайджанские</string>
+    <string name="cat_series_korean">Корейские дорамы</string>
+    <string name="cat_series_detective">Детективные</string>
+    <string name="cat_series_melodrama">Мелодрамы</string>
+    <string name="cat_series_comedy">Комедийные</string>
+    <string name="cat_series_historical">Исторические</string>
+    <string name="cat_series_cartoons">Мультсериалы</string>
+    <string name="cat_series_anime">Аниме</string>
+    <string name="cat_series_documentary">Документальные</string>
+
+    <!-- Поисковые запросы (не показываются пользователю) -->
+    <string name="q_trailers" translatable="false"></string>
+    <string name="q_movies_new">новый фильм полностью</string>
+    <string name="q_action">боевик фильм полностью</string>
+    <string name="q_comedy">комедия фильм полностью</string>
+    <string name="q_drama">драма фильм полностью</string>
+    <string name="q_melodrama">мелодрама фильм полностью</string>
+    <string name="q_horror">ужасы фильм полностью</string>
+    <string name="q_scifi">фантастика фильм полностью</string>
+    <string name="q_thriller">детектив триллер фильм полностью</string>
+    <string name="q_cartoons">мультфильм полностью</string>
+    <string name="q_documentary">документальный фильм полностью</string>
+    <string name="q_movies_russian">русский фильм полностью</string>
+    <string name="q_movies_soviet">советский фильм полностью</string>
+    <string name="q_movies_turkish">турецкий фильм полностью</string>
+    <string name="q_movies_azerbaijani">Azərbaycan filmi tam</string>
+    <string name="q_series_new">новый сериал все серии</string>
+    <string name="q_series_turkish">турецкий сериал все серии</string>
+    <string name="q_series_russian">русский сериал все серии</string>
+    <string name="q_series_azerbaijani">Azərbaycan serialı bütün seriyalar</string>
+    <string name="q_series_korean">корейская дорама русская озвучка</string>
+    <string name="q_series_detective">детективный сериал все серии</string>
+    <string name="q_series_melodrama">мелодрама сериал все серии</string>
+    <string name="q_series_comedy">комедийный сериал все серии</string>
+    <string name="q_series_historical">исторический сериал все серии</string>
+    <string name="q_series_cartoons">мультсериал все серии</string>
+    <string name="q_series_anime">аниме все серии</string>
+    <string name="q_series_documentary">документальный сериал все серии</string>
+</resources>

@@ -60,6 +60,8 @@ class AppViewModel @Inject constructor(
         MenuItem.SEARCH -> TopLevelDestination.SEARCH
         MenuItem.HOME -> TopLevelDestination.HOME
         MenuItem.MUSIC -> TopLevelDestination.MUSIC
+        MenuItem.MOVIES -> TopLevelDestination.MOVIES
+        MenuItem.SERIES -> TopLevelDestination.SERIES
         MenuItem.SUBSCRIPTIONS -> TopLevelDestination.SUBSCRIPTIONS
         MenuItem.HISTORY -> TopLevelDestination.HISTORY
     }

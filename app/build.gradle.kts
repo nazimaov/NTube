@@ -74,6 +74,7 @@ dependencies {
 
     implementation(project(":feature:home"))
     implementation(project(":feature:search"))
+    implementation(project(":feature:catalog"))
     implementation(project(":feature:channel"))
     implementation(project(":feature:playlist"))
     implementation(project(":feature:watch"))

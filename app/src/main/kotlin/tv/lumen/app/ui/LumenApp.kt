@@ -53,7 +53,9 @@ import androidx.tv.material3.Text
 import tv.lumen.app.navigation.Channel
 import tv.lumen.app.navigation.History
 import tv.lumen.app.navigation.Home
+import tv.lumen.app.navigation.Movies
 import tv.lumen.app.navigation.Music
+import tv.lumen.app.navigation.Series
 import tv.lumen.app.navigation.Playlist
 import tv.lumen.app.navigation.Search
 import tv.lumen.app.navigation.Settings
@@ -69,6 +71,8 @@ import tv.lumen.feature.home.HomeRoute
 import tv.lumen.feature.library.HistoryRoute
 import tv.lumen.feature.library.SubscriptionsRoute
 import tv.lumen.feature.playlist.PlaylistRoute
+import tv.lumen.feature.catalog.MoviesRoute
+import tv.lumen.feature.catalog.SeriesRoute
 import tv.lumen.feature.search.MusicRoute
 import tv.lumen.feature.search.SearchRoute
 import tv.lumen.feature.settings.SettingsRoute
@@ -148,7 +152,7 @@ fun LumenApp(
                         .padding(12.dp)
                         .selectableGroup()
                         .onFocusChanged { drawerHasFocus = it.hasFocus },
-                    verticalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterVertically),
+                    verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
                 ) {
                     menu.forEach { item ->
                         NavigationDrawerItem(
@@ -181,6 +185,8 @@ fun LumenApp(
                 composable<Music> {
                     MusicRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel, onOpenPlaylist = ::openPlaylist)
                 }
+                composable<Movies> { MoviesRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
+                composable<Series> { SeriesRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<Subscriptions> { SubscriptionsRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<History> { HistoryRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<Settings> {

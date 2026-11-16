@@ -71,6 +71,22 @@ class YouTubeLiveTest {
     }
 
     @Test
+    fun trailers() = runBlocking {
+        val videos = repo.trailers().ok("trailers")
+        println("trailers: ${videos.size} видео, первое «${videos.firstOrNull()?.title}»")
+        assertTrue("трейлеры пусты", videos.isNotEmpty())
+    }
+
+    @Test
+    fun catalogSearchFullMovies() = runBlocking {
+        val page = repo.search("боевик фильм полностью", SearchFilter.VIDEOS, null).ok("catalog").items
+        val videos = page.filterIsInstance<SearchItem.VideoItem>().map { it.video }
+        val long = videos.count { it.durationSec >= 2400 }
+        println("catalog: ${videos.size} видео, длиннее 40 минут: $long; первое «${videos.firstOrNull()?.title}»")
+        assertTrue("нет видео", videos.isNotEmpty())
+    }
+
+    @Test
     fun musicSearch() = runBlocking {
         val songs = repo.search("daft punk", SearchFilter.MUSIC_SONGS, null).ok("music songs").items
         val albums = repo.search("daft punk", SearchFilter.MUSIC_ALBUMS, null).ok("music albums").items

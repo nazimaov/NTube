@@ -85,9 +85,16 @@ internal class NewPipeYouTubeRepository @Inject constructor(
 
     /** Чарты YouTube «Музыка в тренде» (киоск trending_music); не во всех странах. */
     override suspend fun musicTrending(): AppResult<List<Video>> = call {
+        kioskVideos(MUSIC_KIOSK_ID)
+    }
+
+    /** Чарт YouTube «Трейлеры фильмов и сериалов» (киоск trending_movies_and_shows). */
+    override suspend fun trailers(): AppResult<List<Video>> = call { kioskVideos(TRAILERS_KIOSK_ID) }
+
+    private fun kioskVideos(kioskId: String): List<Video> {
         val kiosks = youtube.kioskList
-        val url = kiosks.getListLinkHandlerFactoryByType(MUSIC_KIOSK_ID).fromId(MUSIC_KIOSK_ID).url
-        Mappers.videos(KioskInfo.getInfo(youtube, url).relatedItems)
+        val url = kiosks.getListLinkHandlerFactoryByType(kioskId).fromId(kioskId).url
+        return Mappers.videos(KioskInfo.getInfo(youtube, url).relatedItems)
     }
 
     /**
@@ -240,6 +247,7 @@ internal class NewPipeYouTubeRepository @Inject constructor(
     private companion object {
         // Идентификатор киоска из YoutubeTrendingMusicLinkHandlerFactory (NewPipeExtractor v0.27.1)
         const val MUSIC_KIOSK_ID = "trending_music"
+        const val TRAILERS_KIOSK_ID = "trending_movies_and_shows"
 
         // Региональные киоски экстрактора v0.27.1; «Trending» — YoutubeTrendingExtractor.KIOSK_ID
         val REGIONAL_KIOSKS = listOf(

@@ -23,6 +23,9 @@ interface YouTubeRepository {
     /** Музыкальные чарты YouTube («Музыка в тренде»). */
     suspend fun musicTrending(): AppResult<List<Video>>
 
+    /** Трейлеры фильмов и сериалов — чарт YouTube. */
+    suspend fun trailers(): AppResult<List<Video>>
+
     /** Популярное в регионе из настроек — подмешивается в рекомендации. */
     suspend fun regionalPopular(): AppResult<List<Video>>
 

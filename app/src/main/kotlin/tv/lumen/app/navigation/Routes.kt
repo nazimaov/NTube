@@ -6,6 +6,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object Home
 @Serializable data object Search
 @Serializable data object Music
+@Serializable data object Movies
+@Serializable data object Series
 @Serializable data object Subscriptions
 @Serializable data object History
 @Serializable data object Settings
