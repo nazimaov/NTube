@@ -7,4 +7,6 @@
     <string name="home_chip_all">All</string>
     <string name="home_chip_subscriptions">Subscriptions</string>
     <string name="home_chip_trending">Trending</string>
+    <string name="home_recommendations">Recommended for you</string>
+    <string name="home_chip_recommendations">Recommended</string>
 </resources>

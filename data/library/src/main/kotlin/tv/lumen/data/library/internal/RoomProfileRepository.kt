@@ -94,6 +94,12 @@ internal class RoomProfileRepository @Inject constructor(
         all.firstOrNull { it.id == id }?.id ?: all.first().id
     }
 
+    override fun likedVideoIds(limit: Int): Flow<List<String>> =
+        currentId.flatMapLatest { reactionDao.observeIds(it, 1, limit) }.flowOn(io)
+
+    override val dislikedVideoIds: Flow<Set<String>> =
+        currentId.flatMapLatest { reactionDao.observeIds(it, -1, 1000) }.map { it.toSet() }.flowOn(io)
+
     /** Первый запуск: создать профиль по умолчанию (пустое имя — подпись берёт UI). */
     private suspend fun ensureDefault() = createLock.withLock {
         if (profileDao.getAll().isEmpty()) {

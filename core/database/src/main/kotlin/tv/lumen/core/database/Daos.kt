@@ -161,4 +161,8 @@ interface VideoReactionDao {
 
     @Query("DELETE FROM video_reaction WHERE profile_id = :profileId AND video_id = :videoId")
     suspend fun delete(profileId: Long, videoId: String)
+
+    /** Видео с отметкой [reaction] (1 — нравится, -1 — нет), сначала свежие. */
+    @Query("SELECT video_id FROM video_reaction WHERE profile_id = :profileId AND reaction = :reaction ORDER BY updated_at DESC LIMIT :limit")
+    fun observeIds(profileId: Long, reaction: Int, limit: Int): Flow<List<String>>
 }

@@ -46,7 +46,7 @@ fun HomeRoute(
 
     val trending = state.trending
     // Пока ничего нет — экран загрузки или ошибки трендов
-    if (state.continueWatching.isEmpty() && state.subscriptionsNew.isEmpty()) {
+    if (state.continueWatching.isEmpty() && state.recommendations.isEmpty() && state.subscriptionsNew.isEmpty()) {
         when (trending) {
             TrendingState.Loading -> return LoadingState(modifier)
             is TrendingState.Error -> return ErrorState(trending.error, onRetry = viewModel::loadTrending, modifier = modifier)
@@ -56,6 +56,7 @@ fun HomeRoute(
 
     val firstRow = when {
         state.continueWatching.isNotEmpty() -> "continue"
+        state.recommendations.isNotEmpty() -> "recs"
         state.subscriptionsNew.isNotEmpty() -> "subs"
         else -> "trending"
     }
@@ -93,6 +94,18 @@ fun HomeRoute(
                         ) { entry, m -> card(entry.video, m, entry.progress) }
                     }
                 }
+                if (state.recommendations.isNotEmpty()) {
+                    item(key = "recs") {
+                        ContentRow(
+                            title = stringResource(R.string.home_recommendations),
+                            items = state.recommendations,
+                            key = { it.id },
+                            focusMemory = viewModel.focusMemory,
+                            rowKey = "recs",
+                            isFirstRow = firstRow == "recs",
+                        ) { video, m -> card(video, m) }
+                    }
+                }
                 if (state.subscriptionsNew.isNotEmpty()) {
                     item(key = "subs") {
                         ContentRow(
@@ -118,6 +131,12 @@ fun HomeRoute(
                     }
                 }
             }
+            HomeChip.Recommendations -> PagedGrid(
+                items = state.recommendations,
+                key = { it.id },
+                focusMemory = viewModel.focusMemory,
+                columns = 3,
+            ) { video, m -> card(video, m) }
             HomeChip.Subscriptions -> PagedGrid(
                 items = state.subscriptionsNew,
                 key = { it.id },
@@ -148,6 +167,7 @@ fun HomeRoute(
 }
 private enum class HomeChip(@StringRes val label: Int) {
     All(R.string.home_chip_all),
+    Recommendations(R.string.home_chip_recommendations),
     Subscriptions(R.string.home_chip_subscriptions),
     Trending(R.string.home_chip_trending),
 }

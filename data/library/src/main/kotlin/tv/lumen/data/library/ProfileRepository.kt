@@ -34,4 +34,10 @@ interface ProfileRepository {
 
     /** null снимает отметку. */
     suspend fun setReaction(videoId: String, reaction: Reaction?)
+
+    /** Лайкнутые видео текущего профиля, сначала свежие (до [limit]). */
+    fun likedVideoIds(limit: Int = 20): Flow<List<String>>
+
+    /** Дизлайкнутые видео текущего профиля. */
+    val dislikedVideoIds: Flow<Set<String>>
 }

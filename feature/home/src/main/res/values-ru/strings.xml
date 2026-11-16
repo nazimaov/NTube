@@ -7,4 +7,6 @@
     <string name="home_chip_all">Все</string>
     <string name="home_chip_subscriptions">Подписки</string>
     <string name="home_chip_trending">В тренде</string>
+    <string name="home_recommendations">Рекомендации для вас</string>
+    <string name="home_chip_recommendations">Рекомендации</string>
 </resources>
