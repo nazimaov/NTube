@@ -58,7 +58,11 @@ import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.PlayerView
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.PlayArrow
-import tv.lumen.core.designsystem.component.LumenChip
+import tv.lumen.core.designsystem.component.PlayerIconButton
+import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Settings
 import tv.lumen.core.designsystem.component.LumenIcons
 import androidx.tv.material3.MaterialTheme
 import androidx.tv.material3.Text
@@ -394,51 +398,64 @@ private fun ControlPanel(
         }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+            verticalAlignment = Alignment.Top,
             modifier = Modifier.onFocusChanged { onButtonsFocusChanged(it.hasFocus) },
         ) {
-            LumenChip(
-                text = stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play),
+            PlayerIconButton(
                 icon = if (state.playWhenReady) LumenIcons.Pause else Icons.Filled.PlayArrow,
-                selected = false,
+                label = stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play),
                 onClick = controller::togglePlayPause,
+                size = 60.dp,
                 modifier = Modifier.focusRequester(playFocus),
             )
             if (state.qualities.isNotEmpty()) {
-                LumenChip(
-                    text = "${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}",
-                    selected = false,
+                PlayerIconButton(
+                    icon = Icons.Filled.Settings,
+                    label = "${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}",
                     onClick = { onOpenDialog(WatchDialog.QUALITY) },
                 )
             }
             if (!state.isLive) {
-                LumenChip(
-                    text = "${stringResource(R.string.watch_speed)}: ${formatSpeed(state.speed)}",
-                    selected = false,
+                PlayerIconButton(
+                    icon = LumenIcons.Speed,
+                    label = "${stringResource(R.string.watch_speed)}: ${formatSpeed(state.speed)}",
                     onClick = { onOpenDialog(WatchDialog.SPEED) },
+                    active = state.speed != 1f,
                 )
             }
             if (state.subtitles.isNotEmpty()) {
                 val current = state.subtitles.firstOrNull { it.languageTag == state.subtitle }?.name
-                    ?: stringResource(R.string.watch_subtitles_off)
-                LumenChip(
-                    text = "${stringResource(R.string.watch_subtitles)}: $current",
-                    selected = false,
+                PlayerIconButton(
+                    icon = LumenIcons.Subtitles,
+                    label = "${stringResource(R.string.watch_subtitles)}: ${current ?: stringResource(R.string.watch_subtitles_off)}",
                     onClick = { onOpenDialog(WatchDialog.SUBTITLES) },
+                    active = current != null,
                 )
             }
             if (state.audioTracks.size > 1) {
-                LumenChip(text = stringResource(R.string.watch_audio), selected = false, onClick = { onOpenDialog(WatchDialog.AUDIO) })
+                PlayerIconButton(
+                    icon = LumenIcons.MusicNote,
+                    label = stringResource(R.string.watch_audio),
+                    onClick = { onOpenDialog(WatchDialog.AUDIO) },
+                )
             }
             state.details?.video?.channelId?.let { channelId ->
-                LumenChip(text = stringResource(R.string.watch_channel), selected = false, onClick = { onOpenChannel(channelId) })
-                LumenChip(text = stringResource(R.string.watch_comments), selected = false, onClick = { onOpenDialog(WatchDialog.COMMENTS) })
-                // Как у YouTube: «Подписаться» — светлая кнопка, «Вы подписаны» — серая
-                LumenChip(
-                    text = stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe),
-                    selected = !state.isSubscribed,
+                PlayerIconButton(
+                    icon = Icons.Filled.AccountCircle,
+                    label = stringResource(R.string.watch_channel),
+                    onClick = { onOpenChannel(channelId) },
+                )
+                PlayerIconButton(
+                    icon = LumenIcons.Comment,
+                    label = stringResource(R.string.watch_comments),
+                    onClick = { onOpenDialog(WatchDialog.COMMENTS) },
+                )
+                PlayerIconButton(
+                    icon = if (state.isSubscribed) Icons.Filled.Check else Icons.Filled.Add,
+                    label = stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe),
                     onClick = controller::toggleSubscribe,
+                    active = state.isSubscribed,
                 )
             }
         }
