@@ -74,6 +74,9 @@ class SettingsViewModel @Inject constructor(
     }
 
     /** Результат показывает общий диалог обновления в app. */
+    /** Найденное, но не установленное обновление (красная точка). */
+    val pendingUpdate: StateFlow<tv.lumen.data.updater.UpdateInfo?> = updates.pending
+
     fun checkForUpdates() {
         viewModelScope.launch { updates.check(force = true, userInitiated = true) }
     }

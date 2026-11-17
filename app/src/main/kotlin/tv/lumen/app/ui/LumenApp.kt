@@ -84,6 +84,7 @@ fun LumenApp(
 ) {
     val menu by appViewModel.menu.collectAsStateWithLifecycle()
     val updateState by appViewModel.updateState.collectAsStateWithLifecycle()
+    val updatePending by appViewModel.updatePending.collectAsStateWithLifecycle()
     val decorator by appViewModel.decorator.collectAsStateWithLifecycle()
     val navController = rememberNavController()
     val backStackEntry by navController.currentBackStackEntryAsState()
@@ -156,7 +157,14 @@ fun LumenApp(
                         NavigationDrawerItem(
                             selected = currentDestination.isOn(item) || (item == TopLevelDestination.SETTINGS && currentDestination?.hasRoute(SettingsSection::class) == true),
                             onClick = { navController.navigateToTopLevel(item) },
-                            leadingContent = { Icon(imageVector = item.icon, contentDescription = null) },
+                            leadingContent = {
+                                Box {
+                                    Icon(imageVector = item.icon, contentDescription = null)
+                                    if (item == TopLevelDestination.SETTINGS && updatePending) {
+                                        tv.lumen.core.designsystem.component.RedDot(Modifier.align(Alignment.TopEnd))
+                                    }
+                                }
+                            },
                             shape = NavigationDrawerItemDefaults.shape(shape = RoundedCornerShape(12.dp)),
                             colors = NavigationDrawerItemDefaults.colors(
                                 selectedContainerColor = LumenColors.SurfaceFocused,

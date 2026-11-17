@@ -62,6 +62,29 @@ internal class GitHubUpdateManager @Inject constructor(
     internal var clock: () -> Long = System::currentTimeMillis
 
     private val _state = MutableStateFlow<UpdateState>(UpdateState.Idle)
+
+    private val _pending = MutableStateFlow(loadPending())
+    override val pending: StateFlow<UpdateInfo?> = _pending.asStateFlow()
+
+    /** Сохранённая находка действительна, пока она новее установленной версии. */
+    private fun loadPending(): UpdateInfo? {
+        val version = prefs.getString(KEY_PENDING_VERSION, null) ?: return null
+        if (!Versions.isNewer(version, config.currentVersion)) return null
+        val url = prefs.getString(KEY_PENDING_URL, null) ?: return null
+        return UpdateInfo(version, prefs.getString(KEY_PENDING_NOTES, "").orEmpty(), url, prefs.getLong(KEY_PENDING_SIZE, -1))
+    }
+
+    private fun setPending(info: UpdateInfo?) {
+        _pending.value = info
+        prefs.edit().apply {
+            if (info == null) {
+                remove(KEY_PENDING_VERSION).remove(KEY_PENDING_URL).remove(KEY_PENDING_NOTES).remove(KEY_PENDING_SIZE)
+            } else {
+                putString(KEY_PENDING_VERSION, info.version).putString(KEY_PENDING_URL, info.apkUrl)
+                    .putString(KEY_PENDING_NOTES, info.notes).putLong(KEY_PENDING_SIZE, info.sizeBytes)
+            }
+        }.apply()
+    }
     override val state: StateFlow<UpdateState> = _state.asStateFlow()
 
     override suspend fun check(force: Boolean, userInitiated: Boolean) {
@@ -75,6 +98,8 @@ internal class GitHubUpdateManager @Inject constructor(
         if (userInitiated) _state.value = UpdateState.Checking
         val result = fetchLatest()
         prefs.edit().putLong(KEY_LAST_CHECK, now).apply()
+        // Ответ получен: запоминаем, есть ли новая версия; при сбое сети прежняя находка остаётся
+        if (result != null) setPending(if (Versions.isNewer(result.tagName, config.currentVersion)) toInfo(result) else null)
         _state.value = when {
             result == null -> if (userInitiated) UpdateState.Failed(UpdateState.Reason.NETWORK) else UpdateState.Idle
             !Versions.isNewer(result.tagName, config.currentVersion) -> if (userInitiated) UpdateState.UpToDate else UpdateState.Idle
@@ -200,6 +225,10 @@ internal class GitHubUpdateManager @Inject constructor(
         const val DEFAULT_API_URL = "https://api.github.com"
         private const val CHECK_INTERVAL_MS = 3 * 60 * 60 * 1000L
         private const val KEY_LAST_CHECK = "last_check"
+        private const val KEY_PENDING_VERSION = "pending_version"
+        private const val KEY_PENDING_URL = "pending_url"
+        private const val KEY_PENDING_NOTES = "pending_notes"
+        private const val KEY_PENDING_SIZE = "pending_size"
         private const val TAG = "Lumen/Updater"
     }
 }

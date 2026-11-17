@@ -53,6 +53,8 @@
     <string name="settings_menu_home">Home</string>
     <string name="settings_version">Version %1$s</string>
     <string name="settings_licenses">%1$s is free software under GPLv3. YouTube data: NewPipeExtractor (GPLv3). Player: AndroidX Media3 (Apache 2.0). Sponsored segments: SponsorBlock by Ajay Ramachandran, sponsor.ajay.app, data licensed under CC BY-NC-SA 4.0. Account sign-in follows SmartTube / MediaServiceCore by Yuriy Liskov (GPLv3). Not affiliated with YouTube or Google.</string>
+<string name="settings_update_available">Update %1$s is available</string>
+    <string name="settings_update_install">Press to update</string>
 <string name="settings_check_updates">Check for updates</string>
     <string name="settings_update_on_start">Check for updates on start</string>
 <string name="settings_match_fps">Match display frame rate</string>

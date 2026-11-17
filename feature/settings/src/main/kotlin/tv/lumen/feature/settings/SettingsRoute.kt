@@ -371,7 +371,20 @@ fun SettingsPageRoute(
         }
         if (page == SettingsPage.ABOUT) {
         item {
-            Row(stringResource(R.string.settings_check_updates), null, Modifier.rememberFocus(memory, "update", isFirst = true)) { viewModel.checkForUpdates() }
+            val pending by viewModel.pendingUpdate.collectAsStateWithLifecycle()
+            val found = pending
+            if (found != null) {
+                // Найдено обновление: пункт выделен красной точкой, по нажатию открывается окно «Обновить»
+                SettingCard(
+                    title = stringResource(R.string.settings_update_available, found.version),
+                    value = stringResource(R.string.settings_update_install),
+                    onClick = { viewModel.checkForUpdates() },
+                    modifier = Modifier.rememberFocus(memory, "update", isFirst = true),
+                    trailing = { tv.lumen.core.designsystem.component.RedDot(size = 14.dp) },
+                )
+            } else {
+                Row(stringResource(R.string.settings_check_updates), null, Modifier.rememberFocus(memory, "update", isFirst = true)) { viewModel.checkForUpdates() }
+            }
         }
         item {
             Toggle(stringResource(R.string.settings_update_on_start), s.updateCheckOnStart, Modifier.rememberFocus(memory, "updateOnStart")) {

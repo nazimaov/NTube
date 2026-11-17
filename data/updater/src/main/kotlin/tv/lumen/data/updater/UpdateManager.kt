@@ -36,6 +36,9 @@ sealed interface UpdateState {
 interface UpdateManager {
     val state: StateFlow<UpdateState>
 
+    /** Найденная, но ещё не установленная новая версия: остаётся после «Позже» и между запусками (значок «есть обновление»). */
+    val pending: StateFlow<UpdateInfo?>
+
     /**
      * Проверить наличие новой версии. Без [force] — не чаще раза в 3 часа.
      * [userInitiated] — показать результат «последняя версия» и ошибки (кнопка в настройках).

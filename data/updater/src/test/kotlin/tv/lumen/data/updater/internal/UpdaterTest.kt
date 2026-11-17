@@ -29,7 +29,8 @@ class UpdaterTest {
         val store = HashMap<String, Any?>()
         val editor = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(SharedPreferences.Editor::class.java)) { proxy, m, args ->
             when (m.name) {
-                "putLong" -> { store[args!![0] as String] = args[1]; proxy }
+                "putLong", "putString" -> { store[args!![0] as String] = args[1]; proxy }
+                "remove" -> { store.remove(args!![0] as String); proxy }
                 "apply" -> null
                 "commit" -> true
                 else -> proxy
@@ -38,6 +39,7 @@ class UpdaterTest {
         val prefs = Proxy.newProxyInstance(javaClass.classLoader, arrayOf(SharedPreferences::class.java)) { _, m, args ->
             when (m.name) {
                 "getLong" -> (store[args!![0] as String] as? Long) ?: args[1]
+                "getString" -> (store[args!![0] as String] as? String) ?: args[1]
                 "edit" -> editor
                 else -> null
             }
@@ -110,5 +112,22 @@ class UpdaterTest {
     fun `владелец не задан - проверка не идёт`() = runBlocking {
         manager("1.0.0", owner = "CHANGE_ME").check(force = true, userInitiated = true)
         assertEquals(0, server.requestCount)
+    }
+
+    @Test
+    fun `найденное обновление остаётся pending, пока не вышла установленная версия`() = runBlocking {
+        server.enqueue(MockResponse.Builder().body(release).build())
+        val m = manager("1.0.0")
+        assertNull(m.pending.value)
+        m.check(force = true)
+        assertEquals("1.0.1", m.pending.value?.version)
+        // «Позже» закрывает окно, но точка остаётся
+        m.dismiss()
+        assertEquals("1.0.1", m.pending.value?.version)
+        // Установленная версия догнала релиз — точка пропадает
+        server.enqueue(MockResponse.Builder().body(release).build())
+        val updated = manager("1.0.1")
+        updated.check(force = true)
+        assertNull(updated.pending.value)
     }
 }

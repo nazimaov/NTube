@@ -49,6 +49,10 @@ class AppViewModel @Inject constructor(
 
     val updateState: StateFlow<UpdateState> = updates.state
 
+    /** Есть найденное, но не установленное обновление: красная точка на шестерёнке. */
+    val updatePending: StateFlow<Boolean> = updates.pending.map { it != null }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, false)
+
     init {
         // При запуске, не чаще раза в 3 часа (SPEC 10.5); выключается в настройках
         viewModelScope.launch {

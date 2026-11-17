@@ -5,8 +5,9 @@ import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
-import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.GridCells
@@ -76,6 +77,7 @@ fun SettingsRoute(
     val s by viewModel.settings.collectAsStateWithLifecycle()
     val profile by viewModel.currentProfile.collectAsStateWithLifecycle()
     val account by viewModel.account.collectAsStateWithLifecycle()
+    val pendingUpdate by viewModel.pendingUpdate.collectAsStateWithLifecycle()
     FocusMemoryScope(viewModel.focusMemory)
 
     val on = stringResource(R.string.settings_on)
@@ -99,7 +101,7 @@ fun SettingsRoute(
         SettingsPage.MODS to modsSummary(s, on, off),
         SettingsPage.MENU to stringResource(R.string.settings_summary_menu, s.menuItems.size - s.hiddenMenuItems.size),
         SettingsPage.GENERAL to stringResource(if (s.historyEnabled) R.string.settings_summary_history_on else R.string.settings_summary_history_off),
-        SettingsPage.ABOUT to stringResource(R.string.settings_version, versionName),
+        SettingsPage.ABOUT to (pendingUpdate?.let { stringResource(R.string.settings_update_available, it.version) } ?: stringResource(R.string.settings_version, versionName)),
     )
 
     LazyVerticalGrid(
@@ -116,6 +118,7 @@ fun SettingsRoute(
             SettingsTile(
                 page = page,
                 summary = summaries[page].orEmpty(),
+                badge = page == SettingsPage.ABOUT && pendingUpdate != null,
                 onClick = { onOpenPage(page) },
                 modifier = Modifier.rememberFocus(viewModel.focusMemory, page.name, isFirst = page == SettingsPage.entries.first()),
             )
@@ -124,7 +127,7 @@ fun SettingsRoute(
 }
 
 @Composable
-private fun SettingsTile(page: SettingsPage, summary: String, onClick: () -> Unit, modifier: Modifier = Modifier) {
+private fun SettingsTile(page: SettingsPage, summary: String, badge: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Surface(
         onClick = onClick,
         shape = ClickableSurfaceDefaults.shape(TileShape),
@@ -138,12 +141,16 @@ private fun SettingsTile(page: SettingsPage, summary: String, onClick: () -> Uni
         ),
         border = ClickableSurfaceDefaults.border(focusedBorder = Border(BorderStroke(2.dp, LumenColors.FocusRing), shape = TileShape)),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1.05f),
-        modifier = modifier.aspectRatio(16f / 9f),
+        modifier = modifier,
     ) {
-        Column(Modifier.fillMaxSize().padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
-            Icon(page.icon, contentDescription = null, modifier = Modifier.size(40.dp))
-            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text(stringResource(page.title), style = MaterialTheme.typography.titleMedium, color = Color.Unspecified, maxLines = 1)
+        // Высота по содержимому, но не ниже 150 dp: при раскрытом меню плитки уже, и подпись не должна обрезаться
+        Column(Modifier.fillMaxWidth().heightIn(min = 150.dp).padding(20.dp), verticalArrangement = Arrangement.SpaceBetween) {
+            androidx.compose.foundation.layout.Box {
+                Icon(page.icon, contentDescription = null, modifier = Modifier.size(40.dp))
+                if (badge) tv.lumen.core.designsystem.component.RedDot(Modifier.align(androidx.compose.ui.Alignment.TopEnd), size = 14.dp)
+            }
+            Column(Modifier.padding(top = 12.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                Text(stringResource(page.title), style = MaterialTheme.typography.titleMedium, color = Color.Unspecified, maxLines = 2)
                 Text(
                     summary,
                     style = MaterialTheme.typography.bodySmall,
