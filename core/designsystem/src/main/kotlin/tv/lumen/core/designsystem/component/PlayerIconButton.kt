@@ -37,7 +37,7 @@ import tv.lumen.core.designsystem.theme.LumenColors
  * Круглая кнопка-иконка панели плеера, как у YouTube на ТВ: в покое — полупрозрачная,
  * в фокусе — белая с тёмной иконкой, а под ней появляется подпись [label].
  * [caption] (например, число лайков) показывается внутри вытянутой кнопки рядом с иконкой.
- * [active] подсвечивает включённое состояние (например, субтитры) красной точкой.
+ * [active] заливает кнопку красным, когда состояние включено (лайк, подписка, субтитры); в фокусе она белая с красной иконкой.
  */
 @Composable
 fun PlayerIconButton(
@@ -59,10 +59,10 @@ fun PlayerIconButton(
             onClick = onClick,
             shape = ClickableSurfaceDefaults.shape(CircleShape),
             colors = ClickableSurfaceDefaults.colors(
-                containerColor = Color.White.copy(alpha = 0.16f),
+                containerColor = if (active) LumenColors.Red else Color.White.copy(alpha = 0.16f),
                 contentColor = Color.White,
                 focusedContainerColor = LumenColors.TextPrimary,
-                focusedContentColor = LumenColors.Background,
+                focusedContentColor = if (active) LumenColors.Red else LumenColors.Background,
                 pressedContainerColor = Color.White.copy(alpha = 0.7f),
                 pressedContentColor = LumenColors.Background,
             ),
@@ -82,12 +82,6 @@ fun PlayerIconButton(
                         Icon(icon, contentDescription = label, modifier = Modifier.size(size * 0.45f))
                         Text(caption, style = MaterialTheme.typography.titleSmall, color = Color.Unspecified, maxLines = 1)
                     }
-                }
-                if (active) {
-                    Box(
-                        Modifier.align(Alignment.BottomCenter).padding(bottom = 5.dp).size(6.dp)
-                            .clip(CircleShape).background(LumenColors.Red),
-                    )
                 }
             }
         }
