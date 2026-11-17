@@ -25,7 +25,7 @@ import tv.lumen.core.model.UnavailableReason
 @Composable
 fun LoadingState(modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(stringResource(R.string.ds_loading), style = MaterialTheme.typography.titleLarge)
+        LumenLoader()
     }
 }
 

@@ -249,12 +249,7 @@ internal fun WatchScreen(
         VideoSurface(controller = controller, keepScreenOn = state.isPlaying || state.isBuffering)
 
         if (state.isLoading || (state.isBuffering && !panelVisible)) {
-            Text(
-                text = stringResource(R.string.watch_loading),
-                style = MaterialTheme.typography.titleLarge,
-                color = Color.White,
-                modifier = Modifier.align(Alignment.Center),
-            )
+            tv.lumen.core.designsystem.component.LumenLoader(Modifier.align(Alignment.Center))
         }
 
         state.notice?.let { NoticeBanner(it, Modifier.align(Alignment.TopCenter)) }
