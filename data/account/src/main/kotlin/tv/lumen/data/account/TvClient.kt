@@ -10,6 +10,9 @@ internal object TvClient {
         "Mozilla/5.0 (Linux armeabi-v7a; Android 7.1.2; Fire OS 6.0) Cobalt/22.lts.3.306369-gold (unlike Gecko) " +
             "v8/8.8.278.8-jit gles Starboard/13, Amazon_ATV_mediatek8695_2019/NS6294 (Amazon, AFTMM, Wireless) " +
             "com.amazon.firetv.youtube/22.3.r2.v66.0"
+    // Ослабленный клиент, как AppClient.TV_DOWNGRADED у SmartTube: единственный, кому `player` отвечает с аккаунтом
+    const val USER_AGENT_DOWNGRADED = "Mozilla/5.0 (DirectFB; Linux x86_64) Cobalt/4.13031-qa (unlike Gecko) Starboard/1"
+    const val CLIENT_VERSION_DOWNGRADED = "5.20260901"
     const val REFERER = "https://www.youtube.com/tv"
     const val CLIENT_NAME = "TVHTML5"
     const val CLIENT_VERSION = "7.20260901.15.00"

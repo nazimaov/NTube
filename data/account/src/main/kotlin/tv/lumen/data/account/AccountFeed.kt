@@ -99,9 +99,9 @@ internal object AccountFeedModule {
 
 /** Тело запроса телевизионного клиента YouTube: контекст клиента, язык и регион плюс данные запроса. */
 internal object BrowseBody {
-    fun build(data: String, visitorData: String?, locale: Locale, utcOffsetMinutes: Int = utcOffset()): String =
-        "{\"context\":{\"client\":{\"clientName\":\"${TvClient.CLIENT_NAME}\",\"clientVersion\":\"${TvClient.CLIENT_VERSION}\"," +
-            "\"clientScreen\":\"WATCH\",\"userAgent\":\"${TvClient.USER_AGENT}\"," +
+    fun build(data: String, visitorData: String?, locale: Locale, utcOffsetMinutes: Int = utcOffset(), downgraded: Boolean = false): String =
+        "{\"context\":{\"client\":{\"clientName\":\"${TvClient.CLIENT_NAME}\",\"clientVersion\":\"${if (downgraded) TvClient.CLIENT_VERSION_DOWNGRADED else TvClient.CLIENT_VERSION}\"," +
+            "\"clientScreen\":\"WATCH\",\"userAgent\":\"${if (downgraded) TvClient.USER_AGENT_DOWNGRADED else TvClient.USER_AGENT}\"," +
             "\"tvAppInfo\":{\"appQuality\":\"TV_APP_QUALITY_FULL_ANIMATION\",\"zylonLeftNav\":true}," +
             "\"webpSupport\":false,\"animatedWebpSupport\":true," +
             "\"acceptLanguage\":\"${locale.language}\",\"acceptRegion\":\"${locale.country.ifBlank { "US" }}\"," +

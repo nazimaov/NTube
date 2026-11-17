@@ -27,6 +27,8 @@ private class TokenStore(var token: String?) : AccountStore {
 
 private const val NEXT_RESPONSE = """{"contents":{"x":{"videoMetadataRenderer":{"likeButton":{"likeButtonRenderer":{"likeStatus":"LIKE"}},"owner":{"subscribeButton":{"subscribeButtonRenderer":{"subscribed":true,"channelId":"UCSMOQeBJ2RAnuFungnQOxLg"}}}}}}}"""
 
+private const val PLAYER_RESPONSE = """{"playabilityStatus":{"status":"OK"},"playbackTracking":{"videostatsWatchtimeUrl":{"baseUrl":"https://s.youtube.com/api/stats/watchtime?ns=yt&el=leanback&ei=EVT&vm=VMON&of=OFV"}}}"""
+
 class AccountActionsTest {
     private lateinit var server: MockWebServer
     private val requests = mutableListOf<RecordedRequest>()
@@ -45,6 +47,8 @@ class AccountActionsTest {
                     path.startsWith("/s/_/k") -> MockResponse.Builder().body("""x={clientId:"abc.apps.googleusercontent.com",s:"SEC"};""").build()
                     path == "/o/oauth2/token" -> MockResponse.Builder().body("""{"access_token":"ACC","expires_in":3600,"token_type":"Bearer"}""").build()
                     path.startsWith("/yt/like/") || path.startsWith("/yt/subscription/") -> MockResponse.Builder().code(likeCode).body("{}").build()
+                    path == "/yt/player" -> MockResponse.Builder().body(PLAYER_RESPONSE).build()
+                    path.startsWith("/stats/") -> MockResponse.Builder().body("").build()
                     path == "/yt/next" -> MockResponse.Builder().body(NEXT_RESPONSE).build()
                     else -> MockResponse.Builder().code(404).build()
                 }
@@ -133,5 +137,62 @@ class AccountActionsTest {
     fun `ошибка сервера - false, приложение не падает`() = runBlocking {
         likeCode = 500
         assertFalse(actions("REF").react("v", before = null, now = Reaction.LIKE))
+    }
+
+    private fun reporter(token: String?): WatchReporter {
+        val a = actions(token)
+        val client = OkHttpClient()
+        val json = Json { ignoreUnknownKeys = true }
+        val account = GoogleAccount(
+            client, json, TokenStore(token), CoroutineScope(job), Dispatchers.IO,
+            tvPageUrl = server.url("/tv").toString(),
+            oauthBase = server.url("/o/oauth2").toString().trimEnd('/'),
+            revokeUrl = server.url("/revoke").toString(),
+        )
+        return WatchReporter(client, account, a, Dispatchers.IO, server.url("/stats").toString().trimEnd('/'))
+    }
+
+    private fun statsRequests() = requests.filter { it.url.encodedPath.startsWith("/stats/") }
+
+    @Test
+    fun `просмотр - запись и обновление времени с параметрами плеера`() = runBlocking {
+        val r = reporter("REF")
+        var now = 1_000_000L
+        r.clock = { now }
+        r.report("vid1", 5f, 600f) // слишком рано
+        assertTrue(statsRequests().isEmpty())
+        r.report("vid1", 20f, 600f)
+        assertEquals(listOf("/stats/playback", "/stats/watchtime"), statsRequests().map { it.url.encodedPath })
+        val first = statsRequests().first().url
+        assertEquals("vid1", first.queryParameter("docid"))
+        assertEquals("EVT", first.queryParameter("ei"))
+        assertEquals("VMON", first.queryParameter("vm"))
+        assertEquals("OFV", first.queryParameter("of"))
+        assertEquals(16, first.queryParameter("cpn")!!.length)
+        r.report("vid1", 30f, 600f) // раньше интервала
+        assertEquals(2, statsRequests().size)
+        now += 31_000
+        r.report("vid1", 51f, 600f)
+        assertEquals(3, statsRequests().size)
+        val update = statsRequests().last().url
+        assertEquals("/stats/watchtime", update.encodedPath)
+        assertEquals("20.000", update.queryParameter("st"))
+        assertEquals("51.000", update.queryParameter("et"))
+        assertEquals(first.queryParameter("cpn"), update.queryParameter("cpn"))
+    }
+
+    @Test
+    fun `досмотренное видео - финальный отчёт один раз`() = runBlocking {
+        val r = reporter("REF")
+        r.report("vid1", 580f, 600f)
+        r.report("vid1", 590f, 600f)
+        val finals = statsRequests().filter { it.url.queryParameter("final") == "1" }
+        assertEquals(2, finals.size) // playback + watchtime
+    }
+
+    @Test
+    fun `без входа просмотр не отправляется`() = runBlocking {
+        reporter(null).report("vid1", 100f, 600f)
+        assertTrue(requests.none { it.url.encodedPath.startsWith("/stats/") || it.url.encodedPath == "/yt/player" })
     }
 }
