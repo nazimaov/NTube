@@ -124,7 +124,7 @@ class AccountActions @Inject internal constructor(
                     visitor?.let { header("X-Goog-Visitor-Id", it) }
                     if (downgraded) {
                         header("X-Youtube-Client-Name", "7")
-                        header("X-Youtube-Client-Version", TvClient.CLIENT_VERSION_DOWNGRADED)
+                        header("X-Youtube-Client-Version", TvClient.clientVersionDowngraded)
                     }
                 }
                 .post(BrowseBody.build(data, visitor, feed.locale, downgraded = downgraded).toRequestBody(JSON))

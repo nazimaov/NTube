@@ -12,10 +12,24 @@ internal object TvClient {
             "com.amazon.firetv.youtube/22.3.r2.v66.0"
     // Ослабленный клиент, как AppClient.TV_DOWNGRADED у SmartTube: единственный, кому `player` отвечает с аккаунтом
     const val USER_AGENT_DOWNGRADED = "Mozilla/5.0 (DirectFB; Linux x86_64) Cobalt/4.13031-qa (unlike Gecko) Starboard/1"
-    const val CLIENT_VERSION_DOWNGRADED = "5.20260901"
     const val REFERER = "https://www.youtube.com/tv"
     const val CLIENT_NAME = "TVHTML5"
-    const val CLIENT_VERSION = "7.20260901.15.00"
+    /** Запасная версия на случай, если страница YouTube TV недоступна; обычно берётся с неё (см. [useLiveVersion]). */
+    private const val FALLBACK_VERSION = "7.20260901.15.00"
+    @Volatile private var live: String? = null
+
+    /** Версия телевизионного клиента: актуальная со страницы YouTube TV, иначе запасная. */
+    val clientVersion: String get() = live ?: FALLBACK_VERSION
+
+    /** Ослабленный клиент (как SmartTube): «5.» и та же дата, что у текущей версии, например 7.20261113.09.00 → 5.20261113. */
+    val clientVersionDowngraded: String get() = "5." + clientVersion.split('.')[1]
+
+    private val VERSION = Regex(""""INNERTUBE_CONTEXT_CLIENT_VERSION":"(7\.\d{8}\.\d{2}\.\d{2})"""")
+
+    /** Запоминает версию клиента со страницы YouTube TV; страница без неё или с другим видом версии игнорируется. */
+    fun useLiveVersion(page: String) {
+        VERSION.find(page)?.groupValues?.get(1)?.let { live = it }
+    }
     const val SCRIPTS_BASE = "https://www.youtube.com"
 
     /** Права, которые запрашивает телевизионное приложение YouTube. */

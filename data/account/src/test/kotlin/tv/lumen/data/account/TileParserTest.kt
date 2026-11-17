@@ -108,3 +108,15 @@ class TileParserTest {
     }
 }
 
+
+class TvClientVersionTest {
+    @org.junit.Test
+    fun versionIsTakenFromPageAndDowngradedSharesDate() {
+        TvClient.useLiveVersion("""x,"INNERTUBE_CONTEXT_CLIENT_VERSION":"7.20261113.09.00","y""")
+        org.junit.Assert.assertEquals("7.20261113.09.00", TvClient.clientVersion)
+        org.junit.Assert.assertEquals("5.20261113", TvClient.clientVersionDowngraded)
+        // Страница без версии или с чужим видом версии не меняет текущую
+        TvClient.useLiveVersion("""x,"INNERTUBE_CONTEXT_CLIENT_VERSION":"1.2","y""")
+        org.junit.Assert.assertEquals("7.20261113.09.00", TvClient.clientVersion)
+    }
+}

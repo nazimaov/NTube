@@ -220,6 +220,7 @@ class GoogleAccount @Inject internal constructor(
         clientData?.let { return it }
         val page = getText(tvPageUrl) ?: return null
         visitor = Regex("\"visitorData\":\"(.*?)\"").find(page)?.groupValues?.get(1)
+        TvClient.useLiveVersion(page)
         val origin = tvPageUrl.toHttpUrl().newBuilder().encodedPath("/").query(null).build().toString().trimEnd('/')
         val url = ClientDataParser.scriptUrl(page, origin) ?: return null
         val data = getText(url)?.let(ClientDataParser::clientData)
