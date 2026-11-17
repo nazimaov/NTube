@@ -16,6 +16,8 @@ import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.flowOf
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.sample
 import tv.lumen.player.PlayerController
 import tv.lumen.player.PlayerControllerFactory
 import tv.lumen.player.PlayerState
@@ -50,6 +52,7 @@ class WatchViewModel @Inject constructor(
     private val youtube: YouTubeRepository,
     private val library: LibraryRepository,
     private val accountActions: AccountActions,
+    private val watchReporter: tv.lumen.data.account.WatchReporter,
     @ApplicationScope private val appScope: CoroutineScope,
     settings: SettingsRepository,
 ) : ViewModel() {
@@ -89,6 +92,18 @@ class WatchViewModel @Inject constructor(
                     library.subscribe(channel, video.channelName.orEmpty(), null)
                 }
             }
+        }
+    }
+
+    // Со входом просмотр пишется в историю аккаунта (редкие отчёты); сбой не влияет на воспроизведение
+    init {
+        viewModelScope.launch {
+            controller.state
+                .sample(5_000)
+                .filter { it.isPlaying && !it.isLive && it.videoId != null && it.durationMs > 0 }
+                .collect { s ->
+                    runCatching { watchReporter.report(s.videoId!!, s.positionMs / 1000f, s.durationMs / 1000f) }
+                }
         }
     }
 

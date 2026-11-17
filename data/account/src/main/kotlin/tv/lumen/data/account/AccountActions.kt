@@ -27,6 +27,7 @@ class AccountActions @Inject internal constructor(
     private val feed: AccountFeed,
     @IoDispatcher private val io: CoroutineDispatcher,
     @Named(BASE_URL) private val baseUrl: String,
+    private val poTokens: PoTokenSource,
 ) {
     private val http = client.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
     private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -62,6 +63,51 @@ class AccountActions @Inject internal constructor(
         return runCatching { NextParser.parse(json.parseToJsonElement(text)) }.getOrNull()
     }
 
+    /**
+     * Параметры отчёта о просмотре видео: ответ `player` аккаунта, как у телевизионного клиента.
+     * null — входа нет, видео не воспроизводится аккаунтом или YouTube не отдал параметры.
+     */
+    suspend fun trackingParams(videoId: String): TrackingParams? {
+        if (!account.isSignedIn) return null
+        // Без токена проверки телевизионный клиент отвечает UNPLAYABLE и параметров отчёта нет
+        val visitor = account.visitorData() ?: return null
+        val token = poTokens.mint(visitor) ?: return null
+        val data = "\"videoId\":\"$videoId\",\"serviceIntegrityDimensions\":{\"poToken\":\"$token\"}," +
+            "\"playbackContext\":{\"contentPlaybackContext\":{\"html5Preference\":\"HTML5_PREF_WANTS\"" +
+            (signatureTimestamp()?.let { ",\"signatureTimestamp\":$it" } ?: "") + "}}"
+        val text = request("player", data) ?: return null
+        val (status, params) = runCatching { PlayerParser.parse(json.parseToJsonElement(text)) }.getOrNull() ?: return null
+        if (params == null) Log.w(TAG, "player: параметров просмотра нет, статус $status")
+        return params
+    }
+
+    private var timestamp: Pair<Int, Long>? = null
+
+    /**
+     * signatureTimestamp телевизионного плеера: без него `player` отвечает UNPLAYABLE. Берётся из скрипта плеера,
+     * адрес которого указан в iframe_api; кэшируется на сутки, при сбое null (запрос уйдёт без него).
+     */
+    private suspend fun signatureTimestamp(): Int? = withContext(io) {
+        timestamp?.takeIf { System.currentTimeMillis() - it.second < DAY_MS }?.let { return@withContext it.first }
+        try {
+            val api = get("https://www.youtube.com/iframe_api") ?: return@withContext null
+            val id = Regex("""player\\?/([a-z0-9]{8})""").find(api)?.groupValues?.get(1) ?: return@withContext null
+            val script = get("https://www.youtube.com/s/player/$id/tv-player-ias.vflset/tv-player-ias.js") ?: return@withContext null
+            val value = Regex("""signatureTimestamp:(\d+)""").find(script)?.groupValues?.get(1)?.toIntOrNull() ?: return@withContext null
+            timestamp = value to System.currentTimeMillis()
+            value
+        } catch (e: CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            null
+        }
+    }
+
+    private fun get(url: String): String? =
+        http.newCall(Request.Builder().url(url).header("User-Agent", TvClient.USER_AGENT).build()).execute().use {
+            if (it.isSuccessful) it.body.string() else null
+        }
+
     private suspend fun post(path: String, data: String): Boolean = request(path, data) != null
 
     /** Тело ответа при успехе, иначе null. */
@@ -77,7 +123,12 @@ class AccountActions @Inject internal constructor(
                 .apply { visitor?.let { header("X-Goog-Visitor-Id", it) } }
                 .post(BrowseBody.build(data, visitor, feed.locale).toRequestBody(JSON))
                 .build()
-            http.newCall(request).execute().use { if (it.isSuccessful) it.body.string() else null }
+            http.newCall(request).execute().use {
+                if (it.isSuccessful) it.body.string() else {
+                    Log.w(TAG, "$path: HTTP ${it.code}")
+                    null
+                }
+            }
         } catch (e: CancellationException) {
             throw e
         } catch (e: Exception) {
@@ -89,6 +140,7 @@ class AccountActions @Inject internal constructor(
     companion object {
         const val BASE_URL = "account.actionsBaseUrl"
         private const val TAG = "Lumen/AccountActions"
+        private const val DAY_MS = 24 * 60 * 60 * 1000L
         private val JSON = "application/json".toMediaType()
     }
 }

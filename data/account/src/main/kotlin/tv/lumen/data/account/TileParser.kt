@@ -9,6 +9,7 @@ import kotlinx.serialization.json.intOrNull
 import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import tv.lumen.core.model.PageToken
 import tv.lumen.core.model.Video
 
@@ -174,5 +175,25 @@ internal object NextParser {
             else -> null
         }
         return AccountVideoState(reaction, subscribed)
+    }
+}
+
+/** Параметры, с которыми YouTube принимает отчёты о просмотре; берутся из ответа `player` аккаунта. */
+data class TrackingParams(val eventId: String, val visitorMonitoring: String, val of: String)
+
+internal object PlayerParser {
+    /** Статус воспроизводимости и параметры из адреса `videostatsWatchtimeUrl`. */
+    fun parse(root: JsonElement): Pair<String?, TrackingParams?> {
+        val obj = root as? JsonObject ?: return null to null
+        val playability = obj["playabilityStatus"] as? JsonObject
+        val reason = (playability?.get("reason") as? JsonPrimitive)?.contentOrNull
+        val status = (playability?.get("status") as? JsonPrimitive)?.contentOrNull?.let { if (reason != null) "$it ($reason)" else it }
+        val base = (((obj["playbackTracking"] as? JsonObject)?.get("videostatsWatchtimeUrl") as? JsonObject)?.get("baseUrl") as? JsonPrimitive)?.contentOrNull
+        val url = base?.let { runCatching { it.toHttpUrl() }.getOrNull() }
+        val ei = url?.queryParameter("ei")
+        val vm = url?.queryParameter("vm")
+        val of = url?.queryParameter("of")
+        val params = if (ei != null && vm != null && of != null) TrackingParams(ei, vm, of) else null
+        return status to params
     }
 }
