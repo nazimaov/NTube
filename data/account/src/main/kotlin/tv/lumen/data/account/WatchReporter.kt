@@ -71,8 +71,9 @@ class WatchReporter @Inject internal constructor(
     }
 
     private suspend fun newSession(videoId: String): Session? {
-        val params = actions.trackingParams(videoId) ?: return null
-        return Session(videoId, params, nonce()).also { session = it }
+        val nonce = nonce()
+        val params = actions.trackingParams(videoId, nonce) ?: return null
+        return Session(videoId, params, nonce).also { session = it }
     }
 
     private suspend fun send(s: Session, position: Float, length: Float, final: Boolean, now: Long) = withContext(io) {

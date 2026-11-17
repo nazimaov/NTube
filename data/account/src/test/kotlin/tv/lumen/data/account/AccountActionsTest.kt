@@ -73,7 +73,7 @@ class AccountActionsTest {
             revokeUrl = server.url("/revoke").toString(),
         )
         val feed = AccountFeed(client, json, account, Dispatchers.IO, browseUrl = server.url("/yt/browse").toString())
-        return AccountActions(client, account, feed, Dispatchers.IO, baseUrl = server.url("/yt").toString().trimEnd('/'), poTokens = object : PoTokenSource { override suspend fun mint(identifier: String) = "POT" })
+        return AccountActions(client, account, feed, Dispatchers.IO, baseUrl = server.url("/yt").toString().trimEnd('/'))
     }
 
     private fun likeRequests() = requests.filter { it.url.encodedPath.startsWith("/yt/like/") }

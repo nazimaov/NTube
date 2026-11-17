@@ -27,7 +27,6 @@ class AccountActions @Inject internal constructor(
     private val feed: AccountFeed,
     @IoDispatcher private val io: CoroutineDispatcher,
     @Named(BASE_URL) private val baseUrl: String,
-    private val poTokens: PoTokenSource,
 ) {
     private val http = client.newBuilder().callTimeout(15, TimeUnit.SECONDS).build()
     private val json = kotlinx.serialization.json.Json { ignoreUnknownKeys = true }
@@ -67,15 +66,16 @@ class AccountActions @Inject internal constructor(
      * Параметры отчёта о просмотре видео: ответ `player` аккаунта, как у телевизионного клиента.
      * null — входа нет, видео не воспроизводится аккаунтом или YouTube не отдал параметры.
      */
-    suspend fun trackingParams(videoId: String): TrackingParams? {
+    suspend fun trackingParams(videoId: String, cpn: String): TrackingParams? {
         if (!account.isSignedIn) return null
-        // Без токена проверки телевизионный клиент отвечает UNPLAYABLE и параметров отчёта нет
-        val visitor = account.visitorData() ?: return null
-        val token = poTokens.mint(visitor) ?: return null
-        val data = "\"videoId\":\"$videoId\",\"serviceIntegrityDimensions\":{\"poToken\":\"$token\"}," +
-            "\"playbackContext\":{\"contentPlaybackContext\":{\"html5Preference\":\"HTML5_PREF_WANTS\"" +
-            (signatureTimestamp()?.let { ",\"signatureTimestamp\":$it" } ?: "") + "}}"
-        val text = request("player", data) ?: return null
+        // Как SmartTube (AppClient.TV_DOWNGRADED): ослабленный телевизионный клиент, без токена проверки;
+        // с обычной версией и токеном YouTube отвечает «Необходимо перезагрузить страницу»
+        val sts = signatureTimestamp()
+        val playback = if (sts == null) "" else
+            "\"playbackContext\":{\"contentPlaybackContext\":{\"html5Preference\":\"HTML5_PREF_WANTS\",\"lactMilliseconds\":60000," +
+                "\"isInlinePlaybackNoAd\":true,\"signatureTimestamp\":$sts},\"devicePlaybackCapabilities\":{\"supportsVp9Encoding\":true,\"supportXhr\":false}},"
+        val data = "$playback\"videoId\":\"$videoId\",\"cpn\":\"$cpn\""
+        val text = request("player", data, downgraded = true) ?: return null
         val (status, params) = runCatching { PlayerParser.parse(json.parseToJsonElement(text)) }.getOrNull() ?: return null
         if (params == null) Log.w(TAG, "player: параметров просмотра нет, статус $status")
         return params
@@ -111,17 +111,23 @@ class AccountActions @Inject internal constructor(
     private suspend fun post(path: String, data: String): Boolean = request(path, data) != null
 
     /** Тело ответа при успехе, иначе null. */
-    private suspend fun request(path: String, data: String): String? = withContext(io) {
+    private suspend fun request(path: String, data: String, downgraded: Boolean = false): String? = withContext(io) {
         try {
             val auth = account.authorizationHeader() ?: return@withContext null
             val visitor = account.visitorData()
             val request = Request.Builder()
                 .url("$baseUrl/$path?prettyPrint=false")
                 .header("Authorization", auth)
-                .header("User-Agent", TvClient.USER_AGENT)
+                .header("User-Agent", if (downgraded) TvClient.USER_AGENT_DOWNGRADED else TvClient.USER_AGENT)
                 .header("Referer", TvClient.REFERER)
-                .apply { visitor?.let { header("X-Goog-Visitor-Id", it) } }
-                .post(BrowseBody.build(data, visitor, feed.locale).toRequestBody(JSON))
+                .apply {
+                    visitor?.let { header("X-Goog-Visitor-Id", it) }
+                    if (downgraded) {
+                        header("X-Youtube-Client-Name", "7")
+                        header("X-Youtube-Client-Version", TvClient.CLIENT_VERSION_DOWNGRADED)
+                    }
+                }
+                .post(BrowseBody.build(data, visitor, feed.locale, downgraded = downgraded).toRequestBody(JSON))
                 .build()
             http.newCall(request).execute().use {
                 if (it.isSuccessful) it.body.string() else {
