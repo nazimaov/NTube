@@ -6,6 +6,7 @@ import org.junit.Test
 import tv.lumen.core.model.Video
 import tv.lumen.data.youtube.internal.regionalQueries
 import tv.lumen.data.youtube.internal.titleFitsRegion
+import tv.lumen.data.youtube.internal.trailerQueries
 import tv.lumen.data.youtube.internal.trendScore
 import java.time.Duration
 import java.time.Instant
@@ -52,5 +53,15 @@ class TrendScoreTest {
         assertTrue(!titleFitsRegion("Новые песни 2026", "tr"))
         assertTrue(titleFitsRegion("Новые песни 2026", "ru"))
         assertTrue(!titleFitsRegion("Best songs 2026", "ru"))
+    }
+
+    @Test
+    fun trailerQueriesFollowRegionLanguage() {
+        assertTrue(trailerQueries("az").any { it.contains("treyler") })
+        // В Азербайджане нужны и азербайджанские, и турецкие трейлеры
+        assertTrue(trailerQueries("az").any { it.contains("fragman") })
+        assertTrue(trailerQueries("tr").any { it.contains("fragman") })
+        assertTrue(trailerQueries("ru").any { it.contains("трейлер") })
+        assertTrue(trailerQueries("de").any { it.contains("trailer") })
     }
 }

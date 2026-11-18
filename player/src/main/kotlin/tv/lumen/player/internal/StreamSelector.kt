@@ -37,6 +37,9 @@ internal sealed interface Selection {
 
     data class Live(val hlsUrl: String?, val dashMpdUrl: String?) : Selection
 
+    /** Только звук (режим «аудио» в музыке): без видеопотока, экономит трафик. */
+    data class AudioOnly(val audio: AudioStream) : Selection
+
     data object Unplayable : Selection
 }
 
@@ -48,10 +51,12 @@ internal class StreamSelector(private val caps: DeviceCapabilities) {
         prefs: PlayerPreferences,
         requestedHeight: Int? = null,
         audioTrackId: String? = null,
+        audioOnly: Boolean = false,
     ): Selection {
         if (set.isLive && (set.hlsUrl != null || set.dashMpdUrl != null)) {
             return Selection.Live(set.hlsUrl, set.dashMpdUrl)
         }
+        if (audioOnly) selectAudio(set.audio, prefs, audioTrackId)?.let { return Selection.AudioOnly(it) }
 
         val playable = playableVideo(set.videoOnly, prefs)
         val audio = selectAudio(set.audio, prefs, audioTrackId)

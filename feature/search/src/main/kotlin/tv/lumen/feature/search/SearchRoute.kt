@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -23,6 +24,8 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -153,7 +156,12 @@ private fun MusicHeader(viewModel: MusicViewModel, mood: Mood?, onOpenChannel: (
     val artists by viewModel.artists.collectAsStateWithLifecycle()
     Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
         Text(stringResource(R.string.music_moods), style = MaterialTheme.typography.titleLarge)
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.focusRestorer()) {
+        // Запас по краям: плитка с фокусом увеличивается и получает рамку, ряд иначе её обрезает; сдвиг возвращает выравнивание
+        LazyRow(
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+            contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+            modifier = Modifier.offset(x = (-14).dp).focusRestorer(),
+        ) {
             itemsIndexed(MusicBrowse.moods, key = { _, m -> m.id }) { index, m ->
                 MoodTile(
                     m, selected = m == mood, onClick = { viewModel.setMood(m) },
@@ -163,7 +171,11 @@ private fun MusicHeader(viewModel: MusicViewModel, mood: Mood?, onOpenChannel: (
         }
         if (artists.isNotEmpty()) {
             Text(stringResource(R.string.music_artists), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 8.dp))
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
+            LazyRow(
+                horizontalArrangement = Arrangement.spacedBy(20.dp),
+                contentPadding = PaddingValues(horizontal = 14.dp, vertical = 8.dp),
+                modifier = Modifier.offset(x = (-14).dp).focusRestorer(),
+            ) {
                 items(artists, key = { it.id }) { a ->
                     ChannelCard(a, onClick = { onOpenChannel(a.id) }, modifier = Modifier.width(132.dp))
                 }

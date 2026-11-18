@@ -11,7 +11,7 @@ interface PlayerController {
     val player: Player
 
     /** startPositionMs = 0 — продолжить с сохранённой позиции (5–95%) или с начала. */
-    fun load(videoId: String, startPositionMs: Long = 0, playlistId: String? = null)
+    fun load(videoId: String, startPositionMs: Long = 0, playlistId: String? = null, audioOnly: Boolean = false)
     fun play()
     fun pause()
     fun togglePlayPause()
@@ -22,6 +22,9 @@ interface PlayerController {
     fun setSpeed(speed: Float)
 
     fun setQuality(height: Int)
+
+    /** Видео или только звук (с обложкой) на лету, с той же позиции. */
+    fun setAudioOnly(audioOnly: Boolean)
 
     /** languageTag дорожки или null — выключить. */
     fun setSubtitle(lang: String?)

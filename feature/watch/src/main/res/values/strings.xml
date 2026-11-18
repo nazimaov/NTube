@@ -57,4 +57,6 @@
     <string name="queue_added">Added to queue</string>
     <string name="watch_recommendations">Recommended for you</string>
     <string name="watch_error_sign_in">This is a video made for kids: YouTube plays such videos in third-party apps only after you sign in. Settings → Account.</string>
+    <string name="watch_mode_video">Video</string>
+    <string name="watch_mode_audio">Audio</string>
 </resources>

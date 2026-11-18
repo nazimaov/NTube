@@ -33,6 +33,15 @@ data class QualityOption(
     val codec: VideoCodec,
 ) {
     val label: String get() = if (fps > 30) "${height}p$fps" else "${height}p"
+
+    /** Метка в углу шестерёнки, как на сайте YouTube: HD от 720p, 2K — 1440p, 4K — 2160p, 8K — 4320p; ниже 720p — без метки. */
+    val badge: String? get() = when {
+        height >= 4320 -> "8K"
+        height >= 2160 -> "4K"
+        height >= 1440 -> "2K"
+        height >= 720 -> "HD"
+        else -> null
+    }
 }
 
 data class AudioTrackOption(
@@ -53,6 +62,8 @@ data class PlayerState(
     val isPlaying: Boolean = false,
     /** Пользователь хочет, чтобы видео играло (true и во время подгрузки после перемотки). */
     val playWhenReady: Boolean = true,
+    /** Режим «только аудио»: играет звук, на экране обложка (музыка). */
+    val audioOnly: Boolean = false,
     val isBuffering: Boolean = false,
     val isEnded: Boolean = false,
     val positionMs: Long = 0,

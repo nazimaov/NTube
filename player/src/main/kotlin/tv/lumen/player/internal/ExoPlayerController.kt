@@ -75,6 +75,7 @@ internal class ExoPlayerController(
 
     private var details: VideoDetails? = null
     private var requestedHeight: Int? = null
+    private var audioOnly = false
     private var subtitleLang: String? = prefs.subtitleLanguage
     private var audioTrackId: String? = null
     private var retries = 0
@@ -125,13 +126,14 @@ internal class ExoPlayerController(
         })
     }
 
-    override fun load(videoId: String, startPositionMs: Long, playlistId: String?) {
+    override fun load(videoId: String, startPositionMs: Long, playlistId: String?, audioOnly: Boolean) {
         details = null
+        this.audioOnly = audioOnly
         requestedHeight = null
         audioTrackId = null
         retries = 0
         this.playlistId = playlistId
-        _state.value = PlayerState(videoId = videoId, isLoading = true, speed = exo.playbackParameters.speed)
+        _state.value = PlayerState(videoId = videoId, isLoading = true, speed = exo.playbackParameters.speed, audioOnly = audioOnly)
         segments = emptyList()
         disabledSegments.clear()
         loadSegments(videoId) // параллельно с загрузкой видео (SPEC 6.1)
@@ -344,10 +346,17 @@ internal class ExoPlayerController(
     private suspend fun prepare(details: VideoDetails, positionMs: Long) {
         val streams = details.streams
         val subtitle = selector.selectSubtitle(streams.subtitles, subtitleLang)
-        val selection = selector.select(streams, prefs, requestedHeight, audioTrackId)
+        val selection = selector.select(streams, prefs, requestedHeight, audioTrackId, audioOnly)
 
         val source = when (selection) {
             is Selection.Separate -> when (val r = sources.separate(details.video.id, selection.video, selection.audio, subtitle)) {
+                is AppResult.Failure -> {
+                    _state.update { it.copy(isLoading = false, error = r.error) }
+                    return
+                }
+                is AppResult.Success -> r.value
+            }
+            is Selection.AudioOnly -> when (val r = sources.audioOnly(details.video.id, selection.audio)) {
                 is AppResult.Failure -> {
                     _state.update { it.copy(isLoading = false, error = r.error) }
                     return
@@ -450,6 +459,13 @@ internal class ExoPlayerController(
 
     override fun setQuality(height: Int) {
         requestedHeight = height
+        reprepare()
+    }
+
+    override fun setAudioOnly(audioOnly: Boolean) {
+        if (this.audioOnly == audioOnly) return
+        this.audioOnly = audioOnly
+        _state.update { it.copy(audioOnly = audioOnly) }
         reprepare()
     }
 

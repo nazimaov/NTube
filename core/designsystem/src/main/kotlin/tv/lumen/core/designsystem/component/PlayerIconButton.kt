@@ -1,6 +1,7 @@
 package tv.lumen.core.designsystem.component
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.size
@@ -48,6 +49,8 @@ fun PlayerIconButton(
     size: Dp = 52.dp,
     active: Boolean = false,
     caption: String? = null,
+    /** Красная метка в правом верхнем углу кнопки (например «HD» у шестерёнки качества). */
+    badge: String? = null,
 ) {
     var focused by remember { mutableStateOf(false) }
     Column(
@@ -55,6 +58,7 @@ fun PlayerIconButton(
         verticalArrangement = Arrangement.spacedBy(6.dp),
         modifier = if (caption == null) Modifier.width(size) else Modifier,
     ) {
+        Box {
         Surface(
             onClick = onClick,
             shape = ClickableSurfaceDefaults.shape(CircleShape),
@@ -84,6 +88,21 @@ fun PlayerIconButton(
                     }
                 }
             }
+        }
+        if (badge != null) {
+            Text(
+                text = badge,
+                style = MaterialTheme.typography.labelSmall,
+                color = Color.White,
+                fontWeight = androidx.compose.ui.text.font.FontWeight.Bold,
+                maxLines = 1,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .offset(x = 6.dp, y = (-4).dp)
+                    .background(LumenColors.Red, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
+                    .padding(horizontal = 5.dp, vertical = 1.dp),
+            )
+        }
         }
         // Подпись видна только в фокусе; место под неё зарезервировано, чтобы ряд не прыгал
         Text(

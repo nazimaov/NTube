@@ -16,7 +16,7 @@ import kotlinx.serialization.Serializable
 @Serializable data class SettingsSection(val page: String)
 
 /** Имена полей читает WatchViewModel из SavedStateHandle — не переименовывать без него. */
-@Serializable data class Watch(val videoId: String, val playlistId: String? = null, val startMs: Long = 0)
+@Serializable data class Watch(val videoId: String, val playlistId: String? = null, val startMs: Long = 0, val audioOnly: Boolean = false)
 
 @Serializable data class Channel(val channelId: String)
 

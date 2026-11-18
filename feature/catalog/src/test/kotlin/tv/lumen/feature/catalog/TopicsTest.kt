@@ -44,3 +44,15 @@ class LiveChannelsTest {
         }
     }
 }
+
+class TopicsRegionalTest {
+    @Test
+    fun everyTopicHasOwnTurkishAndAzerbaijaniQueries() {
+        for (topic in Topics.all) {
+            for (query in listOf(topic.query) + topic.subtopics.map { it.query }) {
+                assertTrue("${topic.id} tr", query[QueryLang.TR] != query[QueryLang.EN])
+                assertTrue("${topic.id} az", query[QueryLang.AZ] != query[QueryLang.EN])
+            }
+        }
+    }
+}

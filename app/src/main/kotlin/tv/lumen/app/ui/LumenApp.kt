@@ -103,7 +103,8 @@ fun LumenApp(
     var showExitDialog by remember { mutableStateOf(false) }
     val drawerFocus = remember { TopLevelDestination.entries.associateWith { FocusRequester() } }
 
-    fun openVideo(id: String, playlistId: String? = null) = navController.navigate(Watch(videoId = id, playlistId = playlistId))
+    fun openVideo(id: String, playlistId: String? = null, audioOnly: Boolean = false) =
+        navController.navigate(Watch(videoId = id, playlistId = playlistId, audioOnly = audioOnly))
     fun openChannel(id: String) = navController.navigate(Channel(id))
     fun openPlaylist(id: String, title: String) = navController.navigate(Playlist(id, title))
 
@@ -245,8 +246,8 @@ fun LumenApp(
                     WatchRoute(
                         onBack = { navController.popBackStack() },
                         // Похожее видео заменяет текущее, чтобы Back вёл туда, откуда пришли
-                        onOpenVideo = { id, playlistId ->
-                            navController.navigate(Watch(videoId = id, playlistId = playlistId)) {
+                        onOpenVideo = { id, playlistId, audioOnly ->
+                            navController.navigate(Watch(videoId = id, playlistId = playlistId, audioOnly = audioOnly)) {
                                 popUpTo<Watch> { inclusive = true }
                             }
                         },

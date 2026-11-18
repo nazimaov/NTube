@@ -88,8 +88,8 @@ private enum class PanelFocus { PLAY, SEEK, RELATED }
 @Composable
 fun WatchRoute(
     onBack: () -> Unit,
-    /** videoId, playlistId */
-    onOpenVideo: (String, String?) -> Unit,
+    /** videoId, playlistId, только аудио */
+    onOpenVideo: (String, String?, Boolean) -> Unit,
     onOpenChannel: (String) -> Unit,
     modifier: Modifier = Modifier,
     viewModel: WatchViewModel = hiltViewModel(),
@@ -119,8 +119,8 @@ fun WatchRoute(
         state = state,
         controller = viewModel.controller,
         onBack = onBack,
-        onOpenVideo = { id -> onOpenVideo(id, null) },
-        onPlayNext = { id -> onOpenVideo(id, viewModel.playlistId) },
+        onOpenVideo = { id -> onOpenVideo(id, null, viewModel.controller.state.value.audioOnly) },
+        onPlayNext = { id -> onOpenVideo(id, viewModel.playlistId, viewModel.controller.state.value.audioOnly) },
         onOpenChannel = onOpenChannel,
         onCheckUpdate = viewModel::checkForUpdates,
         modifier = modifier,
@@ -281,6 +281,18 @@ internal fun WatchScreen(
     ) {
         VideoSurface(controller = controller, keepScreenOn = state.isPlaying || state.isBuffering)
 
+        // Режим «только аудио»: вместо видео — обложка
+        if (state.audioOnly) {
+            Box(Modifier.fillMaxSize().background(Color.Black)) {
+                coil3.compose.AsyncImage(
+                    model = state.details?.video?.thumbnailUrl,
+                    contentDescription = null,
+                    contentScale = androidx.compose.ui.layout.ContentScale.Fit,
+                    modifier = Modifier.fillMaxSize(),
+                )
+            }
+        }
+
         if (state.isLoading || (state.isBuffering && !panelVisible)) {
             tv.lumen.core.designsystem.component.LumenLoader(Modifier.align(Alignment.Center))
         }
@@ -413,6 +425,45 @@ private fun VideoSurface(controller: PlayerController, keepScreenOn: Boolean) {
         onRelease = { view -> view.player = null },
         modifier = Modifier.fillMaxSize(),
     )
+}
+
+/** Маленький переключатель «Видео | Аудио»: две кнопки рядом, выбранная залита. */
+@Composable
+private fun ModeSwitch(audioOnly: Boolean, onChange: (Boolean) -> Unit, modifier: Modifier = Modifier) {
+    val requesters = remember { listOf(FocusRequester(), FocusRequester()) }
+    var refocus by remember { mutableIntStateOf(0) }
+    var clicked by remember { mutableIntStateOf(0) }
+    // После смены режима панель перестраивается (кнопка качества появляется или исчезает) и фокус слетает — возвращаем его
+    LaunchedEffect(refocus) {
+        if (refocus == 0) return@LaunchedEffect
+        delay(350)
+        runCatching { requesters[clicked].requestFocus() }
+    }
+    Row(
+        modifier = modifier.background(Color.White.copy(alpha = 0.16f), RoundedCornerShape(50)).padding(4.dp),
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+    ) {
+        listOf(false to R.string.watch_mode_video, true to R.string.watch_mode_audio).forEachIndexed { index, (isAudio, label) ->
+            val selected = audioOnly == isAudio
+            androidx.tv.material3.Surface(
+                onClick = { clicked = index; refocus++; onChange(isAudio) },
+                shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(RoundedCornerShape(50)),
+                colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
+                    containerColor = if (selected) Color.White else Color.Transparent,
+                    contentColor = if (selected) Color.Black else Color.White,
+                    focusedContainerColor = if (selected) Color.White else Color.White.copy(alpha = 0.35f),
+                    focusedContentColor = if (selected) Color.Black else Color.White,
+                ),
+                border = androidx.tv.material3.ClickableSurfaceDefaults.border(
+                    focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(2.dp, LumenColors.FocusRing), shape = RoundedCornerShape(50)),
+                ),
+                scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
+                modifier = Modifier.focusRequester(requesters[index]),
+            ) {
+                Text(stringResource(label), style = MaterialTheme.typography.labelLarge, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp))
+            }
+        }
+    }
 }
 
 /** Верхняя плашка плеера: название, под ним просмотры и дата, ниже канал. */
@@ -573,6 +624,7 @@ private fun ControlPanel(
                         icon = Icons.Filled.Settings,
                         label = "${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}",
                         onClick = { onOpenDialog(WatchDialog.QUALITY) },
+                        badge = state.quality?.badge,
                     )
                 }
                 if (!state.isLive) {
@@ -582,6 +634,10 @@ private fun ControlPanel(
                         onClick = { onOpenDialog(WatchDialog.SPEED) },
                         active = state.speed != 1f,
                     )
+                }
+                // Как в YouTube Music: маленький переключатель «Видео | Аудио» — звук с обложкой экономит трафик
+                if (!state.isLive && state.details?.streams?.audio?.isNotEmpty() == true) {
+                    ModeSwitch(audioOnly = state.audioOnly, onChange = controller::setAudioOnly, modifier = Modifier.padding(top = 8.dp))
                 }
                 if (state.subtitles.isNotEmpty()) {
                     val current = state.subtitles.firstOrNull { it.languageTag == state.subtitle }?.name

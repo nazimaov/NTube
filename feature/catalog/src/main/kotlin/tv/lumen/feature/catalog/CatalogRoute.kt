@@ -22,6 +22,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.focus.focusProperties
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.stringResource
@@ -89,6 +90,10 @@ private fun CatalogScreen(
     // Выбранная подборка; пока ничего не выбирали — первая
     var chosen by remember(kind) { mutableStateOf(categories.firstOrNull { it.id == selectedId } ?: categories.first()) }
     FocusMemoryScope(viewModel.focusMemory)
+    // Явные маршруты Вверх/Вниз между рядами: иначе фокус перескакивает ряд категорий (Сериалы ↔ Год/Жанр)
+    val kindFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val categoryFocus = remember { androidx.compose.ui.focus.FocusRequester() }
+    val genreFocus = remember { androidx.compose.ui.focus.FocusRequester() }
 
     val uiLang = when (LocalConfiguration.current.locales[0].language) {
         "ru" -> QueryLang.RU
@@ -104,8 +109,14 @@ private fun CatalogScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
             modifier = Modifier.padding(start = LumenDimens.ContentStart, top = LumenDimens.SafeVertical),
         ) {
-            LumenChip(text = stringResource(R.string.catalog_movies_title), selected = kind == CatalogKind.MOVIES, onClick = { onKindChange(CatalogKind.MOVIES) })
-            LumenChip(text = stringResource(R.string.catalog_series_title), selected = kind == CatalogKind.SERIES, onClick = { onKindChange(CatalogKind.SERIES) })
+            LumenChip(
+                text = stringResource(R.string.catalog_movies_title), selected = kind == CatalogKind.MOVIES, onClick = { onKindChange(CatalogKind.MOVIES) },
+                modifier = (if (kind == CatalogKind.MOVIES) Modifier.focusRequester(kindFocus) else Modifier).focusProperties { down = categoryFocus },
+            )
+            LumenChip(
+                text = stringResource(R.string.catalog_series_title), selected = kind == CatalogKind.SERIES, onClick = { onKindChange(CatalogKind.SERIES) },
+                modifier = (if (kind == CatalogKind.SERIES) Modifier.focusRequester(kindFocus) else Modifier).focusProperties { down = categoryFocus },
+            )
         }
         LazyRow(
             contentPadding = PaddingValues(start = LumenDimens.ContentStart, end = LumenDimens.SafeHorizontal, top = 12.dp, bottom = 4.dp),
@@ -117,6 +128,10 @@ private fun CatalogScreen(
                     text = stringResource(category.label),
                     selected = category.id == chosen.id,
                     onClick = { chosen = category },
+                    modifier = (if (category.id == chosen.id) Modifier.focusRequester(categoryFocus) else Modifier).focusProperties {
+                        up = kindFocus
+                        if (!chosen.trailers) down = genreFocus
+                    },
                 )
             }
         }
@@ -130,6 +145,7 @@ private fun CatalogScreen(
                     text = stringResource(R.string.filter_value, stringResource(R.string.filter_genre), stringResource(filters.genre.label)),
                     selected = filters.genre != Genre.ANY,
                     onClick = { dialog = FilterDialog.GENRE },
+                    modifier = Modifier.focusRequester(genreFocus).focusProperties { up = categoryFocus },
                 )
                 LumenChip(
                     text = stringResource(
@@ -139,6 +155,7 @@ private fun CatalogScreen(
                     ),
                     selected = filters.year != null,
                     onClick = { dialog = FilterDialog.YEAR },
+                    modifier = Modifier.focusProperties { up = categoryFocus },
                 )
             }
         }
@@ -158,7 +175,8 @@ private fun CatalogScreen(
                     onClick = { onOpenVideo(video.id) },
                     onLongClick = { menuFor = video },
                     progress = progress[video.id],
-                    modifier = itemModifier,
+                    // Первая строка сетки: Вверх — на «Жанр» (или на категорию, если фильтров нет)
+                    modifier = if (results.items.indexOf(video) < 3) itemModifier.focusProperties { up = if (chosen.trailers) categoryFocus else genreFocus } else itemModifier,
                 )
             }
         }

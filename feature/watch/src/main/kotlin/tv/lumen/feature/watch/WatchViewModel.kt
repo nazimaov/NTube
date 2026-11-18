@@ -177,12 +177,16 @@ class WatchViewModel @Inject constructor(
     /** Плейлист, из которого запущено видео: следующее видео берётся из него. */
     val playlistId: String?
 
+    /** Открыто в режиме «только аудио»: следующие видео тоже открываются так. */
+    val audioOnly: Boolean
+
     init {
         // Имена аргументов — поля маршрута Watch(videoId, playlistId, startMs) в app
         val videoId: String = checkNotNull(savedStateHandle["videoId"]) { "Нет videoId" }
         val startMs: Long = savedStateHandle["startMs"] ?: 0L
         playlistId = savedStateHandle["playlistId"]
-        controller.load(videoId, startMs, playlistId)
+        audioOnly = savedStateHandle["audioOnly"] ?: false
+        controller.load(videoId, startMs, playlistId, audioOnly)
         // Рекомендации готовятся заранее, чтобы второй Вниз открывал их сразу
         loadRecommendations()
         // Сразу после ошибки разбора — тихая проверка обновления (SPEC 10.5, п. 1)

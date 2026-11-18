@@ -114,7 +114,8 @@ internal class NewPipeYouTubeRepository @Inject constructor(
         val queries = when (language) {
             "ru" -> listOf("популярная музыка $year", "новые песни $year", "хиты $year", "русские хиты", "новинки музыки", "популярные клипы $year")
             "tr" -> listOf("popüler müzik $year", "yeni şarkılar $year", "türkçe pop hitleri", "en çok dinlenen şarkılar", "yeni klipler $year")
-            "az" -> listOf("ən yaxşı mahnılar $year", "yeni mahnılar $year", "azərbaycan mahnıları", "hit mahnılar", "yeni klip $year")
+            "az" -> listOf("ən yaxşı mahnılar $year", "yeni mahnılar $year", "azərbaycan mahnıları", "hit mahnılar", "yeni klip $year",
+                "türkçe pop hitleri", "yeni şarkılar $year", "en çok dinlenen şarkılar")
             "en" -> listOf("top music hits $year", "new songs $year", "best songs", "pop hits $year", "popular music videos")
             else -> {
                 // Для остальных стран — название страны на её языке, чтобы поиск дал местную музыку
@@ -139,7 +140,32 @@ internal class NewPipeYouTubeRepository @Inject constructor(
     }
 
     /** Чарт YouTube «Трейлеры фильмов и сериалов» (киоск trending_movies_and_shows). */
-    override suspend fun trailers(): AppResult<List<Video>> = call { kioskVideos(TRAILERS_KIOSK_ID) }
+    override suspend fun trailers(): AppResult<List<Video>> = call {
+        val chart = runCatching { kioskVideos(TRAILERS_KIOSK_ID) }.getOrDefault(emptyList())
+        if (chart.size >= MIN_TRAILERS) return@call chart
+        // Чарт страны короткий или его нет (в Азербайджане там 3 видео): добираем поиском трейлеров на языке региона
+        val country = NewPipe.getPreferredContentCountry().countryCode.ifBlank { "US" }
+        val found = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+            trailerQueries(RegionLanguages.languageFor(country)).map { query ->
+                async {
+                    runCatching {
+                        val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(SearchFilter.VIDEOS)), "")
+                        SearchInfo.getInfo(youtube, handler).relatedItems.mapNotNull(Mappers::searchItem)
+                    }.getOrNull().orEmpty()
+                }
+            }.awaitAll()
+        }
+        val videos = LinkedHashMap<String, Video>()
+        chart.forEach { videos.putIfAbsent(it.id, it) }
+        for (item in found.flatten()) {
+            val v = (item as? SearchItem.VideoItem)?.video ?: continue
+            // Трейлер — это минуты, а не часы; нарезки и обзоры отсеиваем длительностью
+            if (!v.isLive && !v.isShort && v.durationSec in 20..420) videos.putIfAbsent(v.id, v)
+        }
+        if (videos.isEmpty()) throw ExtractionException("Нет трейлеров для региона")
+        val now = Instant.now()
+        videos.values.sortedByDescending { trendScore(it, now) }
+    }
 
     private fun kioskVideos(kioskId: String): List<Video> {
         val kiosks = youtube.kioskList
@@ -424,6 +450,7 @@ internal class NewPipeYouTubeRepository @Inject constructor(
             YoutubeTrendingExtractor.KIOSK_ID, "trending_music", "trending_gaming", "trending_podcasts_episodes",
         )
         const val MIN_REGIONAL = 12
+        const val MIN_TRAILERS = 20
     }
 }
 
@@ -447,7 +474,9 @@ internal fun regionalQueries(country: String): List<String> {
     return when (language) {
         "ru" -> listOf("$name популярное $year", "популярные видео $year", "в тренде сейчас $name", "новое и популярное", "самое просматриваемое за неделю")
         "tr" -> listOf("$name gündem videolar $year", "$name popüler videolar", "en çok izlenenler $name", "gündemdeki videolar", "yeni popüler videolar $year")
-        "az" -> listOf("$name populyar videolar $year", "$name trend videolar", "ən çox izlənənlər $name", "gündəm videoları", "yeni populyar videolar $year")
+        // В Азербайджане смотрят и азербайджанский, и турецкий контент
+        "az" -> listOf("$name populyar videolar $year", "$name trend videolar", "ən çox izlənənlər $name", "gündəm videoları", "yeni populyar videolar $year",
+            "gündem videolar $year", "en çok izlenenler Türkiye", "yeni popüler videolar $year")
         "en" -> listOf("$name trending videos $year", "most popular videos this week $name", "popular now $name", "most watched $name")
         else -> listOf("$name trending $year", "$name popular videos", "$name most watched this week", "$name new videos $year")
     }
@@ -475,3 +504,15 @@ internal fun titleFitsRegion(title: String, language: String): Boolean {
 private const val TV_TAG = "Lumen/TvPlayer"
 private const val KIDS_CLIENT_VERSION = "10.26.4"
 private const val KIDS_USER_AGENT = "com.google.android.apps.youtube.kids/$KIDS_CLIENT_VERSION (Linux; U; Android 12) gzip"
+
+/** Запросы свежих трейлеров на языке региона. */
+internal fun trailerQueries(language: String): List<String> {
+    val year = java.time.Year.now().value
+    return when (language) {
+        "ru" -> listOf("трейлер фильма $year", "новые трейлеры фильмов", "трейлер сериала $year", "официальный трейлер")
+        "tr" -> listOf("fragman $year", "yeni film fragmanları", "dizi fragmanı $year", "resmi fragman")
+        "az" -> listOf("treyler $year", "yeni film treylerləri", "serial treyleri $year", "rəsmi treyler",
+            "fragman $year", "yeni film fragmanları", "dizi fragmanı $year", "resmi fragman")
+        else -> listOf("official trailer $year", "new movie trailers", "tv series trailer $year", "final trailer")
+    }
+}

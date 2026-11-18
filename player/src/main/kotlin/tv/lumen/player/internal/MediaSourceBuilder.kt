@@ -64,6 +64,13 @@ internal class MediaSourceBuilder @Inject constructor(
         return AppResult.Success(MergingMediaSource(true, videoSource, audioSource))
     }
 
+    /** Только звук: один источник без видеодорожки. */
+    suspend fun audioOnly(videoId: String, audio: AudioStream): AppResult<MediaSource> =
+        when (val r = itemFor(videoId, audio.id, audio.url, audio.delivery)) {
+            is AppResult.Failure -> r
+            is AppResult.Success -> AppResult.Success(factory.createMediaSource(r.value))
+        }
+
     fun muxed(stream: VideoStream, subtitle: SubtitleTrack?): MediaSource =
         factory.createMediaSource(MediaItem.Builder().setUri(stream.url).build().withSubtitle(subtitle))
 

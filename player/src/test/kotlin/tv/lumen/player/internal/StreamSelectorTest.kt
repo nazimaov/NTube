@@ -147,4 +147,17 @@ class StreamSelectorTest {
         val live = StreamSet(emptyList(), emptyList(), emptyList(), emptyList(), "https/hls.m3u8", null, isLive = true, durationSec = -1)
         assertTrue(StreamSelector(FakeCaps()).select(live, PlayerPreferences()) is Selection.Live)
     }
+
+    @Test
+    fun `режим только аудио выбирает один звуковой поток без видео`() {
+        val sel = StreamSelector(FakeCaps()).select(set(all), PlayerPreferences(), audioOnly = true)
+        assertTrue(sel is Selection.AudioOnly)
+        assertEquals(AudioCodec.OPUS, (sel as Selection.AudioOnly).audio.codec)
+    }
+
+    @Test
+    fun `режим только аудио без звуковых потоков играет как обычное видео`() {
+        val sel = StreamSelector(FakeCaps()).select(set(all, audio = emptyList(), muxed = listOf(v(360, VideoCodec.AVC))), PlayerPreferences(), audioOnly = true)
+        assertTrue(sel is Selection.Muxed)
+    }
 }
