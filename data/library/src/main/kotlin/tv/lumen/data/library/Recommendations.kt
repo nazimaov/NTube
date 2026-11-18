@@ -1,4 +1,4 @@
-package tv.lumen.feature.home
+package tv.lumen.data.library
 
 import tv.lumen.core.model.Video
 

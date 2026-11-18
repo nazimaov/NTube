@@ -12,6 +12,8 @@ dependencies {
     implementation(libs.newpipe.extractor)
 
     testImplementation(libs.kotlinx.coroutines.test)
+    // Настоящий org.json для тестов разбора: в Android SDK для модульных тестов он заглушка
+    testImplementation(libs.org.json)
 }
 
 // Живые запросы к YouTube (SPEC, раздел 12). Не входят в `test`: тесты *LiveTest

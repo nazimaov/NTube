@@ -40,4 +40,18 @@
     <string name="ds_menu_add_queue">Добавить в очередь</string>
     <string name="ds_menu_in_queue">Уже в очереди</string>
     <string name="ds_toast_added_queue">Добавлено в очередь</string>
+    <string name="ds_menu_not_interested">Не интересно (убрать)</string>
+    <string name="ds_menu_watch_later">Смотреть позже</string>
+    <string name="ds_menu_remove_later">Убрать из «Смотреть позже»</string>
+    <string name="ds_menu_add_playlist">Добавить в плейлист</string>
+    <string name="ds_playlist_new">Новый плейлист</string>
+    <string name="ds_playlist_default_name">Плейлист %1$d</string>
+    <string name="ds_playlist_watch_later">Смотреть позже</string>
+    <string name="ds_playlist_count">Видео: %1$d</string>
+    <string name="ds_toast_hidden">Видео убрано, больше не показывается</string>
+    <string name="ds_toast_added_later">Добавлено в «Смотреть позже»</string>
+    <string name="ds_toast_removed_later">Убрано из «Смотреть позже»</string>
+    <string name="ds_toast_added_playlist">Добавлено в плейлист</string>
+    <string name="ds_toast_removed_playlist">Убрано из плейлиста</string>
+    <string name="ds_error_sign_in">Это видео для детей: YouTube показывает такие видео в сторонних приложениях только после входа в аккаунт. Настройки → Аккаунт.</string>
 </resources>

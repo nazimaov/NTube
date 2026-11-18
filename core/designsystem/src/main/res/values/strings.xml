@@ -34,4 +34,18 @@
     <string name="ds_menu_add_queue">Add to queue</string>
     <string name="ds_menu_in_queue">Already in queue</string>
     <string name="ds_toast_added_queue">Added to queue</string>
+    <string name="ds_menu_not_interested">Not interested (remove)</string>
+    <string name="ds_menu_watch_later">Watch later</string>
+    <string name="ds_menu_remove_later">Remove from Watch later</string>
+    <string name="ds_menu_add_playlist">Add to playlist</string>
+    <string name="ds_playlist_new">New playlist</string>
+    <string name="ds_playlist_default_name">Playlist %1$d</string>
+    <string name="ds_playlist_watch_later">Watch later</string>
+    <string name="ds_playlist_count">Videos: %1$d</string>
+    <string name="ds_toast_hidden">Video removed, it will not be shown again</string>
+    <string name="ds_toast_added_later">Added to Watch later</string>
+    <string name="ds_toast_removed_later">Removed from Watch later</string>
+    <string name="ds_toast_added_playlist">Added to playlist</string>
+    <string name="ds_toast_removed_playlist">Removed from playlist</string>
+    <string name="ds_error_sign_in">This is a video made for kids: YouTube plays such videos in third-party apps only after you sign in. Settings → Account.</string>
 </resources>

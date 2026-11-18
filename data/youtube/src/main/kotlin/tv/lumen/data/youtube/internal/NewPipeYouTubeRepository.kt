@@ -41,9 +41,13 @@ import tv.lumen.core.model.VideoDetails
 import tv.lumen.core.model.channelUrl
 import tv.lumen.core.model.playlistUrl
 import tv.lumen.core.model.videoUrl
+import tv.lumen.data.youtube.AuthorizedPlayer
 import tv.lumen.data.youtube.YouTubeInitializer
+import org.schabi.newpipe.extractor.services.youtube.YoutubeJavaScriptPlayerManager
 import tv.lumen.data.youtube.YouTubeRepository
 import java.time.Instant
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -51,6 +55,8 @@ import javax.inject.Singleton
 internal class NewPipeYouTubeRepository @Inject constructor(
     private val client: OkHttpClient,
     @IoDispatcher private val io: CoroutineDispatcher,
+    /** Запрос от имени аккаунта для видео «для детей» (см. [AuthorizedPlayer]); пусто — не подключён. */
+    private val authorizedPlayer: java.util.Optional<AuthorizedPlayer> = java.util.Optional.empty(),
 ) : YouTubeRepository {
 
     private val youtube get() = ServiceList.YouTube
@@ -85,7 +91,49 @@ internal class NewPipeYouTubeRepository @Inject constructor(
 
     /** Чарты YouTube «Музыка в тренде» (киоск trending_music); не во всех странах. */
     override suspend fun musicTrending(): AppResult<List<Video>> = call {
-        kioskVideos(MUSIC_KIOSK_ID)
+        try {
+            kioskVideos(MUSIC_KIOSK_ID)
+        } catch (e: org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException) {
+            // YouTube Charts есть не для всех стран (например, нет для Азербайджана): вместо чарта
+            // берём поиск популярной музыки на языке контента
+            musicSearchFallback()
+        }
+    }
+
+    /**
+     * «Музыка в тренде» для страны без YouTube Charts: песни на языке РЕГИОНА (страна контента, а не язык
+     * интерфейса), найденные несколькими запросами и отсортированные по [trendScore] — чем больше
+     * просмотров и чем свежее выпуск, тем выше.
+     */
+    private fun musicSearchFallback(): List<Video> {
+        val country = NewPipe.getPreferredContentCountry().countryCode.ifBlank { "US" }
+        val language = RegionLanguages.languageFor(country)
+        val year = java.time.Year.now().value
+        val queries = when (language) {
+            "ru" -> listOf("популярная музыка $year", "новые песни $year", "хиты $year", "русские хиты", "новинки музыки", "популярные клипы $year")
+            "tr" -> listOf("popüler müzik $year", "yeni şarkılar $year", "türkçe pop hitleri", "en çok dinlenen şarkılar", "yeni klipler $year")
+            "az" -> listOf("ən yaxşı mahnılar $year", "yeni mahnılar $year", "azərbaycan mahnıları", "hit mahnılar", "yeni klip $year")
+            "en" -> listOf("top music hits $year", "new songs $year", "best songs", "pop hits $year", "popular music videos")
+            else -> {
+                // Для остальных стран — название страны на её языке, чтобы поиск дал местную музыку
+                val locale = Locale(language, country)
+                val name = locale.getDisplayCountry(locale).ifBlank { country }
+                listOf("$name top songs $year", "$name new songs $year", "$name music hits", "$name popular music", "$name music videos $year")
+            }
+        }
+        val videos = LinkedHashMap<String, Video>()
+        for (query in queries) {
+            runCatching {
+                val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(SearchFilter.VIDEOS)), "")
+                SearchInfo.getInfo(youtube, handler).relatedItems.mapNotNull(Mappers::searchItem)
+            }.getOrNull()?.forEach { item ->
+                val v = (item as? SearchItem.VideoItem)?.video ?: return@forEach
+                if (!v.isLive && !v.isShort && v.durationSec in 90..900) videos.putIfAbsent(v.id, v)
+            }
+        }
+        if (videos.isEmpty()) throw ExtractionException("Нет музыки для региона")
+        val now = Instant.now()
+        return videos.values.sortedByDescending { trendScore(it, now) }
     }
 
     /** Чарт YouTube «Трейлеры фильмов и сериалов» (киоск trending_movies_and_shows). */
@@ -98,33 +146,45 @@ internal class NewPipeYouTubeRepository @Inject constructor(
     }
 
     /**
-     * Популярное в регионе из настроек (страна контента): тренды, музыкальные и игровые чарты,
-     * подкасты — без эфиров и Shorts. Для стран, где чартов YouTube нет, добавляется поиск
-     * на языке региона по названию страны.
+     * Популярное в регионе из настроек (страна контента): то, что реально смотрят в этой стране, на её языке.
+     * Общие киоски YouTube («В тренде» и т. п.) не годятся: они отдают мировой список, а не страны. Поэтому
+     * берётся поиск на языке региона несколькими запросами («<страна> популярное», «самое просматриваемое»…),
+     * без эфиров и Shorts, и результат сортируется по [trendScore]: больше просмотров и свежее выпуск — выше.
+     * Киоски — только запасной вариант, если поиск ничего не дал.
      */
     override suspend fun regionalPopular(): AppResult<List<Video>> = call {
-        val kiosks = youtube.kioskList
-        val country = NewPipe.getPreferredContentCountry().countryCode
+        val country = NewPipe.getPreferredContentCountry().countryCode.ifBlank { "US" }
+        val language = RegionLanguages.languageFor(country)
         val collected = LinkedHashMap<String, Video>()
-        for (id in REGIONAL_KIOSKS) {
-            runCatching {
-                val url = kiosks.getListLinkHandlerFactoryByType(id).fromId(id).url
-                Mappers.videos(KioskInfo.getInfo(youtube, url).relatedItems)
-            }.getOrNull()?.filter { !it.isLive && !it.isShort }?.forEach { collected.putIfAbsent(it.id, it) }
+        // Запросы идут параллельно: так список готов за время одного запроса, а не пяти
+        val found = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+            regionalQueries(country).map { query ->
+                async {
+                    runCatching {
+                        val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(SearchFilter.VIDEOS)), "")
+                        SearchInfo.getInfo(youtube, handler).relatedItems.mapNotNull(Mappers::searchItem)
+                    }.getOrNull().orEmpty()
+                }
+            }.awaitAll()
+        }
+        for (item in found.flatten()) {
+            val video = (item as? SearchItem.VideoItem)?.video ?: continue
+            if (!video.isLive && !video.isShort && video.durationSec >= 60 && titleFitsRegion(video.title, language)) {
+                collected.putIfAbsent(video.id, video)
+            }
         }
         if (collected.size < MIN_REGIONAL) {
-            val locale = Locale(RegionLanguages.languageFor(country), country)
-            val query = locale.getDisplayCountry(locale).ifBlank { country }
-            runCatching {
-                val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(SearchFilter.VIDEOS)), "")
-                SearchInfo.getInfo(youtube, handler).relatedItems.mapNotNull(Mappers::searchItem)
-            }.getOrNull()?.forEach { item ->
-                val video = (item as? SearchItem.VideoItem)?.video ?: return@forEach
-                if (!video.isLive && !video.isShort) collected.putIfAbsent(video.id, video)
+            val kiosks = youtube.kioskList
+            for (id in REGIONAL_KIOSKS) {
+                runCatching {
+                    val url = kiosks.getListLinkHandlerFactoryByType(id).fromId(id).url
+                    Mappers.videos(KioskInfo.getInfo(youtube, url).relatedItems)
+                }.getOrNull()?.filter { !it.isLive && !it.isShort && titleFitsRegion(it.title, language) }?.forEach { collected.putIfAbsent(it.id, it) }
             }
         }
         if (collected.isEmpty()) throw ExtractionException("Нет популярного для региона $country")
-        collected.values.toList()
+        val now = Instant.now()
+        collected.values.sortedByDescending { trendScore(it, now) }
     }
 
     override suspend fun search(query: String, filter: SearchFilter, page: PageToken?) = call {
@@ -143,11 +203,48 @@ internal class NewPipeYouTubeRepository @Inject constructor(
 
     override suspend fun videoDetails(videoId: String, forceRefresh: Boolean): AppResult<VideoDetails> {
         if (forceRefresh) details.remove(videoId) else details.get(videoId)?.let { return AppResult.Success(it.details) }
-        return call {
+        val primary = call {
             val info = StreamInfo.getInfo(youtube, videoUrl(videoId))
             val mapped = Mappers.videoDetails(videoId, info, Instant.now())
             details.put(videoId, CachedVideo(mapped, info))
             mapped
+        }
+        // «Видео недоступно» от экстрактора: так он отвечает на видео «для детей» (v0.27 их не поддерживает).
+        // Пробуем телевизионный клиент от имени аккаунта, как SmartTube; без входа остаётся прежняя ошибка.
+        if (primary is AppResult.Failure && (primary.error as? AppError.ContentUnavailable)?.reason == tv.lumen.core.model.UnavailableReason.OTHER) {
+            tvFallback(videoId)?.let { return AppResult.Success(it) }
+            // Без входа видео «для детей» не получить никаким клиентом — говорим об этом прямо
+            if (authorizedPlayer.isPresent && !authorizedPlayer.get().isSignedIn) {
+                return AppResult.Failure(AppError.ContentUnavailable(tv.lumen.core.model.UnavailableReason.SIGN_IN_REQUIRED, null))
+            }
+        }
+        return primary
+    }
+
+    private suspend fun tvFallback(videoId: String): VideoDetails? {
+        val player = authorizedPlayer.orElse(null) ?: return null
+        val sts = kotlinx.coroutines.withContext(io) { runCatching { YoutubeJavaScriptPlayerManager.getSignatureTimestamp(videoId) }.getOrNull() }
+        val json = player.playerJson(videoId, sts) ?: return null
+        return kotlinx.coroutines.withContext(io) {
+            try {
+                val root = org.json.JSONObject(json)
+                TvPlayerParser.unplayableReason(root)?.let {
+                    android.util.Log.w(TV_TAG, "Телевизионный клиент тоже не отдал видео: $it")
+                    return@withContext null
+                }
+                TvPlayerParser.details(
+                    videoId, root, Instant.now(),
+                    decipher = { YoutubeJavaScriptPlayerManager.deobfuscateSignature(videoId, it) },
+                    throttling = { YoutubeJavaScriptPlayerManager.getUrlWithThrottlingParameterDeobfuscated(videoId, it) },
+                ).also { if (it == null) android.util.Log.w(TV_TAG, "В ответе телевизионного клиента нет потоков") }
+            } catch (e: kotlinx.coroutines.CancellationException) {
+                throw e
+            } catch (e: Exception) {
+                android.util.Log.w(TV_TAG, "Разбор ответа телевизионного клиента не удался", e)
+                null
+            } catch (e: StackOverflowError) {
+                null
+            }
         }
     }
 
@@ -253,6 +350,53 @@ internal class NewPipeYouTubeRepository @Inject constructor(
         val REGIONAL_KIOSKS = listOf(
             YoutubeTrendingExtractor.KIOSK_ID, "trending_music", "trending_gaming", "trending_podcasts_episodes",
         )
-        const val MIN_REGIONAL = 15
+        const val MIN_REGIONAL = 12
     }
 }
+
+/**
+ * Оценка «трендовости»: просмотры, делённые на возраст в днях в степени 0,7 (+3 дня, чтобы свежий выпуск
+ * не получал бесконечный вес). Больше просмотров — выше; при равных просмотрах выше свежее. Видео без числа
+ * просмотров идут в конец, без даты выпуска считаются месячной давности.
+ */
+internal fun trendScore(video: Video, now: Instant): Double {
+    if (video.viewCount <= 0) return 0.0
+    val ageDays = video.publishedAt?.let { java.time.Duration.between(it, now).toHours() / 24.0 }?.coerceAtLeast(0.0) ?: 30.0
+    return video.viewCount / Math.pow(ageDays + 3.0, 0.7)
+}
+
+/** Запросы «популярное сейчас» на языке региона [country], с названием страны; для редких языков — по названию страны. */
+internal fun regionalQueries(country: String): List<String> {
+    val year = java.time.Year.now().value
+    val language = RegionLanguages.languageFor(country)
+    val locale = java.util.Locale(language, country)
+    val name = locale.getDisplayCountry(locale).ifBlank { country }
+    return when (language) {
+        "ru" -> listOf("$name популярное $year", "популярные видео $year", "в тренде сейчас $name", "новое и популярное", "самое просматриваемое за неделю")
+        "tr" -> listOf("$name gündem videolar $year", "$name popüler videolar", "en çok izlenenler $name", "gündemdeki videolar", "yeni popüler videolar $year")
+        "az" -> listOf("$name populyar videolar $year", "$name trend videolar", "ən çox izlənənlər $name", "gündəm videoları", "yeni populyar videolar $year")
+        "en" -> listOf("$name trending videos $year", "most popular videos this week $name", "popular now $name", "most watched $name")
+        else -> listOf("$name trending $year", "$name popular videos", "$name most watched this week", "$name new videos $year")
+    }
+}
+
+/**
+ * Грубая проверка письма: для стран с кириллицей заголовок должен её содержать, для латиницы
+ * (турецкий, азербайджанский и т. д.) не должен состоять в основном из кириллицы, иероглифов или арабского.
+ * Не определяет язык точно, но отсекает явно чужое.
+ */
+internal fun titleFitsRegion(title: String, language: String): Boolean {
+    val letters = title.filter { it.isLetter() }
+    if (letters.isEmpty()) return true
+    val cyrillic = letters.count { it in '\u0400'..'\u04FF' }
+    return when (language) {
+        "ru", "uk", "be", "kk", "ky", "tg" -> cyrillic > 0
+        // В Азербайджане много русскоязычного, поэтому кириллицу там не отсекаем
+        "az" -> letters.count { it.code > 0x2E80 || it in '؀'..'ۿ' } * 2 < letters.length
+        "en", "tr", "de", "fr", "es", "it", "pt", "pl", "nl", "ro", "uz" -> cyrillic * 2 < letters.length &&
+            letters.count { it.code > 0x2E80 || it in '\u0600'..'\u06FF' } * 2 < letters.length
+        else -> true
+    }
+}
+
+private const val TV_TAG = "Lumen/TvPlayer"

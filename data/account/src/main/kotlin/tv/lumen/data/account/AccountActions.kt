@@ -81,6 +81,22 @@ class AccountActions @Inject internal constructor(
         return params
     }
 
+    /**
+     * Ответ `player` телевизионного клиента от имени аккаунта — с потоками видео. Нужен для видео «для детей»,
+     * которые без входа YouTube сторонним клиентам не отдаёт. [signatureTimestamp] — от плеера, которым будут
+     * расшифрованы ссылки; null — берётся свой. Без входа — null.
+     */
+    suspend fun playerJson(videoId: String, signatureTimestamp: Int?): String? {
+        if (!account.isSignedIn) return null
+        val sts = signatureTimestamp ?: signatureTimestamp()
+        val playback = if (sts == null) "" else
+            "\"playbackContext\":{\"contentPlaybackContext\":{\"html5Preference\":\"HTML5_PREF_WANTS\",\"lactMilliseconds\":60000," +
+                "\"isInlinePlaybackNoAd\":true,\"signatureTimestamp\":$sts},\"devicePlaybackCapabilities\":{\"supportsVp9Encoding\":true,\"supportXhr\":false}},"
+        val cpn = (1..16).map { CPN_CHARS.random() }.joinToString("")
+        val data = "$playback\"videoId\":\"$videoId\",\"cpn\":\"$cpn\",\"contentCheckOk\":true,\"racyCheckOk\":true"
+        return request("player", data, downgraded = true)
+    }
+
     private var timestamp: Pair<Int, Long>? = null
 
     /**
@@ -148,6 +164,7 @@ class AccountActions @Inject internal constructor(
         private const val TAG = "Lumen/AccountActions"
         private const val DAY_MS = 24 * 60 * 60 * 1000L
         private val JSON = "application/json".toMediaType()
+        private const val CPN_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"
     }
 }
 

@@ -32,3 +32,32 @@ interface QueueActions {
 }
 
 val LocalQueueActions = staticCompositionLocalOf<QueueActions?> { null }
+
+/** Свой плейлист для меню карточки: название, число видео и id видео внутри (для отметки «уже добавлено»). */
+data class PlaylistRef(val id: String, val name: String, val size: Int, val videoIds: Set<String>)
+
+/**
+ * Что меню карточки умеет сверх очереди: скрыть видео («Не интересно»), «Смотреть позже» и свои плейлисты.
+ * Подключается в app, экраны о нём не знают: меню у всех карточек получает пункты само.
+ */
+interface MenuExtras {
+    val playlists: kotlinx.coroutines.flow.StateFlow<List<PlaylistRef>>
+
+    /** Видео сразу исчезает из всех списков и больше не показывается. */
+    fun hide(video: Video)
+
+    fun isWatchLater(videoId: String): Boolean
+    fun toggleWatchLater(video: Video, defaultName: String)
+
+    /** Добавляет видео в плейлист, а если оно там уже есть — убирает. */
+    fun toggleInPlaylist(playlistId: String, video: Video)
+
+    /** Новый плейлист [name] сразу с этим видео. */
+    fun createPlaylist(video: Video, name: String)
+
+    companion object {
+        const val WATCH_LATER = "watch_later"
+    }
+}
+
+val LocalMenuExtras = staticCompositionLocalOf<MenuExtras?> { null }

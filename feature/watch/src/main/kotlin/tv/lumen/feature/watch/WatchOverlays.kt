@@ -144,6 +144,7 @@ private fun errorText(error: AppError): String = stringResource(
             UnavailableReason.GEO_BLOCKED -> R.string.watch_error_geo
             UnavailableReason.PAID -> R.string.watch_error_paid
             UnavailableReason.BOT_CHECK -> R.string.watch_error_bot
+            UnavailableReason.SIGN_IN_REQUIRED -> R.string.watch_error_sign_in
             else -> R.string.watch_error_unavailable
         }
         is AppError.Unknown -> R.string.watch_error_unknown

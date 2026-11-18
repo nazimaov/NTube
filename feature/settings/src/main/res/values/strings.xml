@@ -117,5 +117,7 @@
     <string name="settings_account_err_denied">Sign-in was declined.</string>
     <string name="settings_account_err_expired">The code expired. Start again.</string>
     <string name="settings_menu_cinema">Cinema</string>
+    <string name="settings_menu_explore">Explore</string>
+    <string name="settings_menu_kids">Kids</string>
     <string name="settings_menu_library">Library</string>
 </resources>

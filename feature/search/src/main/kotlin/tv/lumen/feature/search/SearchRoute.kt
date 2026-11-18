@@ -6,6 +6,19 @@ import android.speech.RecognizerIntent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.ui.focus.focusRestorer
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.tv.material3.Border
+import androidx.tv.material3.ClickableSurfaceDefaults
+import androidx.tv.material3.Surface
+import tv.lumen.core.designsystem.theme.LumenColors
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,6 +29,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
@@ -68,7 +82,10 @@ fun SearchRoute(
     viewModel: SearchViewModel = hiltViewModel(),
 ) = SearchScreen(viewModel, SearchFilter.general, R.string.search_hint, onOpenVideo, onOpenChannel, onOpenPlaylist, modifier)
 
-/** «Музыка»: поиск YouTube Music; пока ничего не искали — чарты «Музыка в тренде». */
+/**
+ * «Музыка»: поиск YouTube Music; пока ничего не искали — язык музыки, плитки настроений и жанров, круглые
+ * аватары исполнителей и под ними чарты региона (или песни выбранного настроения).
+ */
 @Composable
 fun MusicRoute(
     onOpenVideo: (String) -> Unit,
@@ -78,19 +95,111 @@ fun MusicRoute(
     viewModel: MusicViewModel = hiltViewModel(),
 ) {
     val charts by viewModel.charts.collectAsStateWithLifecycle()
+    val mood by viewModel.mood.collectAsStateWithLifecycle()
+    val moodSongs by viewModel.moodSongs.collectAsStateWithLifecycle()
     val progress by viewModel.actions.progress.collectAsStateWithLifecycle()
-    SearchScreen(viewModel, SearchFilter.music, R.string.music_hint, onOpenVideo, onOpenChannel, onOpenPlaylist, modifier) {
-        when (val c = charts) {
-            MusicChartsState.Loading -> LoadingState()
-            is MusicChartsState.Error -> ErrorState(c.error, onRetry = viewModel::loadCharts)
-            is MusicChartsState.Content -> PagedGrid(
-                items = c.videos,
-                key = { it.id },
-                focusMemory = viewModel.focusMemory,
-                header = { Text(stringResource(R.string.music_charts), style = MaterialTheme.typography.titleLarge) },
-            ) { video, itemModifier ->
-                VideoCard(video, onClick = { onOpenVideo(video.id) }, progress = progress[video.id], modifier = itemModifier)
+    val subscribed by viewModel.actions.subscribedIds.collectAsStateWithLifecycle()
+    var menuFor by remember { mutableStateOf<Video?>(null) }
+    val uiLanguage = LocalConfiguration.current.locales[0].language
+    LaunchedEffect(uiLanguage) { viewModel.setUiLanguage(uiLanguage) }
+
+    SearchScreen(viewModel, SearchFilter.music, R.string.music_hint, onOpenVideo, onOpenChannel, onOpenPlaylist, modifier, fieldFirst = false) {
+        val header: @Composable () -> Unit = { MusicHeader(viewModel, mood, onOpenChannel) }
+        val card: @Composable (Video, Modifier) -> Unit = { video, itemModifier ->
+            VideoCard(video, onClick = { onOpenVideo(video.id) }, onLongClick = { menuFor = video }, progress = progress[video.id], modifier = itemModifier)
+        }
+        // Одна и та же сетка во всех состояниях: загрузка и ошибка идут под шапкой, шапка не пересоздаётся
+        val chosen = mood
+        val state = charts
+        val items: List<Video> = when {
+            chosen != null -> moodSongs.items
+            state is MusicChartsState.Content -> state.videos
+            else -> emptyList()
+        }
+        val footer: (@Composable () -> Unit)? = when {
+            chosen != null && moodSongs.isLoading -> ({ LoadingState() })
+            chosen != null && moodSongs.error != null -> ({ ErrorState(moodSongs.error!!, onRetry = viewModel::retryMood) })
+            chosen == null && state is MusicChartsState.Loading -> ({ LoadingState() })
+            chosen == null && state is MusicChartsState.Error -> ({ ErrorState(state.error, onRetry = viewModel::loadCharts) })
+            else -> null
+        }
+        PagedGrid(
+            items = items,
+            key = { it.id },
+            focusMemory = viewModel.focusMemory,
+            canLoadMore = chosen != null && moodSongs.canLoadMore,
+            onLoadMore = viewModel::loadMoreMood,
+            header = header,
+            footer = footer,
+        ) { video, itemModifier -> card(video, itemModifier) }
+    }
+
+    menuFor?.let { video ->
+        VideoMenu(
+            video = video,
+            isSubscribed = video.channelId in subscribed,
+            onDismiss = { menuFor = null },
+            onOpenChannel = { video.channelId?.let(onOpenChannel) },
+            onToggleSubscribe = { viewModel.actions.toggleSubscribe(video) },
+            onHideChannel = { viewModel.actions.hideChannel(video) },
+            onRemoveFromHistory = if (progress.containsKey(video.id)) ({ viewModel.actions.removeFromHistory(video) }) else null,
+        )
+    }
+}
+
+/** Шапка «Музыки»: язык, настроения и жанры, исполнители, заголовок списка ниже. */
+@Composable
+private fun MusicHeader(viewModel: MusicViewModel, mood: Mood?, onOpenChannel: (String) -> Unit) {
+    val artists by viewModel.artists.collectAsStateWithLifecycle()
+    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        Text(stringResource(R.string.music_moods), style = MaterialTheme.typography.titleLarge)
+        LazyRow(horizontalArrangement = Arrangement.spacedBy(12.dp), modifier = Modifier.focusRestorer()) {
+            itemsIndexed(MusicBrowse.moods, key = { _, m -> m.id }) { index, m ->
+                MoodTile(
+                    m, selected = m == mood, onClick = { viewModel.setMood(m) },
+                    modifier = Modifier.rememberFocus(viewModel.focusMemory, "mood:" + m.id, isFirst = index == 0),
+                )
             }
+        }
+        if (artists.isNotEmpty()) {
+            Text(stringResource(R.string.music_artists), style = MaterialTheme.typography.titleLarge, modifier = Modifier.padding(top = 8.dp))
+            LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
+                items(artists, key = { it.id }) { a ->
+                    ChannelCard(a, onClick = { onOpenChannel(a.id) }, modifier = Modifier.width(132.dp))
+                }
+            }
+        }
+        Text(
+            if (mood == null) stringResource(R.string.music_charts) else stringResource(mood.label),
+            style = MaterialTheme.typography.titleLarge,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+}
+
+/** Цветная плитка настроения или жанра, как в Spotify: градиент и название; выбранная — с белой рамкой. */
+@Composable
+private fun MoodTile(mood: Mood, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val shape = RoundedCornerShape(14.dp)
+    Surface(
+        onClick = onClick,
+        shape = ClickableSurfaceDefaults.shape(shape),
+        colors = ClickableSurfaceDefaults.colors(containerColor = Color.Transparent, focusedContainerColor = Color.Transparent),
+        border = ClickableSurfaceDefaults.border(
+            border = if (selected) Border(BorderStroke(3.dp, Color.White), shape = shape) else Border.None,
+            focusedBorder = Border(BorderStroke(3.dp, LumenColors.FocusRing), shape = shape),
+        ),
+        scale = ClickableSurfaceDefaults.scale(focusedScale = 1.06f),
+        modifier = modifier.width(188.dp).height(96.dp),
+    ) {
+        Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(mood.from, mood.to))).padding(14.dp)) {
+            Text(
+                stringResource(mood.label),
+                style = MaterialTheme.typography.titleMedium,
+                color = Color.White,
+                maxLines = 2,
+                modifier = Modifier.align(Alignment.BottomStart),
+            )
         }
     }
 }
@@ -104,6 +213,8 @@ private fun SearchScreen(
     onOpenChannel: (String) -> Unit,
     onOpenPlaylist: (id: String, title: String) -> Unit,
     modifier: Modifier = Modifier,
+    /** Поле поиска получает фокус первым (в «Музыке» фокус на плитках настроений, чтобы не вылезала клавиатура). */
+    fieldFirst: Boolean = true,
     idleContent: @Composable () -> Unit = {},
 ) {
     val query by viewModel.query.collectAsStateWithLifecycle()
@@ -133,7 +244,7 @@ private fun SearchScreen(
                 value = query,
                 onValueChange = viewModel::onQueryChange,
                 onSearch = { submit(query) },
-                modifier = Modifier.weight(1f).rememberFocus(viewModel.focusMemory, "field", isFirst = true),
+                modifier = Modifier.weight(1f).rememberFocus(viewModel.focusMemory, "field", isFirst = fieldFirst),
             )
             VoiceButton(onResult = ::submit)
         }

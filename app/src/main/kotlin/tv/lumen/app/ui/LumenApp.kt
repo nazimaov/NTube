@@ -54,6 +54,8 @@ import androidx.tv.material3.Text
 import tv.lumen.app.navigation.Channel
 import tv.lumen.app.navigation.Home
 import tv.lumen.app.navigation.Cinema
+import tv.lumen.app.navigation.Explore
+import tv.lumen.app.navigation.Kids
 import tv.lumen.app.navigation.Library
 import tv.lumen.app.navigation.Music
 import tv.lumen.app.navigation.Playlist
@@ -70,6 +72,8 @@ import tv.lumen.feature.home.HomeRoute
 import tv.lumen.feature.library.LibraryRoute
 import tv.lumen.feature.playlist.PlaylistRoute
 import tv.lumen.feature.catalog.CinemaRoute
+import tv.lumen.feature.catalog.ExploreRoute
+import tv.lumen.feature.catalog.KidsRoute
 import tv.lumen.feature.search.MusicRoute
 import tv.lumen.feature.search.SearchRoute
 import tv.lumen.feature.settings.SettingsRoute
@@ -111,7 +115,9 @@ fun LumenApp(
     fun onBack(): Boolean {
         when {
             !isTopLevel -> navController.popBackStack()
-            drawerHasFocus -> showExitDialog = true
+            // Второе Back вне «Главной» ведёт на «Главную», а уже на ней — к диалогу выхода
+            drawerHasFocus -> if (currentDestination.isOn(TopLevelDestination.HOME)) showExitDialog = true
+                else navController.navigateToTopLevel(TopLevelDestination.HOME)
             else -> TopLevelDestination.entries.firstOrNull { currentDestination.isOn(it) }
                 ?.let { runCatching { drawerFocus.getValue(it).requestFocus() } }
         }
@@ -122,6 +128,7 @@ fun LumenApp(
         LocalVideoDecorator provides decorator,
         LocalChannelAvatarResolver provides appViewModel.channelAvatars,
         LocalQueueActions provides appViewModel.queueActions,
+        tv.lumen.core.designsystem.component.LocalMenuExtras provides appViewModel.menuExtras,
     ) {
     Box(
         modifier = Modifier
@@ -145,6 +152,12 @@ fun LumenApp(
                     contentDescription = stringResource(tv.lumen.app.R.string.app_name),
                     modifier = Modifier.padding(start = 16.dp, top = 24.dp).height(if (expanded) 52.dp else 40.dp),
                 )
+                // Меню раскрылось (ушли влево): фокус на пункте текущего раздела, а не на первом
+                val current = menu.firstOrNull { currentDestination.isOn(it) }
+                    ?: if (currentDestination?.hasRoute(SettingsSection::class) == true) TopLevelDestination.SETTINGS else null
+                LaunchedEffect(expanded) {
+                    if (expanded && current != null) runCatching { drawerFocus.getValue(current).requestFocus() }
+                }
                 Column(
                     modifier = Modifier
                         .weight(1f)
@@ -198,6 +211,8 @@ fun LumenApp(
                     MusicRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel, onOpenPlaylist = ::openPlaylist)
                 }
                 composable<Cinema> { CinemaRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
+                composable<Explore> { ExploreRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
+                composable<Kids> { KidsRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<Library> { LibraryRoute(onOpenVideo = { openVideo(it) }, onOpenChannel = ::openChannel) }
                 composable<Settings> {
                     SettingsRoute(
@@ -268,9 +283,14 @@ private fun NavDestination?.isOn(item: TopLevelDestination): Boolean =
     this?.hierarchy?.any { it.hasRoute(item.route::class) } == true
 
 private fun NavHostController.navigateToTopLevel(item: TopLevelDestination) {
+    // Нажатие на пункт, где мы уже находимся (или внутри его подэкрана), возвращает его в начальное состояние
+    val here = currentDestination.isOn(item)
     navigate(item.route) {
-        popUpTo(graph.findStartDestination().id) { saveState = true }
-        launchSingleTop = true
-        restoreState = true
+        popUpTo(graph.findStartDestination().id) {
+            saveState = !here
+            inclusive = here && item == TopLevelDestination.HOME
+        }
+        launchSingleTop = !here
+        restoreState = !here
     }
 }

@@ -21,5 +21,7 @@
     <string name="update_not_configured">Updates are not configured: set lumen.updateRepoOwner in gradle.properties.</string>
     <string name="menu_music">Music</string>
     <string name="menu_cinema">Cinema</string>
+    <string name="menu_explore">Explore</string>
+    <string name="menu_kids">Kids</string>
     <string name="menu_library">Library</string>
 </resources>

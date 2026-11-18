@@ -187,7 +187,7 @@ fun HistoryRoute(
 }
 
 @Composable
-private fun Message(text: String, modifier: Modifier) {
+internal fun Message(text: String, modifier: Modifier) {
     Box(modifier.fillMaxSize().padding(horizontal = LumenDimens.SafeHorizontal), contentAlignment = Alignment.Center) {
         Text(text, style = MaterialTheme.typography.titleMedium)
     }
@@ -245,6 +245,7 @@ private enum class LibraryTab(@androidx.annotation.StringRes val label: Int) {
     Subscriptions(R.string.subscriptions_title),
     History(R.string.history_title),
     Liked(R.string.liked_title),
+    Playlists(R.string.playlists_title),
 }
 
 /** «Библиотека»: подписки, история и понравившиеся — как вкладка «Вы» в YouTube. */
@@ -272,6 +273,7 @@ fun LibraryRoute(
             LibraryTab.Subscriptions -> SubscriptionsRoute(onOpenVideo, onOpenChannel)
             LibraryTab.History -> HistoryRoute(onOpenVideo, onOpenChannel)
             LibraryTab.Liked -> LikedRoute(onOpenVideo, onOpenChannel)
+            LibraryTab.Playlists -> PlaylistsRoute(onOpenVideo, onOpenChannel)
         }
     }
 }

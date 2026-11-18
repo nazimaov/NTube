@@ -14,4 +14,15 @@
     <string name="music_filter_albums">Albums</string>
     <string name="music_filter_artists">Artists</string>
     <string name="music_filter_playlists">Playlists</string>
+    <string name="music_moods">Moods and genres</string>
+    <string name="music_artists">Artists</string>
+    <string name="mood_chill">Chill</string>
+    <string name="mood_energy">Dance</string>
+    <string name="mood_romance">Romance</string>
+    <string name="mood_sad">Sad</string>
+    <string name="mood_pop">Pop</string>
+    <string name="mood_rock">Rock</string>
+    <string name="mood_hiphop">Hip-hop</string>
+    <string name="mood_electronic">Electronic</string>
+    <string name="mood_classical">Classical</string>
 </resources>

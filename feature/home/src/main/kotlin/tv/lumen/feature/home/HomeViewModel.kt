@@ -34,6 +34,7 @@ import tv.lumen.data.account.AccountState
 import tv.lumen.data.account.GoogleAccount
 import tv.lumen.data.library.ContentFilter
 import tv.lumen.data.library.LibraryRepository
+import tv.lumen.data.library.Recommendations
 import tv.lumen.data.library.ProfileRepository
 import tv.lumen.core.datastore.SettingsRepository
 import tv.lumen.core.model.getOrNull
@@ -63,8 +64,8 @@ class HomeViewModel @Inject constructor(
     private val youtube: YouTubeRepository,
     private val library: LibraryRepository,
     private val profiles: ProfileRepository,
-    settings: SettingsRepository,
-    youTubeInitializer: YouTubeInitializer,
+    private val settings: SettingsRepository,
+    private val youTubeInitializer: YouTubeInitializer,
     private val account: GoogleAccount,
     private val accountFeed: AccountFeed,
     filter: ContentFilter,
@@ -140,7 +141,11 @@ class HomeViewModel @Inject constructor(
     fun loadTrending() {
         trending.value = TrendingState.Loading
         viewModelScope.launch {
-            trending.value = when (val result = youtube.trending()) {
+            // Регион и язык из настроек применяются до запроса
+            val saved = settings.current.value
+            youTubeInitializer.applyContentLocale(saved.contentLanguage, saved.contentCountry)
+            // «В тренде» — популярное в регионе из настроек, на языке региона, по просмотрам и свежести
+            trending.value = when (val result = youtube.regionalPopular()) {
                 is AppResult.Success -> TrendingState.Content(result.value)
                 is AppResult.Failure -> TrendingState.Error(result.error)
             }

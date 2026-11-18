@@ -5,6 +5,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.flow.StateFlow
+import tv.lumen.data.library.Recommendations
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.async
 import tv.lumen.core.model.Video
 import tv.lumen.data.library.LibraryRepository
 import tv.lumen.core.model.Reaction
@@ -39,6 +42,8 @@ import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import tv.lumen.core.model.AppError
+import tv.lumen.core.model.AppResult
+import tv.lumen.core.model.getOrNull
 import tv.lumen.data.updater.UpdateManager
 
 @OptIn(ExperimentalCoroutinesApi::class)
@@ -72,6 +77,39 @@ class WatchViewModel @Inject constructor(
     val reaction: StateFlow<Reaction?> = controller.state.map { it.details?.video?.id }.distinctUntilChanged()
         .flatMapLatest { id -> if (id == null) flowOf(null) else profiles.reaction(id) }
         .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    private val _recommendations = MutableStateFlow<List<Video>>(emptyList())
+
+    /** Рекомендации под плеером (второй Вниз): популярное в регионе, без текущего видео; грузятся при первом показе. */
+    val recommendations: StateFlow<List<Video>> = _recommendations.asStateFlow()
+    private var recommendationsLoaded = false
+
+    /**
+     * Пока о человеке ничего не известно (нет лайков и истории) — популярное в его регионе. Дальше опираемся на вкусы:
+     * «похожие» к недавно просмотренному и лайкнутому, каждое четвёртое место — региональное, как на «Главной».
+     */
+    fun loadRecommendations() {
+        if (recommendationsLoaded) return
+        recommendationsLoaded = true
+        viewModelScope.launch {
+            val current = controller.state.value.videoId
+            val liked = profiles.likedVideoIds().first()
+            val recent = library.history.first().take(10).map { it.video.id }
+            val disliked = profiles.dislikedVideoIds.first()
+            val seeds = Recommendations.seeds(liked, recent, disliked)
+            val regional = youtube.regionalPopular().getOrNull().orEmpty()
+            val list = if (seeds.isEmpty()) {
+                regional
+            } else {
+                val related = kotlinx.coroutines.coroutineScope {
+                    seeds.map { id -> async { (youtube.videoDetails(id) as? AppResult.Success)?.value?.related.orEmpty() } }.awaitAll()
+                }
+                val exclude = library.progress.first().keys + disliked + seeds
+                Recommendations.withRegional(Recommendations.mix(related, exclude), regional, exclude)
+            }
+            _recommendations.value = list.filter { it.id != current }
+        }
+    }
 
     /** Очередь воспроизведения (только в памяти) и её редактирование. */
     val queue: StateFlow<List<Video>> = library.queue.items
@@ -145,6 +183,8 @@ class WatchViewModel @Inject constructor(
         val startMs: Long = savedStateHandle["startMs"] ?: 0L
         playlistId = savedStateHandle["playlistId"]
         controller.load(videoId, startMs, playlistId)
+        // Рекомендации готовятся заранее, чтобы второй Вниз открывал их сразу
+        loadRecommendations()
         // Сразу после ошибки разбора — тихая проверка обновления (SPEC 10.5, п. 1)
         viewModelScope.launch {
             controller.state.map { it.error }.distinctUntilChanged().collect { error ->

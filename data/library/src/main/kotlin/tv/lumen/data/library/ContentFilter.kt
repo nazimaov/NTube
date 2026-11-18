@@ -3,6 +3,7 @@ package tv.lumen.data.library
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import tv.lumen.core.datastore.SettingsRepository
+import tv.lumen.core.datastore.UserLists
 import tv.lumen.core.model.SearchItem
 import tv.lumen.core.model.Video
 import javax.inject.Inject
@@ -13,10 +14,13 @@ data class FilterRules(
     val hideWatched: Boolean = false,
     val blockedChannels: Set<String> = emptySet(),
     val blockedWords: Set<String> = emptySet(),
+    /** Видео, скрытые кнопкой «Не интересно». */
+    val hiddenVideos: Set<String> = emptySet(),
     val progress: Map<String, Float> = emptyMap(),
 ) {
     fun allows(video: Video): Boolean {
         if (hideShorts && (video.isShort || video.durationSec in 1..SHORT_MAX_SEC)) return false
+        if (video.id in hiddenVideos) return false
         if (hideWatched && (progress[video.id] ?: 0f) >= WATCHED_FRACTION) return false
         if (video.channelId != null && video.channelId in blockedChannels) return false
         if (blockedWords.isNotEmpty()) {
@@ -47,13 +51,15 @@ data class FilterRules(
 class ContentFilter @Inject constructor(
     settings: SettingsRepository,
     library: LibraryRepository,
+    userLists: UserLists,
 ) {
-    val rules: Flow<FilterRules> = combine(settings.settings, library.blockedChannels, library.progress) { s, blocked, progress ->
+    val rules: Flow<FilterRules> = combine(settings.settings, library.blockedChannels, library.progress, userLists.hiddenVideos) { s, blocked, progress, hidden ->
         FilterRules(
             hideShorts = s.hideShorts,
             hideWatched = s.hideWatched,
             blockedChannels = blocked,
             blockedWords = s.blockedWords,
+            hiddenVideos = hidden,
             progress = progress,
         )
     }

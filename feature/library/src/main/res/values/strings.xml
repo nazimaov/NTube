@@ -7,4 +7,12 @@
     <string name="subscriptions_feed_failed">Couldn\'t refresh the feed. Showing saved videos.</string>
     <string name="liked_title">Liked</string>
     <string name="liked_empty">No liked videos yet. Press 👍 in the player or sign in to your Google account.</string>
+    <string name="playlists_title">Playlists</string>
+    <string name="playlists_empty">No playlists yet. Press and hold OK on any video and choose "Add to playlist" or "Watch later".</string>
+    <string name="playlists_count">Videos: %1$d</string>
+    <string name="playlists_play_all">Play all</string>
+    <string name="playlists_delete">Delete playlist</string>
+    <string name="playlists_back">Back to playlists</string>
+    <string name="playlists_list_empty">This playlist has no videos yet.</string>
+    <string name="playlists_remove">Remove from playlist</string>
 </resources>

@@ -9,6 +9,9 @@ import kotlinx.coroutines.flow.stateIn
 import tv.lumen.app.navigation.TopLevelDestination
 import tv.lumen.core.datastore.MenuItem
 import tv.lumen.core.datastore.SettingsRepository
+import tv.lumen.core.datastore.UserLists
+import tv.lumen.core.designsystem.component.MenuExtras
+import tv.lumen.core.designsystem.component.PlaylistRef
 import javax.inject.Inject
 import kotlinx.coroutines.flow.map
 import tv.lumen.core.designsystem.component.QueueActions
@@ -31,6 +34,7 @@ class AppViewModel @Inject constructor(
     /** Недостающие аватары каналов на карточках. */
     val channelAvatars: ChannelAvatars,
     library: LibraryRepository,
+    private val userLists: UserLists,
 ) : ViewModel() {
 
     /** Новый декоратор при смене настроек — карточки перерисовываются сразу, без перезапуска. */
@@ -45,6 +49,38 @@ class AppViewModel @Inject constructor(
     val queueActions: QueueActions = object : QueueActions {
         override fun add(video: Video) = library.queue.add(video)
         override fun contains(videoId: String) = library.queue.contains(videoId)
+    }
+
+    /** «Не интересно», «Смотреть позже» и свои плейлисты для меню карточек. */
+    val menuExtras: MenuExtras = object : MenuExtras {
+        override val playlists: StateFlow<List<PlaylistRef>> = userLists.playlists
+            .map { all -> all.filter { it.id != UserLists.KIDS_WATCHED }.map { PlaylistRef(it.id, it.name, it.videos.size, it.videos.mapTo(HashSet()) { v -> v.id }) } }
+            .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
+
+        override fun hide(video: Video) {
+            viewModelScope.launch { userLists.hide(video.id) }
+        }
+
+        override fun isWatchLater(videoId: String) =
+            userLists.playlists.value.firstOrNull { it.id == UserLists.WATCH_LATER }?.videos?.any { it.id == videoId } == true
+
+        override fun toggleWatchLater(video: Video, defaultName: String) {
+            viewModelScope.launch {
+                userLists.create(defaultName, id = UserLists.WATCH_LATER)
+                if (isWatchLater(video.id)) userLists.remove(UserLists.WATCH_LATER, video.id) else userLists.add(UserLists.WATCH_LATER, video)
+            }
+        }
+
+        override fun toggleInPlaylist(playlistId: String, video: Video) {
+            viewModelScope.launch {
+                val has = userLists.playlists.value.firstOrNull { it.id == playlistId }?.videos?.any { it.id == video.id } == true
+                if (has) userLists.remove(playlistId, video.id) else userLists.add(playlistId, video)
+            }
+        }
+
+        override fun createPlaylist(video: Video, name: String) {
+            viewModelScope.launch { userLists.create(name, video) }
+        }
     }
 
     val updateState: StateFlow<UpdateState> = updates.state
@@ -75,6 +111,8 @@ class AppViewModel @Inject constructor(
         MenuItem.HOME -> TopLevelDestination.HOME
         MenuItem.MUSIC -> TopLevelDestination.MUSIC
         MenuItem.CINEMA -> TopLevelDestination.CINEMA
+        MenuItem.EXPLORE -> TopLevelDestination.EXPLORE
+        MenuItem.KIDS -> TopLevelDestination.KIDS
         MenuItem.LIBRARY -> TopLevelDestination.LIBRARY
     }
 }

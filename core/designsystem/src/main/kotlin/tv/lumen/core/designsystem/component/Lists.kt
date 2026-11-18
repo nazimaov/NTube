@@ -85,6 +85,8 @@ fun <T> PagedGrid(
     canLoadMore: Boolean = false,
     onLoadMore: () -> Unit = {},
     header: (@Composable () -> Unit)? = null,
+    /** Под списком на всю ширину: загрузка или ошибка, сетка при этом не пересоздаётся (фокус в шапке не теряется). */
+    footer: (@Composable () -> Unit)? = null,
     itemContent: @Composable LazyGridItemScope.(item: T, modifier: Modifier) -> Unit,
 ) {
     val state = rememberLazyGridState()
@@ -106,6 +108,9 @@ fun <T> PagedGrid(
         }
         itemsIndexed(items, key = { _, item -> key(item) }) { index, item ->
             itemContent(item, Modifier.rememberFocus(focusMemory, key(item), isFirst = index == 0))
+        }
+        if (footer != null) {
+            item(span = { androidx.compose.foundation.lazy.grid.GridItemSpan(maxLineSpan) }, key = "footer") { footer() }
         }
     }
 }

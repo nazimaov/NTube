@@ -117,5 +117,7 @@
     <string name="settings_account_err_denied">Вход отклонён.</string>
     <string name="settings_account_err_expired">Код устарел. Начните заново.</string>
     <string name="settings_menu_cinema">Кино</string>
+    <string name="settings_menu_explore">Обзор</string>
+    <string name="settings_menu_kids">Детское</string>
     <string name="settings_menu_library">Библиотека</string>
 </resources>

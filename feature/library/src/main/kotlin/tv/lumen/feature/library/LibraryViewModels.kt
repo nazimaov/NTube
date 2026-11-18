@@ -213,3 +213,23 @@ class LikedViewModel @Inject constructor(
         const val LOCAL_LIMIT = 50
     }
 }
+
+/** «Плейлисты»: свои плейлисты на устройстве. */
+@dagger.hilt.android.lifecycle.HiltViewModel
+class PlaylistsViewModel @javax.inject.Inject constructor(
+    private val lists: tv.lumen.core.datastore.UserLists,
+    library: LibraryRepository,
+) : androidx.lifecycle.ViewModel() {
+    val focusMemory = tv.lumen.core.designsystem.focus.FocusMemory()
+    val actions = VideoActions(library, viewModelScope)
+    val playlists = lists.playlists.map { all -> all.filter { it.id != tv.lumen.core.datastore.UserLists.KIDS_WATCHED } }
+        .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
+
+    fun remove(playlistId: String, videoId: String) {
+        viewModelScope.launch { lists.remove(playlistId, videoId) }
+    }
+
+    fun delete(playlistId: String) {
+        viewModelScope.launch { lists.delete(playlistId) }
+    }
+}

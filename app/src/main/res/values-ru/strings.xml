@@ -20,5 +20,7 @@
     <string name="update_not_configured">Обновления не настроены: укажите lumen.updateRepoOwner в gradle.properties.</string>
     <string name="menu_music">Музыка</string>
     <string name="menu_cinema">Кино</string>
+    <string name="menu_explore">Обзор</string>
+    <string name="menu_kids">Детское</string>
     <string name="menu_library">Библиотека</string>
 </resources>

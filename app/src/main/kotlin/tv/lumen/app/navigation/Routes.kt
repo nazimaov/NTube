@@ -7,6 +7,8 @@ import kotlinx.serialization.Serializable
 @Serializable data object Search
 @Serializable data object Music
 @Serializable data object Cinema
+@Serializable data object Explore
+@Serializable data object Kids
 @Serializable data object Library
 @Serializable data object Settings
 

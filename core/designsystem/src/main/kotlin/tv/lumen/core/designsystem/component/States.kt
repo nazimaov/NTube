@@ -30,9 +30,12 @@ fun LoadingState(modifier: Modifier = Modifier) {
 }
 
 @Composable
-fun EmptyState(modifier: Modifier = Modifier) {
+fun EmptyState(modifier: Modifier = Modifier) = EmptyState(stringResource(R.string.ds_empty), modifier)
+
+@Composable
+fun EmptyState(message: String, modifier: Modifier = Modifier) {
     Box(modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-        Text(stringResource(R.string.ds_empty), style = MaterialTheme.typography.titleMedium)
+        Text(message, style = MaterialTheme.typography.titleMedium)
     }
 }
 
@@ -66,6 +69,7 @@ fun errorMessage(error: AppError): String = stringResource(
             UnavailableReason.GEO_BLOCKED -> R.string.ds_error_geo
             UnavailableReason.PAID -> R.string.ds_error_paid
             UnavailableReason.BOT_CHECK -> R.string.ds_error_bot
+            UnavailableReason.SIGN_IN_REQUIRED -> R.string.ds_error_sign_in
             else -> R.string.ds_error_unavailable
         }
         is AppError.Unknown -> R.string.ds_error_unknown

@@ -1,4 +1,4 @@
-package tv.lumen.feature.home
+package tv.lumen.data.library
 
 import org.junit.Assert.assertEquals
 import org.junit.Test

@@ -7,4 +7,12 @@
     <string name="subscriptions_feed_failed">Не удалось обновить ленту. Показаны сохранённые видео.</string>
     <string name="liked_title">Понравившиеся</string>
     <string name="liked_empty">Пока нет понравившихся видео. Нажмите 👍 в плеере или войдите в аккаунт Google.</string>
+    <string name="playlists_title">Плейлисты</string>
+    <string name="playlists_empty">Плейлистов пока нет. Удерживайте OK на любом видео и выберите «Добавить в плейлист» или «Смотреть позже».</string>
+    <string name="playlists_count">Видео: %1$d</string>
+    <string name="playlists_play_all">Воспроизвести всё</string>
+    <string name="playlists_delete">Удалить плейлист</string>
+    <string name="playlists_back">Назад к плейлистам</string>
+    <string name="playlists_list_empty">В плейлисте пока нет видео.</string>
+    <string name="playlists_remove">Убрать из плейлиста</string>
 </resources>

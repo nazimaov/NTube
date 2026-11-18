@@ -36,6 +36,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.focus.FocusDirection
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
@@ -100,7 +101,10 @@ fun WatchRoute(
     val matchFrameRate by viewModel.matchFrameRate.collectAsStateWithLifecycle()
     FrameRateMatcher(enabled = matchFrameRate, fps = state.quality?.fps?.takeIf { !state.isLive })
     val queue by viewModel.queue.collectAsStateWithLifecycle()
+    val recommendations by viewModel.recommendations.collectAsStateWithLifecycle()
     WatchScreen(
+        recommendations = recommendations,
+        onLoadRecommendations = viewModel::loadRecommendations,
         dislikes = dislikes,
         queue = queue,
         onQueueAdd = { viewModel.queueAdd(it) },
@@ -138,6 +142,8 @@ internal fun WatchScreen(
     onReact: (Reaction) -> Unit = {},
     comments: tv.lumen.core.common.PagedState<tv.lumen.core.model.Comment>? = null,
     queue: List<Video> = emptyList(),
+    recommendations: List<Video> = emptyList(),
+    onLoadRecommendations: () -> Unit = {},
     onQueueAdd: (Video) -> Unit = {},
     onQueueRemove: (String) -> Unit = {},
     onQueueMove: (String, Int) -> Unit = { _, _ -> },
@@ -149,6 +155,8 @@ internal fun WatchScreen(
     // Ряд «Похожие» внизу панели: открывается кнопкой Вниз (SPEC 5.5)
     var queueEdit by remember { mutableStateOf<Video?>(null) }
     var relatedVisible by remember { mutableStateOf(false) }
+    // Второй Вниз: вместо «Похожих» показываются рекомендации
+    var recsVisible by remember { mutableStateOf(false) }
     var buttonsFocused by remember { mutableStateOf(false) }
     val related = state.details?.related.orEmpty()
     var panelFocus by remember { mutableStateOf(PanelFocus.PLAY) }
@@ -157,6 +165,7 @@ internal fun WatchScreen(
     // Каждый показ панели заново ставит фокус: элемент с фокусом мог исчезнуть (закрытый диалог)
     var focusRequest by remember { mutableIntStateOf(0) }
     val rootFocus = remember { FocusRequester() }
+    val focusManager = androidx.compose.ui.platform.LocalFocusManager.current
 
     fun showPanel(focus: PanelFocus) {
         panelFocus = focus
@@ -178,6 +187,7 @@ internal fun WatchScreen(
             delay(PANEL_HIDE_MS)
             panelVisible = false
             relatedVisible = false
+            recsVisible = false
         }
     }
     LaunchedEffect(panelVisible, dialog) {
@@ -199,6 +209,7 @@ internal fun WatchScreen(
                     panelVisible -> {
                         panelVisible = false
                         relatedVisible = false
+                        recsVisible = false
                     }
                     else -> onBack() // выход из плеера
                 }
@@ -223,6 +234,28 @@ internal fun WatchScreen(
         // Вниз с ряда кнопок открывает «Похожие»
         if (panelVisible && dialog == null && !relatedVisible && buttonsFocused && event.key == Key.DirectionDown && (related.isNotEmpty() || queue.isNotEmpty())) {
             showPanel(PanelFocus.RELATED)
+            return true
+        }
+        // Вниз во втором ряду: если ниже плиток нет, открываются рекомендации
+        if (panelVisible && dialog == null && relatedVisible && !recsVisible && event.key == Key.DirectionDown) {
+            val moved = queue.isNotEmpty() && related.isNotEmpty() && focusManager.moveFocus(FocusDirection.Down)
+            if (!moved) {
+                onLoadRecommendations()
+                recsVisible = true
+                focusRequest++
+            }
+            return true
+        }
+        // Вверх из рекомендаций — обратно к «Похожим»
+        if (panelVisible && dialog == null && recsVisible && event.key == Key.DirectionUp) {
+            recsVisible = false
+            focusRequest++
+            return true
+        }
+        // Вверх из «Похожих»: с одним рядом плиток сразу возвращает интерфейс; с двумя сначала идём между рядами
+        if (panelVisible && dialog == null && relatedVisible && event.key == Key.DirectionUp) {
+            val moved = queue.isNotEmpty() && related.isNotEmpty() && focusManager.moveFocus(FocusDirection.Up)
+            if (!moved) { relatedVisible = false; showPanel(PanelFocus.PLAY) }
             return true
         }
         if (dialog != null || panelVisible || state.error != null) return false
@@ -263,12 +296,23 @@ internal fun WatchScreen(
                 color = Color.White,
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier
-                    .align(Alignment.TopStart)
+                    .align(Alignment.TopEnd)
                     .padding(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical)
                     .clip(RoundedCornerShape(12.dp))
                     .background(Color.Black.copy(alpha = 0.8f))
                     .padding(horizontal = 20.dp, vertical = 12.dp),
             )
+        }
+
+        // Как в YouTube: название сверху, под ним просмотры и дата, ниже канал
+        AnimatedVisibility(
+            // Когда открыт список похожих, панель занимает весь экран и название показывается в ней самой
+            visible = panelVisible && state.error == null && state.details != null && !relatedVisible,
+            enter = fadeIn(),
+            exit = fadeOut(),
+            modifier = Modifier.align(Alignment.TopStart),
+        ) {
+            state.details?.let { VideoTitleBar(it.video) }
         }
 
         AnimatedVisibility(
@@ -283,6 +327,8 @@ internal fun WatchScreen(
                 initialFocus = panelFocus,
                 focusRequest = focusRequest,
                 relatedVisible = relatedVisible,
+                recsVisible = recsVisible,
+                recommendations = recommendations,
                 onButtonsFocusChanged = { buttonsFocused = it },
                 onInteraction = { interaction++ },
                 onOpenDialog = { if (it == WatchDialog.COMMENTS) onOpenComments(); dialog = it },
@@ -369,6 +415,37 @@ private fun VideoSurface(controller: PlayerController, keepScreenOn: Boolean) {
     )
 }
 
+/** Верхняя плашка плеера: название, под ним просмотры и дата, ниже канал. */
+@Composable
+private fun VideoTitleBar(video: Video) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.85f), Color.Transparent)))
+            .padding(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
+    ) { VideoTitleText(video) }
+}
+
+@Composable
+private fun VideoTitleText(video: Video) {
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(
+            text = video.title,
+            style = MaterialTheme.typography.headlineSmall,
+            color = Color.White,
+            maxLines = 2,
+            overflow = TextOverflow.Ellipsis,
+        )
+        val views = tv.lumen.core.designsystem.format.videoMeta(video)
+        if (views.isNotBlank()) {
+            Text(views, style = MaterialTheme.typography.titleMedium, color = Color.White.copy(alpha = 0.9f))
+        }
+        video.channelName?.takeIf { it.isNotBlank() }?.let {
+            Text(it, style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
+        }
+    }
+}
+
 @Composable
 private fun ControlPanel(
     state: PlayerState,
@@ -376,6 +453,8 @@ private fun ControlPanel(
     initialFocus: PanelFocus,
     focusRequest: Int,
     relatedVisible: Boolean,
+    recsVisible: Boolean,
+    recommendations: List<Video>,
     onButtonsFocusChanged: (Boolean) -> Unit,
     onInteraction: () -> Unit,
     onOpenDialog: (WatchDialog) -> Unit,
@@ -392,11 +471,16 @@ private fun ControlPanel(
     val playFocus = remember { FocusRequester() }
     val seekFocus = remember { FocusRequester() }
     val relatedFocus = remember { FocusRequester() }
-    LaunchedEffect(focusRequest, relatedVisible) {
+    val recsFocus = remember { FocusRequester() }
+    LaunchedEffect(focusRequest, relatedVisible, recsVisible, recommendations.size) {
         runCatching {
             when (initialFocus) {
                 PanelFocus.SEEK -> seekFocus.requestFocus()
-                PanelFocus.RELATED -> if (relatedVisible) relatedFocus.requestFocus() else playFocus.requestFocus()
+                PanelFocus.RELATED -> when {
+                    relatedVisible && recsVisible && recommendations.isNotEmpty() -> recsFocus.requestFocus()
+                    relatedVisible -> relatedFocus.requestFocus()
+                    else -> playFocus.requestFocus()
+                }
                 PanelFocus.PLAY -> playFocus.requestFocus()
             }
         }
@@ -405,153 +489,141 @@ private fun ControlPanel(
     Column(
         modifier = Modifier
             .fillMaxWidth()
-            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = 0.85f))))
+            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black.copy(alpha = if (relatedVisible) 0.92f else 0.85f))))
             .padding(horizontal = LumenDimens.SafeHorizontal, vertical = LumenDimens.SafeVertical),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        val details = state.details
-        if (details != null) {
-            Text(
-                text = details.video.title,
-                style = MaterialTheme.typography.headlineSmall,
-                color = Color.White,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
-            )
-            val meta = listOfNotNull(
-                details.video.channelName,
-            )
-            if (meta.isNotEmpty()) {
-                Text(meta.joinToString("  ·  "), style = MaterialTheme.typography.bodyLarge, color = Color.White.copy(alpha = 0.7f))
-            }
-        }
-
-        if (state.isLive) {
-            Text(
-                text = stringResource(R.string.watch_live),
-                style = MaterialTheme.typography.labelLarge,
-                color = MaterialTheme.colorScheme.primary,
-            )
-        } else {
-            SeekBar(state, controller, onInteraction, Modifier.focusRequester(seekFocus))
-            // Слева — прошло и осталось, справа — длительность видео
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                val remaining = (state.durationMs - state.positionMs).coerceAtLeast(0)
+        // Со списком «Похожие» интерфейс (кнопки, полоса) прячется, остаются только плитки; вверх — плавно возвращается
+        AnimatedVisibility(visible = !relatedVisible, enter = fadeIn(), exit = fadeOut()) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            if (state.isLive) {
                 Text(
-                    text = "${formatTime(state.positionMs)}  ·  " + stringResource(R.string.watch_time_left, formatTime(remaining)),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f),
+                    text = stringResource(R.string.watch_live),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
                 )
-                Text(
-                    text = formatTime(state.durationMs),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = Color.White.copy(alpha = 0.8f),
-                )
+            } else {
+                SeekBar(state, controller, onInteraction, Modifier.focusRequester(seekFocus))
+                // Слева — прошло и осталось, справа — длительность видео
+                Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                    val remaining = (state.durationMs - state.positionMs).coerceAtLeast(0)
+                    Text(
+                        text = "${formatTime(state.positionMs)}  ·  " + stringResource(R.string.watch_time_left, formatTime(remaining)),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f),
+                    )
+                    Text(
+                        text = formatTime(state.durationMs),
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = Color.White.copy(alpha = 0.8f),
+                    )
+                }
             }
-        }
 
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.Top,
-            modifier = Modifier.onFocusChanged { onButtonsFocusChanged(it.hasFocus) },
-        ) {
-            PlayerIconButton(
-                icon = if (state.playWhenReady) LumenIcons.Pause else Icons.Filled.PlayArrow,
-                label = stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play),
-                onClick = controller::togglePlayPause,
-                size = 60.dp,
-                modifier = Modifier.focusRequester(playFocus),
-            )
-            val likes = state.details?.likeCount?.takeIf { it >= 0 }
-            PlayerIconButton(
-                icon = Icons.Filled.ThumbUp,
-                label = stringResource(R.string.watch_like),
-                caption = likes?.let { formatCompact(it + if (reaction == Reaction.LIKE) 1 else 0) },
-                onClick = { onReact(Reaction.LIKE) },
-                active = reaction == Reaction.LIKE,
-            )
-            PlayerIconButton(
-                icon = LumenIcons.ThumbDown,
-                label = stringResource(R.string.watch_dislike),
-                // Оценка RYD — со знаком «≈» (SPEC 6.3)
-                caption = dislikes?.let { "≈ " + formatCompact(it) },
-                onClick = { onReact(Reaction.DISLIKE) },
-                active = reaction == Reaction.DISLIKE,
-            )
-            if (!state.isLive) {
-                // Одна кнопка: по очереди → повтор → вперемешку
-                val order = state.playbackOrder
+            Row(
+                horizontalArrangement = Arrangement.spacedBy(16.dp),
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier.onFocusChanged { onButtonsFocusChanged(it.hasFocus) },
+            ) {
                 PlayerIconButton(
-                    icon = when (order) {
-                        PlaybackOrder.SEQUENTIAL -> LumenIcons.PlaylistPlay
-                        PlaybackOrder.REPEAT_ONE -> LumenIcons.RepeatOne
-                        PlaybackOrder.SHUFFLE -> LumenIcons.Shuffle
-                    },
-                    label = stringResource(
-                        when (order) {
-                            PlaybackOrder.SEQUENTIAL -> R.string.watch_order_sequential
-                            PlaybackOrder.REPEAT_ONE -> R.string.watch_order_repeat
-                            PlaybackOrder.SHUFFLE -> R.string.watch_order_shuffle
+                    icon = if (state.playWhenReady) LumenIcons.Pause else Icons.Filled.PlayArrow,
+                    label = stringResource(if (state.playWhenReady) R.string.watch_pause else R.string.watch_play),
+                    onClick = controller::togglePlayPause,
+                    size = 60.dp,
+                    modifier = Modifier.focusRequester(playFocus),
+                )
+                val likes = state.details?.likeCount?.takeIf { it >= 0 }
+                PlayerIconButton(
+                    icon = Icons.Filled.ThumbUp,
+                    label = stringResource(R.string.watch_like),
+                    caption = likes?.let { formatCompact(it + if (reaction == Reaction.LIKE) 1 else 0) },
+                    onClick = { onReact(Reaction.LIKE) },
+                    active = reaction == Reaction.LIKE,
+                )
+                PlayerIconButton(
+                    icon = LumenIcons.ThumbDown,
+                    label = stringResource(R.string.watch_dislike),
+                    // Оценка RYD — со знаком «≈» (SPEC 6.3)
+                    caption = dislikes?.let { "≈ " + formatCompact(it) },
+                    onClick = { onReact(Reaction.DISLIKE) },
+                    active = reaction == Reaction.DISLIKE,
+                )
+                if (!state.isLive) {
+                    // Одна кнопка: по очереди → повтор → вперемешку
+                    val order = state.playbackOrder
+                    PlayerIconButton(
+                        icon = when (order) {
+                            PlaybackOrder.SEQUENTIAL -> LumenIcons.PlaylistPlay
+                            PlaybackOrder.REPEAT_ONE -> LumenIcons.RepeatOne
+                            PlaybackOrder.SHUFFLE -> LumenIcons.Shuffle
                         },
-                    ),
-                    onClick = controller::cycleOrder,
-                    active = order != PlaybackOrder.SEQUENTIAL,
-                )
+                        label = stringResource(
+                            when (order) {
+                                PlaybackOrder.SEQUENTIAL -> R.string.watch_order_sequential
+                                PlaybackOrder.REPEAT_ONE -> R.string.watch_order_repeat
+                                PlaybackOrder.SHUFFLE -> R.string.watch_order_shuffle
+                            },
+                        ),
+                        onClick = controller::cycleOrder,
+                        active = order != PlaybackOrder.SEQUENTIAL,
+                    )
+                }
+                if (state.qualities.isNotEmpty()) {
+                    PlayerIconButton(
+                        icon = Icons.Filled.Settings,
+                        label = "${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}",
+                        onClick = { onOpenDialog(WatchDialog.QUALITY) },
+                    )
+                }
+                if (!state.isLive) {
+                    PlayerIconButton(
+                        icon = LumenIcons.Speed,
+                        label = "${stringResource(R.string.watch_speed)}: ${formatSpeed(state.speed)}",
+                        onClick = { onOpenDialog(WatchDialog.SPEED) },
+                        active = state.speed != 1f,
+                    )
+                }
+                if (state.subtitles.isNotEmpty()) {
+                    val current = state.subtitles.firstOrNull { it.languageTag == state.subtitle }?.name
+                    PlayerIconButton(
+                        icon = LumenIcons.Subtitles,
+                        label = "${stringResource(R.string.watch_subtitles)}: ${current ?: stringResource(R.string.watch_subtitles_off)}",
+                        onClick = { onOpenDialog(WatchDialog.SUBTITLES) },
+                        active = current != null,
+                    )
+                }
+                if (state.audioTracks.size > 1) {
+                    PlayerIconButton(
+                        icon = LumenIcons.MusicNote,
+                        label = stringResource(R.string.watch_audio),
+                        onClick = { onOpenDialog(WatchDialog.AUDIO) },
+                    )
+                }
+                state.details?.video?.channelId?.let { channelId ->
+                    PlayerIconButton(
+                        icon = Icons.Filled.AccountCircle,
+                        label = stringResource(R.string.watch_channel),
+                        onClick = { onOpenChannel(channelId) },
+                    )
+                    PlayerIconButton(
+                        icon = LumenIcons.Comment,
+                        label = stringResource(R.string.watch_comments),
+                        onClick = { onOpenDialog(WatchDialog.COMMENTS) },
+                    )
+                    PlayerIconButton(
+                        icon = if (state.isSubscribed) Icons.Filled.Check else Icons.Filled.Add,
+                        label = stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe),
+                        onClick = controller::toggleSubscribe,
+                        active = state.isSubscribed,
+                    )
+                }
             }
-            if (state.qualities.isNotEmpty()) {
-                PlayerIconButton(
-                    icon = Icons.Filled.Settings,
-                    label = "${stringResource(R.string.watch_quality)}: ${state.quality?.label.orEmpty()}",
-                    onClick = { onOpenDialog(WatchDialog.QUALITY) },
-                )
-            }
-            if (!state.isLive) {
-                PlayerIconButton(
-                    icon = LumenIcons.Speed,
-                    label = "${stringResource(R.string.watch_speed)}: ${formatSpeed(state.speed)}",
-                    onClick = { onOpenDialog(WatchDialog.SPEED) },
-                    active = state.speed != 1f,
-                )
-            }
-            if (state.subtitles.isNotEmpty()) {
-                val current = state.subtitles.firstOrNull { it.languageTag == state.subtitle }?.name
-                PlayerIconButton(
-                    icon = LumenIcons.Subtitles,
-                    label = "${stringResource(R.string.watch_subtitles)}: ${current ?: stringResource(R.string.watch_subtitles_off)}",
-                    onClick = { onOpenDialog(WatchDialog.SUBTITLES) },
-                    active = current != null,
-                )
-            }
-            if (state.audioTracks.size > 1) {
-                PlayerIconButton(
-                    icon = LumenIcons.MusicNote,
-                    label = stringResource(R.string.watch_audio),
-                    onClick = { onOpenDialog(WatchDialog.AUDIO) },
-                )
-            }
-            state.details?.video?.channelId?.let { channelId ->
-                PlayerIconButton(
-                    icon = Icons.Filled.AccountCircle,
-                    label = stringResource(R.string.watch_channel),
-                    onClick = { onOpenChannel(channelId) },
-                )
-                PlayerIconButton(
-                    icon = LumenIcons.Comment,
-                    label = stringResource(R.string.watch_comments),
-                    onClick = { onOpenDialog(WatchDialog.COMMENTS) },
-                )
-                PlayerIconButton(
-                    icon = if (state.isSubscribed) Icons.Filled.Check else Icons.Filled.Add,
-                    label = stringResource(if (state.isSubscribed) R.string.watch_subscribed else R.string.watch_subscribe),
-                    onClick = controller::toggleSubscribe,
-                    active = state.isSubscribed,
-                )
             }
         }
 
         val related = state.details?.related.orEmpty()
         // Ряды: сначала своя очередь (долгое нажатие — редактировать), ниже — похожие (долгое — в очередь)
-        if (relatedVisible && queue.isNotEmpty()) {
+        if (relatedVisible && !recsVisible && queue.isNotEmpty()) {
             Text(stringResource(R.string.watch_queue), style = MaterialTheme.typography.titleMedium, color = Color.White)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
                 itemsIndexed(queue, key = { _, v -> "q:" + v.id }) { index, video ->
@@ -566,7 +638,7 @@ private fun ControlPanel(
                 }
             }
         }
-        if (relatedVisible && related.isNotEmpty()) {
+        if (relatedVisible && !recsVisible && related.isNotEmpty()) {
             Text(stringResource(R.string.watch_related), style = MaterialTheme.typography.titleMedium, color = Color.White)
             LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
                 itemsIndexed(related, key = { _, v -> v.id }) { index, video ->
@@ -583,6 +655,28 @@ private fun ControlPanel(
                             .width(CardWidth)
                             .then(if (index == 0 && queue.isEmpty()) Modifier.focusRequester(relatedFocus) else Modifier),
                     )
+                }
+            }
+        }
+        if (relatedVisible && recsVisible) {
+            Text(stringResource(R.string.watch_recommendations), style = MaterialTheme.typography.titleMedium, color = Color.White)
+            if (recommendations.isEmpty()) {
+                tv.lumen.core.designsystem.component.LoadingState(Modifier.fillMaxWidth().height(200.dp))
+            } else {
+                LazyRow(horizontalArrangement = Arrangement.spacedBy(20.dp), modifier = Modifier.focusRestorer()) {
+                    itemsIndexed(recommendations, key = { _, v -> "r:" + v.id }) { index, video ->
+                        VideoCard(
+                            video = video,
+                            onClick = { onOpenVideo(video.id) },
+                            onLongClick = {
+                                if (!queue.any { it.id == video.id }) {
+                                    onAddToQueue(video)
+                                    android.widget.Toast.makeText(context, R.string.queue_added, android.widget.Toast.LENGTH_SHORT).show()
+                                }
+                            },
+                            modifier = Modifier.width(CardWidth).then(if (index == 0) Modifier.focusRequester(recsFocus) else Modifier),
+                        )
+                    }
                 }
             }
         }

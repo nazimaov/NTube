@@ -598,6 +598,8 @@ private fun menuLabel(item: MenuItem): String = stringResource(
         MenuItem.HOME -> R.string.settings_menu_home
         MenuItem.MUSIC -> R.string.settings_menu_music
         MenuItem.CINEMA -> R.string.settings_menu_cinema
+        MenuItem.EXPLORE -> R.string.settings_menu_explore
+        MenuItem.KIDS -> R.string.settings_menu_kids
         MenuItem.LIBRARY -> R.string.settings_menu_library
     },
 )

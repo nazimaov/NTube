@@ -14,4 +14,15 @@
     <string name="music_filter_albums">Альбомы</string>
     <string name="music_filter_artists">Исполнители</string>
     <string name="music_filter_playlists">Плейлисты</string>
+    <string name="music_moods">Настроение и жанры</string>
+    <string name="music_artists">Исполнители</string>
+    <string name="mood_chill">Спокойное</string>
+    <string name="mood_energy">Танцы</string>
+    <string name="mood_romance">Романтика</string>
+    <string name="mood_sad">Грусть</string>
+    <string name="mood_pop">Поп</string>
+    <string name="mood_rock">Рок</string>
+    <string name="mood_hiphop">Хип-хоп</string>
+    <string name="mood_electronic">Электроника</string>
+    <string name="mood_classical">Классика</string>
 </resources>

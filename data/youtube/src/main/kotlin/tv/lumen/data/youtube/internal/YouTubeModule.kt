@@ -11,4 +11,8 @@ import tv.lumen.data.youtube.YouTubeRepository
 internal abstract class YouTubeModule {
     @Binds
     abstract fun repository(impl: NewPipeYouTubeRepository): YouTubeRepository
+
+    /** Реализацию даёт app (через аккаунт); если её нет — запасного пути для видео «для детей» нет. */
+    @dagger.BindsOptionalOf
+    abstract fun authorizedPlayer(): tv.lumen.data.youtube.AuthorizedPlayer
 }
