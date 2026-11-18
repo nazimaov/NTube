@@ -7,6 +7,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -40,7 +41,12 @@ class ExploreViewModel @Inject constructor(
     library: LibraryRepository,
     filter: ContentFilter,
     private val userLists: tv.lumen.core.datastore.UserLists,
+    settings: tv.lumen.core.datastore.SettingsRepository,
 ) : ViewModel() {
+
+    /** Страна контента и режим «язык по региону» из настроек; язык подборки считает [tv.lumen.core.datastore.ContentLang]. */
+    val region: kotlinx.coroutines.flow.StateFlow<Pair<String?, Boolean>> = settings.flow { it.contentCountry to it.contentByRegion }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null to true)
 
     val focusMemory = FocusMemory()
     val actions = VideoActions(library, viewModelScope)
@@ -69,15 +75,14 @@ class ExploreViewModel @Inject constructor(
         liveOnly.value = spec != null
         sortByDate.value = topic.sortByDate && spec == null
         val kidsForYou = topic.id == "kids" && sub == null
-        val kidsSeeds = if (kidsForYou) kidsSeedIds() else emptyList()
         val channels = spec?.channels?.get(lang).orEmpty()
         val keywords = sub?.liveKeywords.orEmpty()
-        val query = if (kidsForYou) "kids:" + kidsSeeds.joinToString(",") else if (channels.isNotEmpty()) "channels:" + channels.joinToString("|") + "#" + keywords.joinToString(",") else (sub?.query ?: topic.query).at(lang)
+        val query = if (kidsForYou) "kids:mix:${lang.name}" else if (channels.isNotEmpty()) "channels:" + channels.joinToString("|") + "#" + keywords.joinToString(",") else (sub?.query ?: topic.query).at(lang)
         if (shown == query) return
         shown = query
         focusMemory.reset()
         collectJob?.cancel()
-        val p = Pager<Video>(viewModelScope, { it.id }) { token -> if (kidsForYou && kidsSeeds.isNotEmpty()) kidsRecommendations(kidsSeeds, (sub?.query ?: topic.query).at(lang)) else if (channels.isNotEmpty()) liveOfChannels(channels, keywords) else load(query, token) }
+        val p = Pager<Video>(viewModelScope, { it.id }) { token -> if (kidsForYou) kidsMix(topic, lang) else if (topic.id == "kids") kidsLoad(query, lang) else if (channels.isNotEmpty()) liveOfChannels(channels, keywords) else load(query, token) }
         pager = p
         collectJob = viewModelScope.launch { p.state.collect { raw.value = it } }
         p.refresh()
@@ -129,31 +134,56 @@ class ExploreViewModel @Inject constructor(
     private fun String.normalized() = lowercase().replace("i\u0307", "i").replace("ə", "e").replace("ı", "i").replace("ü", "u")
         .replace("ö", "o").replace("ç", "c").replace("ş", "s").replace("ğ", "g")
 
-    /** Последние открытые в «Детском» видео: по ним подбираются рекомендации. */
-    private fun kidsSeedIds(): List<String> =
-        userLists.playlists.value.firstOrNull { it.id == tv.lumen.core.datastore.UserLists.KIDS_WATCHED }?.videos?.takeLast(6)?.map { it.id }.orEmpty()
+    /** Поиск в «Детском» — через YouTube Kids: там только одобренные для детей видео, и все они воспроизводятся. */
+    private suspend fun kidsLoad(query: String, lang: QueryLang): AppResult<Page<Video>> =
+        when (val r = youtube.kidsSearch(query, lang.name.lowercase())) {
+            is AppResult.Success -> AppResult.Success(Page(r.value, null))
+            is AppResult.Failure -> r
+        }
 
-    /** Похожие к тому, что ребёнок смотрел, вперемешку по источникам; без самих источников. */
-    private suspend fun kidsRecommendations(seeds: List<String>, fallbackQuery: String): AppResult<Page<Video>> {
-        val related = coroutineScope {
-            seeds.map { id -> async { (youtube.videoDetails(id) as? AppResult.Success)?.value?.related.orEmpty() } }.awaitAll()
+    /**
+     * «Для вас» в «Детском»: понемногу из каждой подтемы (поиск подтем идёт параллельно, по кругу по 1 видео).
+     * Подтемы, из которых ребёнок чаще открывал видео, идут первыми и дают больше; уже открытые видео не повторяются.
+     */
+    private suspend fun kidsMix(topic: Topic, lang: QueryLang): AppResult<Page<Video>> {
+        val lists = userLists.playlists.value
+        val watched = lists.filter { it.id.startsWith(tv.lumen.core.datastore.UserLists.KIDS_WATCHED) }.flatMap { it.videos }.mapTo(HashSet()) { it.id }
+        fun weight(sub: Subtopic) = lists.firstOrNull { it.id == kidsListId(sub.id) }?.videos?.size ?: 0
+        val subs = topic.subtopics.sortedByDescending(::weight)
+        // Каналы, которые ребёнок смотрит чаще всего (до 3): их свежие видео идут первыми — так «Для вас» подстраивается
+        val favoriteChannels = lists.filter { it.id.startsWith(tv.lumen.core.datastore.UserLists.KIDS_WATCHED) }
+            .flatMap { it.videos }.mapNotNull { it.channelName?.takeIf { n -> n.isNotBlank() } }
+            .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(3).map { it.key }
+        val (channelResults, results) = coroutineScope {
+            val ch = favoriteChannels.map { name -> async { kidsLoad(name, lang) } }
+            val q = subs.map { s -> async { kidsLoad(s.query.at(lang), lang) } }
+            ch.awaitAll() to q.awaitAll()
         }
-        val list = tv.lumen.data.library.Recommendations.mix(related, seeds.toSet(), limit = 60).toMutableList()
-        // Похожих мало или нет (например, не загрузились): добираем общим детским поиском, чтобы экран не был пустым
-        if (list.size < 20) {
-            val seen = list.mapTo(HashSet()) { it.id } + seeds
-            val extra = load(fallbackQuery, null)
-            if (extra is AppResult.Success) list += extra.value.items.filter { it.id !in seen }
-            else if (list.isEmpty()) return extra
+        val channelPools = channelResults.map { r -> (r as? AppResult.Success)?.value?.items.orEmpty().filter { it.id !in watched && !it.isShort && !it.isLive }.toMutableList() }
+        val pools = channelPools + results.map { r -> (r as? AppResult.Success)?.value?.items.orEmpty().filter { it.id !in watched && !it.isShort }.toMutableList() }
+        if (pools.all { it.isEmpty() }) return results.firstOrNull { it is AppResult.Failure } ?: AppResult.Success(Page(emptyList(), null))
+        // Любимые подтемы получают дополнительное место в каждом круге
+        val extra = channelPools.map { true } + subs.map { weight(it) > 0 }
+        val seen = HashSet<String>()
+        val out = ArrayList<Video>()
+        while (pools.any { it.isNotEmpty() } && out.size < 80) {
+            pools.forEachIndexed { i, pool ->
+                repeat(if (extra[i]) 2 else 1) {
+                    while (pool.isNotEmpty()) { val v = pool.removeAt(0); if (seen.add(v.id)) { out += v; break } }
+                }
+            }
         }
-        return AppResult.Success(Page(list, null))
+        return AppResult.Success(Page(out, null))
     }
 
-    /** Запоминает открытое в «Детском» видео для рекомендаций. */
-    fun markKidsWatched(video: Video) {
+    private fun kidsListId(subId: String?) = tv.lumen.core.datastore.UserLists.KIDS_WATCHED + (subId?.let { "_$it" } ?: "")
+
+    /** Запоминает открытое в «Детском» видео и подтему, из которой его открыли, — для «Для вас». */
+    fun markKidsWatched(video: Video, subId: String?) {
         viewModelScope.launch {
-            userLists.create("kids", id = tv.lumen.core.datastore.UserLists.KIDS_WATCHED)
-            userLists.add(tv.lumen.core.datastore.UserLists.KIDS_WATCHED, video)
+            val id = kidsListId(subId)
+            userLists.create("kids", id = id)
+            userLists.add(id, video)
         }
     }
 

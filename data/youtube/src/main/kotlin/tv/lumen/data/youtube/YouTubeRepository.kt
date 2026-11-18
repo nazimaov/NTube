@@ -29,6 +29,12 @@ interface YouTubeRepository {
     /** Популярное в регионе из настроек — подмешивается в рекомендации. */
     suspend fun regionalPopular(): AppResult<List<Video>>
 
+    /**
+     * Поиск YouTube Kids: только одобренные для детей видео, которые гарантированно воспроизводятся.
+     * [language] — язык результатов («ru», «tr», «az», «en»), страна — из настроек.
+     */
+    suspend fun kidsSearch(query: String, language: String): AppResult<List<Video>>
+
     suspend fun search(query: String, filter: SearchFilter, page: PageToken?): AppResult<Page<SearchItem>>
 
     suspend fun searchSuggestions(query: String): AppResult<List<String>>

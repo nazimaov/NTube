@@ -155,15 +155,15 @@ object Topics {
     /** Раздел «Детское» (отдельный пункт меню, не плитка «Обзора»): подтемы-чипы и рекомендации по просмотрам. */
     val kids = Topic(
         id = "kids", emoji = "🧸", title = R.string.topic_kids, description = R.string.topic_kids_desc,
-        query = q("детские видео для детей", "videos for kids"), minDurationSec = 60,
+        query = q("детские видео для детей", "çocuklar için videolar", "uşaqlar üçün videolar", "videos for kids"), minDurationSec = 60,
         subtopics = listOf(
-            Subtopic("cartoons", R.string.sub_kids_cartoons, q("мультики для детей", "cartoons for kids")),
-            Subtopic("learn", R.string.sub_kids_learn, q("развивающие мультики обучение для детей", "learning videos for kids")),
-            Subtopic("music", R.string.sub_kids_music, q("детские песни", "kids songs nursery rhymes")),
-            Subtopic("dance", R.string.sub_kids_dance, q("детские танцы песенки для малышей", "kids dance songs")),
-            Subtopic("tales", R.string.sub_kids_tales, q("сказки для детей на ночь", "bedtime stories for kids")),
-            Subtopic("nastya", R.string.sub_kids_nastya, q("Like Nastya", "Like Nastya")),
-            Subtopic("vlad", R.string.sub_kids_vlad, q("Влад и Никита", "Vlad and Niki")),
+            Subtopic("cartoons", R.string.sub_kids_cartoons, q("мультики для детей", "çocuklar için çizgi film", "uşaqlar üçün cizgi filmlər", "cartoons for kids")),
+            Subtopic("learn", R.string.sub_kids_learn, q("развивающие мультики обучение для детей", "çocuklar için eğitici öğretici çizgi film", "uşaqlar üçün təhsil öyrədici cizgi film", "learning videos for kids")),
+            Subtopic("music", R.string.sub_kids_music, q("детские песни", "çocuk şarkıları", "uşaq mahnıları", "kids songs nursery rhymes")),
+            Subtopic("dance", R.string.sub_kids_dance, q("детские танцы песенки для малышей", "çocuk dans şarkıları", "uşaq rəqs mahnıları", "kids dance songs")),
+            Subtopic("tales", R.string.sub_kids_tales, q("сказки для детей на ночь", "çocuklar için masallar", "uşaqlar üçün nağıllar", "bedtime stories for kids")),
+            Subtopic("nastya", R.string.sub_kids_nastya, q("Like Nastya", "Like Nastya Türkçe", "Like Nastya Türkçe", "Like Nastya")),
+            Subtopic("vlad", R.string.sub_kids_vlad, q("Влад и Никита", "Vlad ve Niki Türkçe", "Vlad ve Niki Türkçe", "Vlad and Niki")),
         ),
     )
 

@@ -134,7 +134,7 @@ private fun TopicTile(topic: Topic, onClick: () -> Unit, modifier: Modifier = Mo
 private fun TopicScreen(
     topic: Topic,
     showBack: Boolean = true,
-    onWatched: (Video) -> Unit = {},
+    onWatched: (Video, String?) -> Unit = { _, _ -> },
     viewModel: ExploreViewModel,
     onBack: () -> Unit,
     onOpenVideo: (String) -> Unit,
@@ -149,8 +149,12 @@ private fun TopicScreen(
     var menuFor by remember { mutableStateOf<Video?>(null) }
     FocusMemoryScope(viewModel.focusMemory)
 
-    val uiLang = when (LocalConfiguration.current.locales[0].language) {
+    val region by viewModel.region.collectAsStateWithLifecycle()
+    // Язык подборок — по региону или по языку интерфейса (настройка), для всех тем одинаково
+    val uiLang = when (tv.lumen.core.datastore.ContentLang.code(region.first, region.second, LocalConfiguration.current.locales[0].language, dubbed = topic.id == "kids")) {
         "ru" -> QueryLang.RU
+        "tr" -> QueryLang.TR
+        "az" -> QueryLang.AZ
         else -> QueryLang.EN
     }
     // Язык эфира выбирается только в «Прямом эфире»; «Авто» — язык интерфейса
@@ -228,7 +232,7 @@ private fun TopicScreen(
             ) { video, itemModifier ->
                 VideoCard(
                     video,
-                    onClick = { onWatched(video); onOpenVideo(video.id) },
+                    onClick = { onWatched(video, subId); onOpenVideo(video.id) },
                     onLongClick = { menuFor = video },
                     progress = progress[video.id],
                     // Первая строка сетки: Вверх идёт на выбранный чип подтемы (в эфире — на ряд языков), а не на «Все темы»

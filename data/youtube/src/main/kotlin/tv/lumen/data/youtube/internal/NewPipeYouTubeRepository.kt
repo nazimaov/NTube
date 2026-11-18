@@ -1,7 +1,9 @@
 package tv.lumen.data.youtube.internal
 
 import kotlinx.coroutines.CoroutineDispatcher
+import okhttp3.MediaType.Companion.toMediaType
 import okhttp3.OkHttpClient
+import okhttp3.RequestBody.Companion.toRequestBody
 import org.schabi.newpipe.extractor.InfoItem
 import org.schabi.newpipe.extractor.NewPipe
 import org.schabi.newpipe.extractor.exceptions.ExtractionException
@@ -212,13 +214,84 @@ internal class NewPipeYouTubeRepository @Inject constructor(
         // «Видео недоступно» от экстрактора: так он отвечает на видео «для детей» (v0.27 их не поддерживает).
         // Пробуем телевизионный клиент от имени аккаунта, как SmartTube; без входа остаётся прежняя ошибка.
         if (primary is AppResult.Failure && (primary.error as? AppError.ContentUnavailable)?.reason == tv.lumen.core.model.UnavailableReason.OTHER) {
+            // Сначала клиент YouTube Kids (без входа, прямые ссылки), затем телевизионный клиент от имени аккаунта
+            kidsFallback(videoId)?.let { return AppResult.Success(it) }
             tvFallback(videoId)?.let { return AppResult.Success(it) }
-            // Без входа видео «для детей» не получить никаким клиентом — говорим об этом прямо
-            if (authorizedPlayer.isPresent && !authorizedPlayer.get().isSignedIn) {
-                return AppResult.Failure(AppError.ContentUnavailable(tv.lumen.core.model.UnavailableReason.SIGN_IN_REQUIRED, null))
-            }
         }
         return primary
+    }
+
+    /**
+     * Видео «для детей» через клиент приложения YouTube Kids для Android: он отдаёт такие видео без входа,
+     * а ссылки на потоки приходят прямыми, без шифрования (проверено 2026-11-18: 1080p/2160p, ответ 206).
+     */
+    private suspend fun kidsFallback(videoId: String): VideoDetails? = kotlinx.coroutines.withContext(io) {
+        try {
+            val localization = NewPipe.getPreferredLocalization()
+            val country = NewPipe.getPreferredContentCountry().countryCode
+            val clientInfo = org.json.JSONObject()
+                .put("clientName", "ANDROID_KIDS").put("clientVersion", KIDS_CLIENT_VERSION)
+                .put("hl", localization.languageCode).put("gl", country)
+                .put("androidSdkVersion", 31).put("osName", "Android").put("osVersion", "12")
+            val body = org.json.JSONObject()
+                .put("context", org.json.JSONObject().put("client", clientInfo))
+                .put("videoId", videoId).put("contentCheckOk", true).put("racyCheckOk", true)
+            val request = okhttp3.Request.Builder()
+                .url("https://www.youtube.com/youtubei/v1/player?prettyPrint=false")
+                .header("User-Agent", KIDS_USER_AGENT)
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext null
+                val root = org.json.JSONObject(response.body.string())
+                TvPlayerParser.unplayableReason(root)?.let {
+                    android.util.Log.w(TV_TAG, "Клиент YouTube Kids не отдал видео: $it")
+                    return@withContext null
+                }
+                TvPlayerParser.details(videoId, root, Instant.now(), decipher = { it }, throttling = { it })
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: Exception) {
+            android.util.Log.w(TV_TAG, "Запрос клиента YouTube Kids не удался: ${e.javaClass.simpleName}")
+            null
+        }
+    }
+
+    override suspend fun kidsSearch(query: String, language: String): AppResult<List<Video>> = kotlinx.coroutines.withContext(io) {
+        try {
+            val country = NewPipe.getPreferredContentCountry().countryCode
+            val clientInfo = org.json.JSONObject()
+                .put("clientName", "ANDROID_KIDS").put("clientVersion", KIDS_CLIENT_VERSION)
+                .put("hl", language).put("gl", country)
+                .put("androidSdkVersion", 31).put("osName", "Android").put("osVersion", "12")
+                .put(
+                    "kidsAppInfo",
+                    org.json.JSONObject().put(
+                        "contentSettings",
+                        org.json.JSONObject()
+                            .put("corpusPreference", "KIDS_CORPUS_PREFERENCE_YOUNGER")
+                            .put("kidsNoSearchMode", "YT_KIDS_NO_SEARCH_MODE_OFF"),
+                    ),
+                )
+            val body = org.json.JSONObject().put("context", org.json.JSONObject().put("client", clientInfo)).put("query", query)
+            val request = okhttp3.Request.Builder()
+                .url("https://www.youtube.com/youtubei/v1/search?prettyPrint=false")
+                .header("User-Agent", KIDS_USER_AGENT)
+                .post(body.toString().toRequestBody("application/json".toMediaType()))
+                .build()
+            client.newCall(request).execute().use { response ->
+                if (!response.isSuccessful) return@withContext AppResult.Failure(AppError.Network)
+                AppResult.Success(KidsSearchParser.parse(org.json.JSONObject(response.body.string())))
+            }
+        } catch (e: kotlinx.coroutines.CancellationException) {
+            throw e
+        } catch (e: java.io.IOException) {
+            AppResult.Failure(AppError.Network)
+        } catch (e: Exception) {
+            android.util.Log.w(TV_TAG, "Поиск YouTube Kids не удался: ${e.javaClass.simpleName}")
+            AppResult.Failure(AppError.ExtractionBroken)
+        }
     }
 
     private suspend fun tvFallback(videoId: String): VideoDetails? {
@@ -400,3 +473,5 @@ internal fun titleFitsRegion(title: String, language: String): Boolean {
 }
 
 private const val TV_TAG = "Lumen/TvPlayer"
+private const val KIDS_CLIENT_VERSION = "10.26.4"
+private const val KIDS_USER_AGENT = "com.google.android.apps.youtube.kids/$KIDS_CLIENT_VERSION (Linux; U; Android 12) gzip"

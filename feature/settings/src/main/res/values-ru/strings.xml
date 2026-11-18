@@ -120,4 +120,6 @@
     <string name="settings_menu_explore">Обзор</string>
     <string name="settings_menu_kids">Детское</string>
     <string name="settings_menu_library">Библиотека</string>
+    <string name="settings_by_region">Язык контента по региону</string>
+    <string name="settings_by_region_hint">Вкл: подборки («Обзор», «Детское», «Музыка», тренды) — на языке выбранного региона. Выкл: на языке приложения.</string>
 </resources>

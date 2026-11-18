@@ -120,4 +120,6 @@
     <string name="settings_menu_explore">Explore</string>
     <string name="settings_menu_kids">Kids</string>
     <string name="settings_menu_library">Library</string>
+    <string name="settings_by_region">Content language by region</string>
+    <string name="settings_by_region_hint">On: collections (Explore, Kids, Music, trending) are in the language of the selected region. Off: in the app language.</string>
 </resources>

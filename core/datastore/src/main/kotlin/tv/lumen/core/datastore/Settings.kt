@@ -37,6 +37,8 @@ data class Settings(
     // Общие
     /** null — из системной локали. */
     val contentCountry: String? = null,
+    /** Язык подборок («Обзор», «Детское», «Музыка», тренды) — язык региона (true) или язык интерфейса (false). */
+    val contentByRegion: Boolean = true,
     val contentLanguage: String? = null,
     /** Язык интерфейса (BCP 47, например «az» или «pt-BR»); null — как в системе. */
     val appLanguage: String? = null,

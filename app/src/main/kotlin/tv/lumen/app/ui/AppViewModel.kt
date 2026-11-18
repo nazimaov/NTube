@@ -54,7 +54,7 @@ class AppViewModel @Inject constructor(
     /** «Не интересно», «Смотреть позже» и свои плейлисты для меню карточек. */
     val menuExtras: MenuExtras = object : MenuExtras {
         override val playlists: StateFlow<List<PlaylistRef>> = userLists.playlists
-            .map { all -> all.filter { it.id != UserLists.KIDS_WATCHED }.map { PlaylistRef(it.id, it.name, it.videos.size, it.videos.mapTo(HashSet()) { v -> v.id }) } }
+            .map { all -> all.filter { !it.id.startsWith(UserLists.KIDS_WATCHED) }.map { PlaylistRef(it.id, it.name, it.videos.size, it.videos.mapTo(HashSet()) { v -> v.id }) } }
             .stateIn(viewModelScope, SharingStarted.Eagerly, emptyList())
 
         override fun hide(video: Video) {

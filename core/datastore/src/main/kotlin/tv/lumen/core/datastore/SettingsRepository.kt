@@ -70,6 +70,7 @@ class SettingsRepository @Inject constructor(
         hideWatched = p[HIDE_WATCHED] ?: false,
         blockedWords = p[BLOCKED_WORDS] ?: emptySet(),
         contentCountry = p[COUNTRY],
+        contentByRegion = p[BY_REGION] ?: true,
         contentLanguage = p[LANGUAGE],
         appLanguage = p[APP_LANGUAGE],
         catalogDub = p[CATALOG_DUB]?.let { runCatching { DubLanguage.valueOf(it) }.getOrNull() } ?: DubLanguage.ORIGINAL,
@@ -98,6 +99,7 @@ class SettingsRepository @Inject constructor(
         p[HIDE_SHORTS] = s.hideShorts
         p[HIDE_WATCHED] = s.hideWatched
         p[BLOCKED_WORDS] = s.blockedWords
+        p[BY_REGION] = s.contentByRegion
         if (s.contentCountry != null) p[COUNTRY] = s.contentCountry else p.remove(COUNTRY)
         if (s.contentLanguage != null) p[LANGUAGE] = s.contentLanguage else p.remove(LANGUAGE)
         if (s.appLanguage != null) p[APP_LANGUAGE] = s.appLanguage else p.remove(APP_LANGUAGE)
@@ -140,6 +142,7 @@ class SettingsRepository @Inject constructor(
         val APP_LANGUAGE = stringPreferencesKey("general.app_language")
         val CATALOG_DUB = stringPreferencesKey("catalog.dub")
         val HISTORY = booleanPreferencesKey("general.history_enabled")
+        val BY_REGION = booleanPreferencesKey("language.content_by_region")
         val MENU_ORDER = stringPreferencesKey("general.menu_order")
         val MENU_HIDDEN = stringSetPreferencesKey("general.menu_hidden")
         val UPDATE_CHECK = booleanPreferencesKey("update.check_on_start")

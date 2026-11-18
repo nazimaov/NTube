@@ -222,7 +222,7 @@ class PlaylistsViewModel @javax.inject.Inject constructor(
 ) : androidx.lifecycle.ViewModel() {
     val focusMemory = tv.lumen.core.designsystem.focus.FocusMemory()
     val actions = VideoActions(library, viewModelScope)
-    val playlists = lists.playlists.map { all -> all.filter { it.id != tv.lumen.core.datastore.UserLists.KIDS_WATCHED } }
+    val playlists = lists.playlists.map { all -> all.filter { !it.id.startsWith(tv.lumen.core.datastore.UserLists.KIDS_WATCHED) } }
         .stateIn(viewModelScope, kotlinx.coroutines.flow.SharingStarted.Eagerly, emptyList())
 
     fun remove(playlistId: String, videoId: String) {

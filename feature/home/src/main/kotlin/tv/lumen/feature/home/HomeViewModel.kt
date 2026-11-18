@@ -95,7 +95,7 @@ class HomeViewModel @Inject constructor(
     }
 
     // Популярное в регионе из настроек: меняется вместе с регионом и языком контента
-    private val regional: Flow<List<Video>> = settings.flow { it.contentLanguage to it.contentCountry }
+    private val regional: Flow<List<Video>> = settings.flow { it.contentLanguage to it.contentCountry.takeIf { _ -> it.contentByRegion } }
         .mapLatest { (language, country) ->
             youTubeInitializer.applyContentLocale(language, country) // до запроса, чтобы не было гонки с Application
             youtube.regionalPopular().getOrNull().orEmpty()
@@ -143,7 +143,7 @@ class HomeViewModel @Inject constructor(
         viewModelScope.launch {
             // Регион и язык из настроек применяются до запроса
             val saved = settings.current.value
-            youTubeInitializer.applyContentLocale(saved.contentLanguage, saved.contentCountry)
+            youTubeInitializer.applyContentLocale(saved.contentLanguage, saved.contentCountry.takeIf { saved.contentByRegion })
             // «В тренде» — популярное в регионе из настроек, на языке региона, по просмотрам и свежести
             trending.value = when (val result = youtube.regionalPopular()) {
                 is AppResult.Success -> TrendingState.Content(result.value)

@@ -151,8 +151,8 @@ class MusicViewModel @Inject constructor(
     private val uiLanguage = MutableStateFlow("en")
 
     /** Язык музыки: по стране контента из настроек, пока страны нет — по языку интерфейса. */
-    val lang: StateFlow<MusicLang> = combine(settings.flow { it.contentCountry }, uiLanguage) { country, ui ->
-        MusicBrowse.autoLang(country, ui)
+    val lang: StateFlow<MusicLang> = combine(settings.flow { it.contentCountry to it.contentByRegion }, uiLanguage) { (country, byRegion), ui ->
+        MusicBrowse.autoLang(if (byRegion) country else null, ui)
     }.stateIn(viewModelScope, SharingStarted.Eagerly, MusicLang.EN)
 
     private val _mood = MutableStateFlow<Mood?>(null)

@@ -43,7 +43,7 @@ class LumenApplication : Application(), SingletonImageLoader.Factory {
         youTubeInitializer.initialize()
         // Язык и страна контента из настроек; null — системная локаль (SPEC 4.2, 9.2)
         appScope.launch {
-            settings.flow { it.contentLanguage to it.contentCountry }.collect { (language, country) ->
+            settings.flow { it.contentLanguage to it.contentCountry.takeIf { _ -> it.contentByRegion } }.collect { (language, country) ->
                 youTubeInitializer.applyContentLocale(language, country)
                 // Лента аккаунта запрашивается на том же языке и в том же регионе
                 accountFeed.locale = java.util.Locale(language ?: java.util.Locale.getDefault().language, country ?: java.util.Locale.getDefault().country)

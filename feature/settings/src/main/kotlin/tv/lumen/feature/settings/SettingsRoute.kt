@@ -313,6 +313,19 @@ fun SettingsPageRoute(
             )
         }
         item {
+            Toggle(stringResource(R.string.settings_by_region), s.contentByRegion, Modifier.rememberFocus(memory, "by_region")) {
+                viewModel.update { it.copy(contentByRegion = !it.contentByRegion) }
+            }
+        }
+        item {
+            Text(
+                stringResource(R.string.settings_by_region_hint),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(start = 16.dp, bottom = 8.dp).fillMaxWidth(0.8f),
+            )
+        }
+        item {
             val title = stringResource(R.string.settings_content_language)
             Row(title, contentLangs.label(s.contentLanguage), Modifier.rememberFocus(memory, "lang")) {
                 ask(title, contentLangs, s.contentLanguage) { v -> viewModel.update { it.copy(contentLanguage = v) } }
