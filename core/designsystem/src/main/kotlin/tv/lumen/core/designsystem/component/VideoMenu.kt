@@ -106,6 +106,7 @@ fun VideoMenu(
     Dialog(onDismissRequest = onDismiss) {
         Column(
             modifier = Modifier
+                .swallowOpeningKeyPress()
                 .width(480.dp)
                 .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(16.dp))
                 .padding(24.dp),

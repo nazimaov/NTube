@@ -425,7 +425,8 @@ internal class ExoPlayerController(
         if (exo.playbackState == Player.STATE_ENDED) {
             exo.seekTo(0)
             exo.play()
-        } else if (exo.isPlaying) {
+        } else if (exo.playWhenReady) {
+            // Не isPlaying: во время буферизации оно ложно, и «Пауза» превращалась в бесполезный play()
             exo.pause()
         } else {
             exo.play()

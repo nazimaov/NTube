@@ -1,6 +1,7 @@
 package tv.lumen.feature.watch
 
 import androidx.compose.foundation.background
+import tv.lumen.core.designsystem.component.swallowOpeningKeyPress
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.padding
@@ -48,7 +49,7 @@ fun QueueItemDialog(
     }
     Dialog(onDismissRequest = onDismiss) {
         Column(
-            modifier = Modifier.width(480.dp).background(LumenColors.Surface, RoundedCornerShape(16.dp)).padding(24.dp),
+            modifier = Modifier.swallowOpeningKeyPress().width(480.dp).background(LumenColors.Surface, RoundedCornerShape(16.dp)).padding(24.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             Text(video.title, style = MaterialTheme.typography.titleMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)

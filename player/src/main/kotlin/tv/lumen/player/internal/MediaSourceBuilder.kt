@@ -8,6 +8,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
 import androidx.media3.common.util.UnstableApi
+import androidx.media3.datasource.DataSource
 import androidx.media3.datasource.DefaultDataSource
 import androidx.media3.datasource.okhttp.OkHttpDataSource
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
@@ -38,7 +39,10 @@ internal class MediaSourceBuilder @Inject constructor(
 ) {
     // Видео не кэшируется на диск (SPEC 9.3): клиент без HTTP-кэша
     private val mediaClient = client.newBuilder().cache(null).build()
-    private val dataSourceFactory = DefaultDataSource.Factory(context, OkHttpDataSource.Factory(mediaClient))
+    // Потоки googlevideo качаются кусками по 10 МБ: длинные запросы YouTube сильно замедляет (см. ChunkedDataSource)
+    private val dataSourceFactory = DataSource.Factory {
+        ChunkedDataSource(DefaultDataSource.Factory(context, OkHttpDataSource.Factory(mediaClient)))
+    }
     private val factory = DefaultMediaSourceFactory(dataSourceFactory)
 
     suspend fun separate(
