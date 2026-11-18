@@ -47,6 +47,14 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          VERSION=$(grep '^lumen.versionName=' gradle.properties | cut -d= -f2)
+          # Что нового показывается в самом приложении (окно обновления): docs/releases/<версия>.md с разделами ## ru и ## en;
+          # нет файла — берётся текст коммита с тегом
+          if [ -f "docs/releases/$VERSION.md" ]; then
+            cp "docs/releases/$VERSION.md" "$RUNNER_TEMP/notes.md"
+          else
+            git log -1 --format=%B "$GITHUB_REF_NAME" > "$RUNNER_TEMP/notes.md"
+          fi
           gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 \
             && gh release upload "$GITHUB_REF_NAME" "$APK" --clobber \
-            || gh release create "$GITHUB_REF_NAME" "$APK" --title "$GITHUB_REF_NAME" --generate-notes
+            || gh release create "$GITHUB_REF_NAME" "$APK" --title "$GITHUB_REF_NAME" --notes-file "$RUNNER_TEMP/notes.md"

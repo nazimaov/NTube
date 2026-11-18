@@ -32,7 +32,7 @@ fun UpdateDialog(state: UpdateState, onUpdate: (UpdateInfo) -> Unit, onDismiss: 
     val (title, body, action) = when (state) {
         is UpdateState.Available -> Triple(
             stringResource(R.string.update_available, state.info.version),
-            state.info.notes,
+            tv.lumen.data.updater.ReleaseNotes.select(state.info.notes, androidx.compose.ui.platform.LocalConfiguration.current.locales[0].language),
             stringResource(R.string.update_install) to { onUpdate(state.info) },
         )
         is UpdateState.Downloading -> Triple(
@@ -66,10 +66,13 @@ fun UpdateDialog(state: UpdateState, onUpdate: (UpdateInfo) -> Unit, onDismiss: 
         ) {
             Text(title, style = MaterialTheme.typography.titleLarge)
             if (body.isNotBlank()) {
+                if (state is UpdateState.Available) {
+                    Text(stringResource(R.string.update_whats_new), style = MaterialTheme.typography.titleMedium)
+                }
                 Text(
                     body,
-                    style = MaterialTheme.typography.bodyMedium,
-                    modifier = Modifier.heightIn(max = 240.dp).verticalScroll(rememberScrollState()),
+                    style = MaterialTheme.typography.bodyLarge,
+                    modifier = Modifier.heightIn(max = 320.dp).verticalScroll(rememberScrollState()),
                 )
             }
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

@@ -1,6 +1,7 @@
 package tv.lumen.app.ui
 
 import androidx.activity.compose.LocalActivity
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -29,6 +30,8 @@ import androidx.compose.ui.input.key.key
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.key.type
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavDestination
@@ -43,7 +46,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.Icon
-import androidx.tv.material3.NavigationDrawer
+import androidx.tv.material3.ModalNavigationDrawer
 import androidx.tv.material3.DrawerValue
 import androidx.compose.foundation.layout.height
 import androidx.tv.material3.NavigationDrawerItem
@@ -140,9 +143,18 @@ fun LumenApp(
                 true
             },
     ) {
-        NavigationDrawer(
+        // Modal: раскрытое меню рисуется поверх экрана. Обычный NavigationDrawer сдвигает весь экран, и на каждом
+        // кадре анимации контент (сетки с картинками) перекладывается заново — на слабом ТВ это тормозит и мерцает.
+        ModalNavigationDrawer(
+            // Шторка под меню: слева сплошной фон (текст пунктов читается), правее экран затемнён наполовину
+            scrimBrush = Brush.horizontalGradient(
+                0f to LumenColors.Background,
+                0.3f to LumenColors.Background,
+                0.32f to Color.Black.copy(alpha = 0.55f),
+                1f to Color.Black.copy(alpha = 0.55f),
+            ),
             drawerContent = {
-                if (isWatching) return@NavigationDrawer
+                if (isWatching) return@ModalNavigationDrawer
                 val expanded = it == DrawerValue.Open
                 Column(Modifier.fillMaxHeight()) {
                 // Логотип: в свёрнутом меню — эмблема, в раскрытом — полностью
@@ -197,6 +209,8 @@ fun LumenApp(
                 }
             },
         ) {
+          // Узкая панель меню (80 dp) всегда на месте; экран начинается правее неё и не двигается при раскрытии меню
+          Box(Modifier.fillMaxSize().padding(start = if (isWatching) 0.dp else ClosedDrawerWidth)) {
             // Без анимации переходов: стандартное затухание на ТВ накладывает экраны друг на друга и мерцает
             NavHost(
                 navController = navController,
@@ -255,6 +269,7 @@ fun LumenApp(
                     )
                 }
             }
+          }
         }
 
         UpdateDialog(state = updateState, onUpdate = appViewModel::installUpdate, onDismiss = appViewModel::dismissUpdate)
@@ -303,3 +318,6 @@ private fun NavHostController.navigateToTopLevel(item: TopLevelDestination) {
         restoreState = !here
     }
 }
+
+/** Ширина узкой панели меню в tv-material (ClosedDrawerWidth). */
+private val ClosedDrawerWidth = 80.dp

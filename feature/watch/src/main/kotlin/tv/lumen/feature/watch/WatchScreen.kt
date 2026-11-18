@@ -227,7 +227,7 @@ internal fun WatchScreen(
         when (event.key) {
             Key.MediaPlayPause -> { controller.togglePlayPause(); showPanel(PanelFocus.PLAY); return true }
             Key.MediaPlay -> { controller.play(); return true }
-            Key.MediaPause -> { controller.pause(); showPanel(PanelFocus.PLAY); return true }
+            Key.MediaPause, Key.MediaStop -> { controller.pause(); showPanel(PanelFocus.PLAY); return true }
             Key.MediaFastForward -> { controller.seekBy(FAST_SEEK_MS); return true }
             Key.MediaRewind -> { controller.seekBy(-FAST_SEEK_MS); return true }
         }

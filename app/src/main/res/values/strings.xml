@@ -9,6 +9,7 @@
     <string name="exit_cancel">Cancel</string>
 <string name="update_available">Version %1$s is available</string>
     <string name="update_install">Update</string>
+    <string name="update_whats_new">What\'s new</string>
     <string name="update_later">Later</string>
     <string name="update_close">Close</string>
     <string name="update_downloading">Downloading %1$s…</string>

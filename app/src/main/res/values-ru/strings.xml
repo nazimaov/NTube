@@ -8,6 +8,7 @@
     <string name="exit_cancel">Отмена</string>
 <string name="update_available">Доступна версия %1$s</string>
     <string name="update_install">Обновить</string>
+    <string name="update_whats_new">Что нового</string>
     <string name="update_later">Позже</string>
     <string name="update_close">Закрыть</string>
     <string name="update_downloading">Загрузка %1$s…</string>

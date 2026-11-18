@@ -64,8 +64,14 @@ internal class ExoPlayerController(
         .build()
         .apply { playWhenReady = true }
 
-    // Медиакнопки пульта и голосовые команды (SPEC 5.6)
-    private val session: MediaSession = MediaSession.Builder(context, exo)
+    // Медиакнопки пульта и голосовые команды (SPEC 5.6). «Стоп» от голосового помощника (Алиса, Google) ставит
+    // на паузу, как в официальном YouTube: настоящий stop() выключал плеер, и видео уже не оживало.
+    private val session: MediaSession = MediaSession.Builder(
+        context,
+        object : androidx.media3.common.ForwardingPlayer(exo) {
+            override fun stop() = pause()
+        },
+    )
         .setId("lumen-" + UUID.randomUUID())
         .build()
 
@@ -427,7 +433,11 @@ internal class ExoPlayerController(
         fetchAndPrepare(videoId, position, forceRefresh = true, resume = details == null)
     }
 
-    override fun play() = exo.play()
+    override fun play() {
+        // «Продолжи» на закончившемся видео — заново с начала
+        if (exo.playbackState == Player.STATE_ENDED) exo.seekTo(0)
+        exo.play()
+    }
     override fun pause() = exo.pause()
 
     override fun togglePlayPause() {
