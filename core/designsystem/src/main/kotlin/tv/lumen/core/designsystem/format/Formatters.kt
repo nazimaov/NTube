@@ -15,12 +15,29 @@ fun formatDuration(seconds: Long): String {
     val h = seconds / 3600
     val m = (seconds % 3600) / 60
     val s = seconds % 60
-    return if (h > 0) "%d:%02d:%02d".format(h, m, s) else "%d:%02d".format(m, s)
+    // Без String.format: он заметно медленнее, а вызывается для каждой карточки при прокрутке
+    return buildString(8) {
+        if (h > 0) {
+            append(h).append(':')
+            if (m < 10) append('0')
+        }
+        append(m).append(':')
+        if (s < 10) append('0')
+        append(s)
+    }
 }
 
 /** 1 234 567 → «1,2 млн» / «1.2M». */
-fun formatCompact(count: Long, locale: Locale = Locale.getDefault()): String =
-    CompactDecimalFormat.getInstance(locale, CompactDecimalFormat.CompactStyle.SHORT).format(count)
+fun formatCompact(count: Long, locale: Locale = Locale.getDefault()): String {
+    // Создание CompactDecimalFormat грузит данные ICU и дорогое — раньше это происходило у каждой
+    // новой карточки при прокрутке ряда; теперь один экземпляр на язык
+    val format = synchronized(compactFormats) {
+        compactFormats.getOrPut(locale) { CompactDecimalFormat.getInstance(locale, CompactDecimalFormat.CompactStyle.SHORT) }
+    }
+    return synchronized(format) { format.format(count) }
+}
+
+private val compactFormats = HashMap<Locale, CompactDecimalFormat>()
 
 @Composable
 fun viewsText(count: Long): String? {

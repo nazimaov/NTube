@@ -93,14 +93,27 @@ internal class NewPipeYouTubeRepository @Inject constructor(
 
     /** Чарты YouTube «Музыка в тренде» (киоск trending_music); не во всех странах. */
     override suspend fun musicTrending(): AppResult<List<Video>> = call {
-        try {
-            kioskVideos(MUSIC_KIOSK_ID)
-        } catch (e: org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException) {
-            // YouTube Charts есть не для всех стран (например, нет для Азербайджана): вместо чарта
-            // берём поиск популярной музыки на языке контента
+        val country = NewPipe.getPreferredContentCountry().countryCode.ifBlank { "US" }
+        // Готовый список держим полчаса: повторный вход в «Музыку» открывается сразу
+        musicCache.get(country)?.let { return@call it }
+        val videos = if (country in noMusicChart) {
             musicSearchFallback()
+        } else {
+            try {
+                kioskVideos(MUSIC_KIOSK_ID)
+            } catch (e: org.schabi.newpipe.extractor.exceptions.ContentNotAvailableException) {
+                // YouTube Charts есть не для всех стран (например, нет для Азербайджана): вместо чарта
+                // берём поиск популярной музыки на языке контента; страну запоминаем, чтобы не спрашивать чарт снова
+                noMusicChart += country
+                musicSearchFallback()
+            }
         }
+        musicCache.put(country, videos)
+        videos
     }
+
+    private val musicCache = TimedCache<String, List<Video>>(ttlMillis = 30 * 60 * 1000L, maxSize = 4)
+    private val noMusicChart: MutableSet<String> = java.util.concurrent.ConcurrentHashMap.newKeySet()
 
     /**
      * «Музыка в тренде» для страны без YouTube Charts: песни на языке РЕГИОНА (страна контента, а не язык
@@ -124,15 +137,21 @@ internal class NewPipeYouTubeRepository @Inject constructor(
                 listOf("$name top songs $year", "$name new songs $year", "$name music hits", "$name popular music", "$name music videos $year")
             }
         }
+        // Запросы параллельно: раньше 5–8 поисков шли по очереди, и список ждал их все подряд
+        val found = kotlinx.coroutines.runBlocking(kotlinx.coroutines.Dispatchers.IO) {
+            queries.map { query ->
+                async {
+                    runCatching {
+                        val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(SearchFilter.VIDEOS)), "")
+                        SearchInfo.getInfo(youtube, handler).relatedItems.mapNotNull(Mappers::searchItem)
+                    }.getOrNull().orEmpty()
+                }
+            }.awaitAll()
+        }
         val videos = LinkedHashMap<String, Video>()
-        for (query in queries) {
-            runCatching {
-                val handler = youtube.searchQHFactory.fromQuery(query, listOf(searchFilter(SearchFilter.VIDEOS)), "")
-                SearchInfo.getInfo(youtube, handler).relatedItems.mapNotNull(Mappers::searchItem)
-            }.getOrNull()?.forEach { item ->
-                val v = (item as? SearchItem.VideoItem)?.video ?: return@forEach
-                if (!v.isLive && !v.isShort && v.durationSec in 90..900) videos.putIfAbsent(v.id, v)
-            }
+        for (item in found.flatten()) {
+            val v = (item as? SearchItem.VideoItem)?.video ?: continue
+            if (!v.isLive && !v.isShort && v.durationSec in 90..900) videos.putIfAbsent(v.id, v)
         }
         if (videos.isEmpty()) throw ExtractionException("Нет музыки для региона")
         val now = Instant.now()
@@ -284,7 +303,7 @@ internal class NewPipeYouTubeRepository @Inject constructor(
         }
     }
 
-    override suspend fun kidsSearch(query: String, language: String): AppResult<List<Video>> = kotlinx.coroutines.withContext(io) {
+    override suspend fun kidsSearch(query: String, language: String, page: PageToken?): AppResult<Page<Video>> = kotlinx.coroutines.withContext(io) {
         try {
             val country = NewPipe.getPreferredContentCountry().countryCode
             val clientInfo = org.json.JSONObject()
@@ -300,7 +319,8 @@ internal class NewPipeYouTubeRepository @Inject constructor(
                             .put("kidsNoSearchMode", "YT_KIDS_NO_SEARCH_MODE_OFF"),
                     ),
                 )
-            val body = org.json.JSONObject().put("context", org.json.JSONObject().put("client", clientInfo)).put("query", query)
+            val body = org.json.JSONObject().put("context", org.json.JSONObject().put("client", clientInfo))
+                .apply { if (page != null) put("continuation", page.value) else put("query", query) }
             val request = okhttp3.Request.Builder()
                 .url("https://www.youtube.com/youtubei/v1/search?prettyPrint=false")
                 .header("User-Agent", KIDS_USER_AGENT)
@@ -308,7 +328,8 @@ internal class NewPipeYouTubeRepository @Inject constructor(
                 .build()
             client.newCall(request).execute().use { response ->
                 if (!response.isSuccessful) return@withContext AppResult.Failure(AppError.Network)
-                AppResult.Success(KidsSearchParser.parse(org.json.JSONObject(response.body.string())))
+                val root = org.json.JSONObject(response.body.string())
+                AppResult.Success(Page(KidsSearchParser.parse(root), KidsSearchParser.next(root)?.let(::PageToken)))
             }
         } catch (e: kotlinx.coroutines.CancellationException) {
             throw e

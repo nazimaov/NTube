@@ -151,7 +151,7 @@ private fun TopicScreen(
 
     val region by viewModel.region.collectAsStateWithLifecycle()
     // Язык подборок — по региону или по языку интерфейса (настройка), для всех тем одинаково
-    val uiLang = when (tv.lumen.core.datastore.ContentLang.code(region.first, region.second, LocalConfiguration.current.locales[0].language, dubbed = topic.id == "kids")) {
+    val uiLang = when (tv.lumen.core.datastore.ContentLang.code(region.first, region.second, LocalConfiguration.current.locales[0].language)) {
         "ru" -> QueryLang.RU
         "tr" -> QueryLang.TR
         "az" -> QueryLang.AZ

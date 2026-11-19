@@ -230,7 +230,10 @@ class MusicViewModel @Inject constructor(
     fun loadCharts() {
         _charts.value = MusicChartsState.Loading
         viewModelScope.launch {
-            _charts.value = when (val r = youtube.musicTrending()) {
+            val started = System.currentTimeMillis()
+            val r = youtube.musicTrending()
+            android.util.Log.i("Lumen", "Музыка в тренде: ${System.currentTimeMillis() - started} мс")
+            _charts.value = when (r) {
                 is AppResult.Success -> MusicChartsState.Content(r.value)
                 is AppResult.Failure -> MusicChartsState.Error(r.error)
             }

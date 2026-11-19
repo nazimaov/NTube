@@ -82,7 +82,15 @@ class ExploreViewModel @Inject constructor(
         shown = query
         focusMemory.reset()
         collectJob?.cancel()
-        val p = Pager<Video>(viewModelScope, { it.id }) { token -> if (kidsForYou) kidsMix(topic, lang) else if (topic.id == "kids") kidsLoad(query, lang) else if (channels.isNotEmpty()) liveOfChannels(channels, keywords) else load(query, token) }
+        val subPools = if (topic.id == "kids" && !kidsForYou) kidsPools(sub?.query ?: topic.query, lang) else emptyList()
+        val p = Pager<Video>(viewModelScope, { it.id }) { token ->
+            when {
+                kidsForYou -> kidsMix(topic, lang, first = token == null)
+                topic.id == "kids" -> kidsLoad(subPools)
+                channels.isNotEmpty() -> liveOfChannels(channels, keywords)
+                else -> load(query, token)
+            }
+        }
         pager = p
         collectJob = viewModelScope.launch { p.state.collect { raw.value = it } }
         p.refresh()
@@ -134,46 +142,113 @@ class ExploreViewModel @Inject constructor(
     private fun String.normalized() = lowercase().replace("i\u0307", "i").replace("ə", "e").replace("ı", "i").replace("ü", "u")
         .replace("ö", "o").replace("ç", "c").replace("ş", "s").replace("ğ", "g")
 
-    /** Поиск в «Детском» — через YouTube Kids: там только одобренные для детей видео, и все они воспроизводятся. */
-    private suspend fun kidsLoad(query: String, lang: QueryLang): AppResult<Page<Video>> =
-        when (val r = youtube.kidsSearch(query, lang.name.lowercase())) {
-            is AppResult.Success -> AppResult.Success(Page(r.value, null))
-            is AppResult.Failure -> r
+    /**
+     * Источник «Детского»: один поиск YouTube Kids с подгрузкой страниц. В буфере — уже полученные, ещё не показанные видео.
+     * [maxPages] — сколько страниц брать, прежде чем перейти к следующему источнику (сначала язык региона, потом дубляж).
+     */
+    private class KidsPool(val query: String, val lang: String, val extra: Boolean = false, val maxPages: Int = Int.MAX_VALUE) {
+        val buffer = ArrayDeque<Video>()
+        var next: PageToken? = null
+        var pages = 0
+        var done = false
+        val exhausted get() = done && buffer.isEmpty()
+    }
+
+    /** Дозагрузить страницу источника; при ошибке источник закрывается, ошибка возвращается. */
+    private suspend fun KidsPool.fetch(keep: (Video) -> Boolean = { true }): AppResult.Failure? {
+        if (done) return null
+        return when (val r = youtube.kidsSearch(query, lang, next)) {
+            is AppResult.Success -> {
+                pages++
+                next = r.value.next
+                if (next == null || pages >= maxPages || r.value.items.isEmpty()) done = true
+                r.value.items.filter(keep).forEach(buffer::addLast)
+                null
+            }
+            is AppResult.Failure -> { done = true; r }
         }
+    }
 
     /**
-     * «Для вас» в «Детском»: понемногу из каждой подтемы (поиск подтем идёт параллельно, по кругу по 1 видео).
-     * Подтемы, из которых ребёнок чаще открывал видео, идут первыми и дают больше; уже открытые видео не повторяются.
+     * Источники для запроса подтемы: язык региона; для Азербайджана после азербайджанских — турецкие (детское там
+     * в основном с турецким дубляжом). Одинаковые запросы (например «Like Nastya Türkçe») не повторяются.
      */
-    private suspend fun kidsMix(topic: Topic, lang: QueryLang): AppResult<Page<Video>> {
-        val lists = userLists.playlists.value
-        val watched = lists.filter { it.id.startsWith(tv.lumen.core.datastore.UserLists.KIDS_WATCHED) }.flatMap { it.videos }.mapTo(HashSet()) { it.id }
-        fun weight(sub: Subtopic) = lists.firstOrNull { it.id == kidsListId(sub.id) }?.videos?.size ?: 0
-        val subs = topic.subtopics.sortedByDescending(::weight)
-        // Каналы, которые ребёнок смотрит чаще всего (до 3): их свежие видео идут первыми — так «Для вас» подстраивается
-        val favoriteChannels = lists.filter { it.id.startsWith(tv.lumen.core.datastore.UserLists.KIDS_WATCHED) }
-            .flatMap { it.videos }.mapNotNull { it.channelName?.takeIf { n -> n.isNotBlank() } }
-            .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(3).map { it.key }
-        val (channelResults, results) = coroutineScope {
-            val ch = favoriteChannels.map { name -> async { kidsLoad(name, lang) } }
-            val q = subs.map { s -> async { kidsLoad(s.query.at(lang), lang) } }
-            ch.awaitAll() to q.awaitAll()
-        }
-        val channelPools = channelResults.map { r -> (r as? AppResult.Success)?.value?.items.orEmpty().filter { it.id !in watched && !it.isShort && !it.isLive }.toMutableList() }
-        val pools = channelPools + results.map { r -> (r as? AppResult.Success)?.value?.items.orEmpty().filter { it.id !in watched && !it.isShort }.toMutableList() }
-        if (pools.all { it.isEmpty() }) return results.firstOrNull { it is AppResult.Failure } ?: AppResult.Success(Page(emptyList(), null))
-        // Любимые подтемы получают дополнительное место в каждом круге
-        val extra = channelPools.map { true } + subs.map { weight(it) > 0 }
-        val seen = HashSet<String>()
+    private fun kidsPools(query: Map<QueryLang, String>, lang: QueryLang): List<KidsPool> {
+        if (lang != QueryLang.AZ) return listOf(KidsPool(query.at(lang), lang.name.lowercase()))
+        val az = query.at(QueryLang.AZ)
+        val tr = query.at(QueryLang.TR)
+        return if (tr == az) listOf(KidsPool(az, "az")) else listOf(KidsPool(az, "az", maxPages = AZ_PAGES), KidsPool(tr, "tr"))
+    }
+
+    /** Подтема «Детского»: страница за страницей — сначала источник языка региона, когда он кончится — следующий. */
+    private suspend fun kidsLoad(pools: List<KidsPool>): AppResult<Page<Video>> {
+        var failure: AppResult.Failure? = null
         val out = ArrayList<Video>()
-        while (pools.any { it.isNotEmpty() } && out.size < 80) {
-            pools.forEachIndexed { i, pool ->
-                repeat(if (extra[i]) 2 else 1) {
-                    while (pool.isNotEmpty()) { val v = pool.removeAt(0); if (seen.add(v.id)) { out += v; break } }
+        for (pool in pools) {
+            if (pool.exhausted) continue
+            if (pool.buffer.isEmpty()) pool.fetch()?.let { failure = it }
+            while (pool.buffer.isNotEmpty()) out += pool.buffer.removeFirst()
+            if (out.isNotEmpty()) break
+        }
+        val more = pools.any { !it.exhausted }
+        val error = failure
+        if (out.isEmpty() && error != null && !more) return error
+        return AppResult.Success(Page(out, if (more) PageToken("more") else null))
+    }
+
+    /** Источники «Для вас» текущего показа; пересоздаются при каждом новом показе. */
+    private var mixPools: List<KidsPool> = emptyList()
+
+    /**
+     * «Для вас» в «Детском»: понемногу из каждой подтемы (по кругу по [MIX_TAKE] видео) и без конца — когда
+     * буфер подтемы пустеет, догружается её следующая страница. Подтемы, из которых ребёнок чаще открывал видео,
+     * и любимые каналы дают вдвое больше; уже открытые видео не повторяются. В Азербайджане сначала идут все
+     * азербайджанские источники, потом турецкие.
+     */
+    private suspend fun kidsMix(topic: Topic, lang: QueryLang, first: Boolean): AppResult<Page<Video>> {
+        val lists = userLists.playlists.value
+        val watchedLists = lists.filter { it.id.startsWith(tv.lumen.core.datastore.UserLists.KIDS_WATCHED) }
+        val watched = watchedLists.flatMap { it.videos }.mapTo(HashSet()) { it.id }
+        if (first) {
+            fun weight(sub: Subtopic) = lists.firstOrNull { it.id == kidsListId(sub.id) }?.videos?.size ?: 0
+            val subs = topic.subtopics.sortedByDescending(::weight)
+            // Каналы, которые ребёнок смотрит чаще всего (до 3): их свежие видео идут первыми — так «Для вас» подстраивается
+            val favoriteChannels = watchedLists.flatMap { it.videos }.mapNotNull { it.channelName?.takeIf { n -> n.isNotBlank() } }
+                .groupingBy { it }.eachCount().entries.sortedByDescending { it.value }.take(3).map { it.key }
+            val code = lang.name.lowercase()
+            // Сначала подборки на языке региона, затем любимые каналы (они могут быть на любом языке)
+            // В Азербайджане подтема без азербайджанского запроса (Like Nastya, Влад и Никита — только турецкий дубляж)
+            // считается турецкой и идёт после азербайджанских
+            fun subLang(sub: Subtopic) = if (lang == QueryLang.AZ && sub.query.at(QueryLang.AZ) == sub.query.at(QueryLang.TR)) "tr" else code
+            val main = subs.map { KidsPool(it.query.at(lang), subLang(it), extra = weight(it) > 0) } +
+                favoriteChannels.map { KidsPool(it, code, extra = true) }
+            val second = if (lang == QueryLang.AZ) {
+                subs.map { KidsPool(it.query.at(QueryLang.TR), "tr", extra = weight(it) > 0) }.filter { p -> main.none { it.query == p.query } }
+            } else emptyList()
+            mixPools = main + second
+        }
+        val pools = mixPools
+        val keep: (Video) -> Boolean = { it.id !in watched && !it.isShort && !it.isLive }
+        // Догрузить тех, у кого в буфере мало (параллельно)
+        val failures = coroutineScope {
+            pools.filter { !it.done && it.buffer.size < MIX_TAKE * 2 }.map { async { it.fetch(keep) } }.awaitAll()
+        }.filterNotNull()
+        if (pools.all { it.exhausted }) {
+            return if (first && failures.isNotEmpty()) failures.first() else AppResult.Success(Page(emptyList(), null))
+        }
+        val out = ArrayList<Video>()
+        val seen = HashSet<String>()
+        // Сначала по кругу источники языка региона, затем — дубляж (в Азербайджане турецкий)
+        val dubbed = lang == QueryLang.AZ
+        for (group in listOf(pools.filter { !(dubbed && it.lang == "tr") }, pools.filter { dubbed && it.lang == "tr" })) {
+            group.forEach { pool ->
+                repeat(if (pool.extra) MIX_TAKE * 2 else MIX_TAKE) {
+                    while (pool.buffer.isNotEmpty()) { val v = pool.buffer.removeFirst(); if (seen.add(v.id)) { out += v; break } }
                 }
             }
         }
-        return AppResult.Success(Page(out, null))
+        val more = pools.any { !it.exhausted }
+        return AppResult.Success(Page(out, if (more) PageToken("more") else null))
     }
 
     private fun kidsListId(subId: String?) = tv.lumen.core.datastore.UserLists.KIDS_WATCHED + (subId?.let { "_$it" } ?: "")
@@ -195,3 +270,9 @@ class ExploreViewModel @Inject constructor(
         show(topic, sub, lang, currentLive)
     }
 }
+
+/** Сколько страниц азербайджанского поиска показать, прежде чем добавлять турецкие (дубляж). */
+private const val AZ_PAGES = 4
+
+/** Сколько видео за круг «Для вас» берётся из каждой подтемы. */
+private const val MIX_TAKE = 3

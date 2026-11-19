@@ -35,6 +35,7 @@ import coil3.compose.AsyncImage
 import coil3.compose.rememberAsyncImagePainter
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
 import tv.lumen.core.designsystem.R
 import tv.lumen.core.designsystem.format.formatDuration
 import tv.lumen.core.designsystem.theme.LumenColors
@@ -109,7 +110,9 @@ fun VideoCard(
             value = runCatching { avatarResolver.avatarUrl(channelId) }.getOrNull()
         }
     }
-    val originalThumb = rememberAsyncImagePainter(video.thumbnailUrl)
+    // Запасная обложка нужна только с DeArrow (без мигания при подмене). Раньше она создавалась у каждой карточки
+    // и декодировалась в полном размере (до 1280×720) — на слабом ТВ это тормозило перемещение по карточкам
+    val originalThumb = if (decorator != null) rememberAsyncImagePainter(video.thumbnailUrl, contentScale = ContentScale.Crop) else null
     Card(
         onClick = onClick,
         onLongClick = onLongClick,
@@ -160,7 +163,8 @@ fun VideoCard(
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis,
                     )
-                    val secondary = listOfNotNull(video.channelName, videoMeta(video).takeIf { it.isNotEmpty() })
+                    val meta = videoMeta(video)
+                    val secondary = remember(video.channelName, meta) { listOfNotNull(video.channelName, meta.takeIf { it.isNotEmpty() }) }
                     if (secondary.isNotEmpty()) {
                         Text(
                             text = secondary.joinToString("\n"),

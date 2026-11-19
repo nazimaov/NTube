@@ -162,6 +162,8 @@ internal fun WatchScreen(
     var panelFocus by remember { mutableStateOf(PanelFocus.PLAY) }
     var dialog by remember { mutableStateOf<WatchDialog?>(null) }
     var interaction by remember { mutableIntStateOf(0) }
+    // OK показал панель: его отпускание не должно «нажать» кнопку «Пауза», на которую встал фокус
+    var swallowOkUp by remember { mutableStateOf(false) }
     // Каждый показ панели заново ставит фокус: элемент с фокусом мог исчезнуть (закрытый диалог)
     var focusRequest by remember { mutableIntStateOf(0) }
     val rootFocus = remember { FocusRequester() }
@@ -216,6 +218,11 @@ internal fun WatchScreen(
             }
             return true
         }
+        val isOkKey = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
+        if (event.type == KeyEventType.KeyUp && isOkKey && swallowOkUp) {
+            swallowOkUp = false
+            return true
+        }
         if (event.type != KeyEventType.KeyDown) return false
         if (event.key !in NavigationKeys) {
             tv.lumen.core.common.CommandLog.add("Клавиша " + android.view.KeyEvent.keyCodeToString(event.nativeKeyEvent.keyCode))
@@ -263,8 +270,10 @@ internal fun WatchScreen(
         }
         if (dialog != null || panelVisible || state.error != null) return false
         return when (event.key) {
+            // OK при скрытой панели только показывает её (фокус на «Пауза»); пауза — вторым нажатием, уже по кнопке
             Key.DirectionCenter, Key.Enter, Key.NumPadEnter -> {
-                controller.togglePlayPause(); showPanel(PanelFocus.PLAY); true
+                swallowOkUp = true
+                showPanel(PanelFocus.PLAY); true
             }
             Key.DirectionLeft -> { controller.seekBy(-seekStep(event)); showPanel(PanelFocus.SEEK); true }
             Key.DirectionRight -> { controller.seekBy(seekStep(event)); showPanel(PanelFocus.SEEK); true }

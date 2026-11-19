@@ -32,8 +32,9 @@ interface YouTubeRepository {
     /**
      * Поиск YouTube Kids: только одобренные для детей видео, которые гарантированно воспроизводятся.
      * [language] — язык результатов («ru», «tr», «az», «en»), страна — из настроек.
+     * [page] — продолжение из предыдущего ответа (`null` — первая страница); результаты не кончаются, пока YouTube отдаёт продолжение.
      */
-    suspend fun kidsSearch(query: String, language: String): AppResult<List<Video>>
+    suspend fun kidsSearch(query: String, language: String, page: PageToken? = null): AppResult<Page<Video>>
 
     suspend fun search(query: String, filter: SearchFilter, page: PageToken?): AppResult<Page<SearchItem>>
 

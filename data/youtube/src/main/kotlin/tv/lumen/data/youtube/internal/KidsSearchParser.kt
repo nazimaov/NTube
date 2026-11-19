@@ -19,6 +19,17 @@ internal object KidsSearchParser {
         return out.values.toList()
     }
 
+    /** Токен следующей страницы (`nextContinuationData`); `reloadContinuationData` — это перезагрузка, не следующая страница. */
+    fun next(root: JSONObject): String? {
+        var token: String? = null
+        walk(root) { key, value ->
+            if (token == null && key == "nextContinuationData" && value is JSONObject) {
+                token = value.optString("continuation").takeIf { it.isNotBlank() }
+            }
+        }
+        return token
+    }
+
     private fun video(d: JSONObject): Video? {
         val id = d.optJSONObject("onTap")?.optJSONObject("innertubeCommand")?.optJSONObject("watchEndpoint")?.optString("videoId")
             ?.takeIf { it.length == 11 } ?: return null

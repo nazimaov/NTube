@@ -1,0 +1,17 @@
+# Профиль запуска (Baseline Profile): код приложения и Compose компилируется заранее, а не исполняется
+# интерпретатором первые дни после установки. Без него на слабых ТВ перемещение по карточкам подтормаживает.
+# ProfileInstaller (уже в зависимостях Compose) ставит профиль при первом запуске, и система компилирует его в фоне.
+HSPLtv/lumen/**->**(**)**
+Ltv/lumen/**;
+HSPLandroidx/compose/runtime/**->**(**)**
+Landroidx/compose/runtime/**;
+HSPLandroidx/compose/ui/**->**(**)**
+Landroidx/compose/ui/**;
+HSPLandroidx/compose/foundation/**->**(**)**
+Landroidx/compose/foundation/**;
+HSPLandroidx/compose/animation/**->**(**)**
+Landroidx/compose/animation/**;
+HSPLandroidx/tv/material3/**->**(**)**
+Landroidx/tv/material3/**;
+HSPLcoil3/**->**(**)**
+Lcoil3/**;

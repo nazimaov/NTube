@@ -19,6 +19,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.Color
@@ -98,7 +99,9 @@ fun PlayerIconButton(
                 maxLines = 1,
                 modifier = Modifier
                     .align(Alignment.TopEnd)
-                    .offset(x = 6.dp, y = (-4).dp)
+                    // Кнопка в фокусе поднимается над соседями (zIndex у Surface) и перекрывала метку
+                    .zIndex(1f)
+                    .offset(x = if (focused) 8.dp else 6.dp, y = if (focused) (-6).dp else (-4).dp)
                     .background(LumenColors.Red, androidx.compose.foundation.shape.RoundedCornerShape(4.dp))
                     .padding(horizontal = 5.dp, vertical = 1.dp),
             )
