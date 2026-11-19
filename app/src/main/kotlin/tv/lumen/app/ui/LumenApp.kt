@@ -6,6 +6,12 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.focusGroup
+import androidx.compose.ui.focus.focusProperties
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.selection.selectableGroup
@@ -46,11 +52,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.tv.material3.Icon
-import androidx.tv.material3.ModalNavigationDrawer
-import androidx.tv.material3.DrawerValue
 import androidx.compose.foundation.layout.height
-import androidx.tv.material3.NavigationDrawerItem
-import androidx.tv.material3.NavigationDrawerItemDefaults
 import androidx.compose.foundation.shape.RoundedCornerShape
 import tv.lumen.core.designsystem.theme.LumenColors
 import androidx.tv.material3.Text
@@ -143,74 +145,8 @@ fun LumenApp(
                 true
             },
     ) {
-        // Modal: раскрытое меню рисуется поверх экрана. Обычный NavigationDrawer сдвигает весь экран, и на каждом
-        // кадре анимации контент (сетки с картинками) перекладывается заново — на слабом ТВ это тормозит и мерцает.
-        ModalNavigationDrawer(
-            // Шторка под меню: слева сплошной фон (текст пунктов читается), правее экран затемнён наполовину
-            scrimBrush = Brush.horizontalGradient(
-                0f to LumenColors.Background,
-                0.3f to LumenColors.Background,
-                0.32f to Color.Black.copy(alpha = 0.55f),
-                1f to Color.Black.copy(alpha = 0.55f),
-            ),
-            drawerContent = {
-                if (isWatching) return@ModalNavigationDrawer
-                val expanded = it == DrawerValue.Open
-                Column(Modifier.fillMaxHeight()) {
-                // Логотип: в свёрнутом меню — эмблема, в раскрытом — полностью
-                androidx.compose.foundation.Image(
-                    painter = androidx.compose.ui.res.painterResource(
-                        if (expanded) tv.lumen.app.R.drawable.logo_full else tv.lumen.app.R.drawable.logo_emblem,
-                    ),
-                    contentDescription = stringResource(tv.lumen.app.R.string.app_name),
-                    modifier = Modifier.padding(start = 16.dp, top = 24.dp).height(if (expanded) 52.dp else 40.dp),
-                )
-                // Меню раскрылось (ушли влево): фокус на пункте текущего раздела, а не на первом
-                val current = menu.firstOrNull { currentDestination.isOn(it) }
-                    ?: if (currentDestination?.hasRoute(SettingsSection::class) == true) TopLevelDestination.SETTINGS else null
-                LaunchedEffect(expanded) {
-                    if (expanded && current != null) runCatching { drawerFocus.getValue(current).requestFocus() }
-                }
-                Column(
-                    modifier = Modifier
-                        .weight(1f)
-                        .padding(12.dp)
-                        .selectableGroup()
-                        .onFocusChanged { drawerHasFocus = it.hasFocus },
-                    verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
-                ) {
-                    menu.forEach { item ->
-                        NavigationDrawerItem(
-                            selected = currentDestination.isOn(item) || (item == TopLevelDestination.SETTINGS && currentDestination?.hasRoute(SettingsSection::class) == true),
-                            onClick = { navController.navigateToTopLevel(item) },
-                            leadingContent = {
-                                Box {
-                                    Icon(imageVector = item.icon, contentDescription = null)
-                                    if (item == TopLevelDestination.SETTINGS && updatePending) {
-                                        tv.lumen.core.designsystem.component.RedDot(Modifier.align(Alignment.TopEnd))
-                                    }
-                                }
-                            },
-                            shape = NavigationDrawerItemDefaults.shape(shape = RoundedCornerShape(12.dp)),
-                            colors = NavigationDrawerItemDefaults.colors(
-                                selectedContainerColor = LumenColors.SurfaceFocused,
-                                selectedContentColor = LumenColors.TextPrimary,
-                                focusedContainerColor = LumenColors.TextPrimary,
-                                focusedContentColor = LumenColors.Background,
-                                focusedSelectedContainerColor = LumenColors.TextPrimary,
-                                focusedSelectedContentColor = LumenColors.Background,
-                            ),
-                            modifier = Modifier.focusRequester(drawerFocus.getValue(item)),
-                        ) {
-                            Text(text = stringResource(item.label))
-                        }
-                    }
-                }
-                }
-            },
-        ) {
-          // Узкая панель меню (80 dp) всегда на месте; экран начинается правее неё и не двигается при раскрытии меню
-          Box(Modifier.fillMaxSize().padding(start = if (isWatching) 0.dp else ClosedDrawerWidth)) {
+        // Экран начинается правее узкой панели меню (80 dp) и не двигается, когда меню раскрывается
+        Box(Modifier.fillMaxSize().padding(start = if (isWatching) 0.dp else ClosedDrawerWidth)) {
             // Без анимации переходов: стандартное затухание на ТВ накладывает экраны друг на друга и мерцает
             NavHost(
                 navController = navController,
@@ -269,7 +205,21 @@ fun LumenApp(
                     )
                 }
             }
-          }
+        }
+
+        // Своя лёгкая панель меню вместо NavigationDrawer из tv-material (как боковые заголовки у SmartTube):
+        // раскрывается сразу, без анимации ширины, поверх экрана; фокус при входе сразу на текущем разделе
+        if (!isWatching) {
+            val current = menu.firstOrNull { currentDestination.isOn(it) }
+                ?: if (currentDestination?.hasRoute(SettingsSection::class) == true) TopLevelDestination.SETTINGS else null
+            SideMenu(
+                menu = menu,
+                current = current,
+                updatePending = updatePending,
+                focusRequesters = drawerFocus,
+                onFocusChanged = { drawerHasFocus = it },
+                onOpen = { navController.navigateToTopLevel(it) },
+            )
         }
 
         UpdateDialog(state = updateState, onUpdate = appViewModel::installUpdate, onDismiss = appViewModel::dismissUpdate)
@@ -321,3 +271,103 @@ private fun NavHostController.navigateToTopLevel(item: TopLevelDestination) {
 
 /** Ширина узкой панели меню в tv-material (ClosedDrawerWidth). */
 private val ClosedDrawerWidth = 80.dp
+
+private val OpenMenuWidth = 280.dp
+
+/**
+ * Боковое меню: узкая полоска с иконками; когда в неё приходит фокус — раскрывается до 280 dp поверх экрана
+ * (сплошной фон, справа затемнение). Ширина меняется сразу, без анимации: на слабом ТВ анимация ширины
+ * перерисовывала всё меню на каждом кадре. Фокус при входе — сразу на текущем разделе ([current]).
+ */
+@Composable
+private fun SideMenu(
+    menu: List<TopLevelDestination>,
+    current: TopLevelDestination?,
+    updatePending: Boolean,
+    focusRequesters: Map<TopLevelDestination, FocusRequester>,
+    onFocusChanged: (Boolean) -> Unit,
+    onOpen: (TopLevelDestination) -> Unit,
+) {
+    var expanded by remember { mutableStateOf(false) }
+    if (expanded) {
+        Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.55f)))
+    }
+    Column(
+        modifier = Modifier
+            .fillMaxHeight()
+            .width(if (expanded) OpenMenuWidth else ClosedDrawerWidth)
+            .background(if (expanded) LumenColors.Background else Color.Transparent)
+            .onFocusChanged {
+                expanded = it.hasFocus
+                onFocusChanged(it.hasFocus)
+            }
+            .focusProperties {
+                onEnter = { current?.let { runCatching { focusRequesters.getValue(it).requestFocus() } } }
+            }
+            .focusGroup(),
+    ) {
+        // Логотип: в свёрнутом меню — эмблема, в раскрытом — полностью
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(
+                if (expanded) tv.lumen.app.R.drawable.logo_full else tv.lumen.app.R.drawable.logo_emblem,
+            ),
+            contentDescription = stringResource(tv.lumen.app.R.string.app_name),
+            modifier = Modifier.padding(start = 16.dp, top = 24.dp).height(if (expanded) 52.dp else 40.dp),
+        )
+        Column(
+            modifier = Modifier.weight(1f).fillMaxWidth().padding(12.dp).selectableGroup(),
+            verticalArrangement = Arrangement.spacedBy(2.dp, Alignment.CenterVertically),
+        ) {
+            menu.forEach { item ->
+                MenuEntry(
+                    item = item,
+                    selected = item == current,
+                    expanded = expanded,
+                    showDot = item == TopLevelDestination.SETTINGS && updatePending,
+                    modifier = Modifier.focusRequester(focusRequesters.getValue(item)),
+                    onClick = { onOpen(item) },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun MenuEntry(
+    item: TopLevelDestination,
+    selected: Boolean,
+    expanded: Boolean,
+    showDot: Boolean,
+    modifier: Modifier,
+    onClick: () -> Unit,
+) {
+    val shape = RoundedCornerShape(12.dp)
+    androidx.tv.material3.Surface(
+        onClick = onClick,
+        shape = androidx.tv.material3.ClickableSurfaceDefaults.shape(shape),
+        colors = androidx.tv.material3.ClickableSurfaceDefaults.colors(
+            containerColor = if (selected) LumenColors.SurfaceFocused else Color.Transparent,
+            contentColor = LumenColors.TextPrimary,
+            focusedContainerColor = LumenColors.TextPrimary,
+            focusedContentColor = LumenColors.Background,
+            pressedContainerColor = LumenColors.SurfaceFocused,
+            pressedContentColor = LumenColors.TextPrimary,
+        ),
+        scale = androidx.tv.material3.ClickableSurfaceDefaults.scale(focusedScale = 1f),
+        modifier = modifier.fillMaxWidth().height(56.dp),
+    ) {
+        Row(
+            modifier = Modifier.fillMaxHeight().padding(horizontal = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Box {
+                Icon(imageVector = item.icon, contentDescription = stringResource(item.label), modifier = Modifier.size(24.dp))
+                if (showDot) tv.lumen.core.designsystem.component.RedDot(Modifier.align(Alignment.TopEnd))
+            }
+            if (expanded) {
+                Text(text = stringResource(item.label), style = androidx.tv.material3.MaterialTheme.typography.titleMedium, maxLines = 1)
+            }
+        }
+    }
+}

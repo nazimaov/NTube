@@ -217,6 +217,9 @@ internal fun WatchScreen(
             return true
         }
         if (event.type != KeyEventType.KeyDown) return false
+        if (event.key !in NavigationKeys) {
+            tv.lumen.core.common.CommandLog.add("Клавиша " + android.view.KeyEvent.keyCodeToString(event.nativeKeyEvent.keyCode))
+        }
         interaction++
         // SponsorBlock: OK при скрытой панели — «Вернуть» пропущенное или «Пропустить» сегмент (SPEC 6.1)
         val isOk = event.key == Key.DirectionCenter || event.key == Key.Enter || event.key == Key.NumPadEnter
@@ -815,3 +818,9 @@ internal fun formatTime(ms: Long): String {
 
 internal fun formatSpeed(speed: Float): String =
     (if (speed % 1f == 0f) "%.1f" else "%.2f").format(speed).trimEnd('0').trimEnd('.', ',') + "×"
+
+/** Обычные кнопки навигации в журнал команд не пишутся — только медиаклавиши и всё необычное. */
+private val NavigationKeys = setOf(
+    Key.DirectionUp, Key.DirectionDown, Key.DirectionLeft, Key.DirectionRight,
+    Key.DirectionCenter, Key.Enter, Key.NumPadEnter, Key.Back,
+)

@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
@@ -68,6 +69,7 @@ fun SettingsPageRoute(
     val backup by viewModel.backup.collectAsStateWithLifecycle()
     var choice by remember { mutableStateOf<ChoiceRequest?>(null) }
     var addingWord by remember { mutableStateOf(false) }
+    var showLog by remember { mutableStateOf(false) }
     val profiles by viewModel.profiles.collectAsStateWithLifecycle()
     val account by viewModel.account.collectAsStateWithLifecycle()
     val currentProfile by viewModel.currentProfile.collectAsStateWithLifecycle()
@@ -404,6 +406,9 @@ fun SettingsPageRoute(
                 viewModel.update { it.copy(updateCheckOnStart = !it.updateCheckOnStart) }
             }
         }
+        item {
+            Row(stringResource(R.string.settings_command_log), stringResource(R.string.settings_command_log_hint), Modifier.rememberFocus(memory, "commandLog")) { showLog = true }
+        }
         item { Text(stringResource(R.string.settings_version, versionName), style = MaterialTheme.typography.bodyLarge) }
         item {
             Text(
@@ -418,6 +423,7 @@ fun SettingsPageRoute(
 
     }
     backup?.let { BackupDialog(it, onClose = viewModel::closeBackup) }
+    if (showLog) CommandLogDialog(onDismiss = { showLog = false; memory.restore() })
 
     choice?.let { req ->
         ChoiceDialog(req) { choice = null; memory.restore() }
@@ -618,3 +624,31 @@ private fun menuLabel(item: MenuItem): String = stringResource(
 )
 /** Ввод имени профиля: [id] = null — создание нового. */
 private data class ProfileNaming(val id: Long?, val name: String)
+
+/** Журнал команд, пришедших в плеер (кнопки, голосовой помощник, потеря звука) — для диагностики «стоп/продолжи». */
+@Composable
+private fun CommandLogDialog(onDismiss: () -> Unit) {
+    val entries by tv.lumen.core.common.CommandLog.entries.collectAsStateWithLifecycle()
+    val first = remember { androidx.compose.ui.focus.FocusRequester() }
+    androidx.compose.runtime.LaunchedEffect(Unit) { runCatching { first.requestFocus() } }
+    androidx.compose.ui.window.Dialog(onDismissRequest = onDismiss) {
+        androidx.compose.foundation.layout.Column(
+            modifier = Modifier
+                .width(720.dp)
+                .background(MaterialTheme.colorScheme.surfaceVariant, androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+                .padding(28.dp),
+            verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp),
+        ) {
+            Text(stringResource(R.string.settings_command_log), style = MaterialTheme.typography.titleLarge)
+            Text(
+                if (entries.isEmpty()) stringResource(R.string.settings_command_log_empty) else entries.joinToString("\n"),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.heightIn(max = 420.dp),
+            )
+            androidx.compose.foundation.layout.Row(horizontalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(16.dp)) {
+                androidx.tv.material3.Button(onClick = onDismiss, modifier = Modifier.focusRequester(first)) { Text(stringResource(R.string.settings_command_log_close)) }
+                androidx.tv.material3.Button(onClick = { tv.lumen.core.common.CommandLog.clear() }) { Text(stringResource(R.string.settings_command_log_clear)) }
+            }
+        }
+    }
+}

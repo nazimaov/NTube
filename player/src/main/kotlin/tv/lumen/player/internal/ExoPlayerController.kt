@@ -38,6 +38,7 @@ import tv.lumen.player.PlayerPreferences
 import tv.lumen.player.PlayerState
 import tv.lumen.player.QualityOption
 import java.util.UUID
+import tv.lumen.core.common.CommandLog
 
 /**
  * Реализация [PlayerController] на Media3 ExoPlayer (SPEC 5). Живёт столько же, сколько экран плеера:
@@ -61,6 +62,15 @@ internal class ExoPlayerController(
 
     private val exo: ExoPlayer = ExoPlayer.Builder(context)
         .setHandleAudioBecomingNoisy(true)
+        // Аудиофокус, как у официальных плееров: если звук забирает другое приложение (голосовой помощник,
+        // «стоп» через захват звука), видео встаёт на паузу; на время короткой реплики ассистента — приглушается
+        .setAudioAttributes(
+            androidx.media3.common.AudioAttributes.Builder()
+                .setUsage(C.USAGE_MEDIA)
+                .setContentType(C.AUDIO_CONTENT_TYPE_MOVIE)
+                .build(),
+            true,
+        )
         .build()
         .apply { playWhenReady = true }
 
@@ -72,6 +82,27 @@ internal class ExoPlayerController(
             override fun stop() = pause()
         },
     )
+        // Журнал: какое приложение (например, Алиса) какую команду прислало — для диагностики на устройстве
+        .setCallback(object : MediaSession.Callback {
+            override fun onConnect(session: MediaSession, controller: MediaSession.ControllerInfo): MediaSession.ConnectionResult {
+                CommandLog.add("Подключилось: ${controller.packageName}")
+                return super.onConnect(session, controller)
+            }
+
+            override fun onPlayerCommandRequest(session: MediaSession, controller: MediaSession.ControllerInfo, playerCommand: Int): Int {
+                CommandLog.add("Команда «${commandName(playerCommand)}» от ${controller.packageName}")
+                return super.onPlayerCommandRequest(session, controller, playerCommand)
+            }
+
+            override fun onMediaButtonEvent(session: MediaSession, controllerInfo: MediaSession.ControllerInfo, intent: android.content.Intent): Boolean {
+                @Suppress("DEPRECATION")
+                val key = intent.getParcelableExtra<android.view.KeyEvent>(android.content.Intent.EXTRA_KEY_EVENT)
+                if (key?.action == android.view.KeyEvent.ACTION_DOWN) {
+                    CommandLog.add("Медиакнопка ${android.view.KeyEvent.keyCodeToString(key.keyCode)} от ${controllerInfo.packageName}")
+                }
+                return super.onMediaButtonEvent(session, controllerInfo, intent)
+            }
+        })
         .setId("lumen-" + UUID.randomUUID())
         .build()
 
@@ -112,7 +143,12 @@ internal class ExoPlayerController(
                 }
             }
 
+            override fun onPlaybackSuppressionReasonChanged(reason: Int) {
+                if (reason == Player.PLAYBACK_SUPPRESSION_REASON_TRANSIENT_AUDIO_FOCUS_LOSS) CommandLog.add("Звук временно забрало другое приложение")
+            }
+
             override fun onPlayWhenReadyChanged(playWhenReady: Boolean, reason: Int) {
+                if (reason == Player.PLAY_WHEN_READY_CHANGE_REASON_AUDIO_FOCUS_LOSS) CommandLog.add("Звук забрало другое приложение — пауза")
                 _state.update { it.copy(playWhenReady = playWhenReady) }
             }
 
@@ -534,4 +570,18 @@ internal class ExoPlayerController(
         const val SKIPPED_NOTICE_MS = 3_000L
         const val MAX_PLAYLIST_PAGES = 5
     }
+}
+
+/** Название команды медиасессии для журнала. */
+private fun commandName(command: Int): String = when (command) {
+    Player.COMMAND_PLAY_PAUSE -> "играть/пауза"
+    Player.COMMAND_STOP -> "стоп"
+    Player.COMMAND_PREPARE -> "подготовить"
+    Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM, Player.COMMAND_SEEK_TO_DEFAULT_POSITION -> "перемотка"
+    Player.COMMAND_SEEK_BACK -> "назад"
+    Player.COMMAND_SEEK_FORWARD -> "вперёд"
+    Player.COMMAND_SEEK_TO_NEXT, Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM -> "следующее"
+    Player.COMMAND_SEEK_TO_PREVIOUS, Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM -> "предыдущее"
+    Player.COMMAND_SET_VOLUME, Player.COMMAND_ADJUST_DEVICE_VOLUME_WITH_FLAGS, Player.COMMAND_SET_DEVICE_VOLUME_WITH_FLAGS -> "громкость"
+    else -> "№$command"
 }

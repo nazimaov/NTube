@@ -122,4 +122,9 @@
     <string name="settings_menu_library">Библиотека</string>
     <string name="settings_by_region">Язык контента по региону</string>
     <string name="settings_by_region_hint">Вкл: подборки («Обзор», «Детское», «Музыка», тренды) — на языке выбранного региона. Выкл: на языке приложения.</string>
+    <string name="settings_command_log">Журнал команд пульта и голоса</string>
+    <string name="settings_command_log_hint">Что пришло в плеер: кнопки, голосовой помощник, звук, забранный другим приложением</string>
+    <string name="settings_command_log_empty">Пока пусто. Откройте видео, скажите «стоп» или нажмите медиакнопку и вернитесь сюда.</string>
+    <string name="settings_command_log_clear">Очистить</string>
+    <string name="settings_command_log_close">Закрыть</string>
 </resources>
